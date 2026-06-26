@@ -3171,6 +3171,11 @@ function getUpiRedeemRemoteStatusLabel(status = '') {
   return UPI_REDEEM_REMOTE_STATUS_LABELS[normalized] || normalized || '';
 }
 
+function isUpiRedeemDuplicateCdkeyMessage(message = '') {
+  const text = String(message || '').trim();
+  return /(?:CDK|CDKEY|卡密)[\s\S]*(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)|(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)[\s\S]*(?:CDK|CDKEY|卡密)/i.test(text);
+}
+
 function normalizeUpiRedeemRemoteStatusValue(status = '') {
   const normalized = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (/兑换成功|成功|已兑换|已使用|已用/.test(normalized)) {
@@ -3255,6 +3260,13 @@ function isUpiRedeemCdkeySelectableForRedeem(entry = {}) {
     || isUpiRedeemRemoteActiveStatus(remoteStatus)
     || isUpiRedeemRemoteActiveStatus(entry.remoteMessage)
     || entry.retrying === true
+  ) {
+    return false;
+  }
+  if (
+    isUpiRedeemDuplicateCdkeyMessage(entry.remoteStatus)
+    || isUpiRedeemDuplicateCdkeyMessage(entry.remoteMessage)
+    || isUpiRedeemDuplicateCdkeyMessage(entry.lastError)
   ) {
     return false;
   }
@@ -3692,6 +3704,15 @@ function renderUpiRedeemCdkeyStatusList(state = latestState) {
     const remoteStatus = String(entry.remoteStatus || '').trim().toLowerCase();
     const remoteLabel = getUpiRedeemRemoteStatusLabel(remoteStatus);
     const subscriptionDisplay = getUpiRedeemCdkeySubscriptionDisplay(entry);
+    const duplicateCdkeyStatusDisplay = (
+      isUpiRedeemDuplicateCdkeyMessage(remoteStatus)
+      || isUpiRedeemDuplicateCdkeyMessage(entry.remoteMessage)
+      || isUpiRedeemDuplicateCdkeyMessage(entry.lastError)
+    ) ? {
+      label: '已占用',
+      className: 'pending',
+      title: entry.remoteMessage || entry.lastError || '后端提示卡密重复提交，已禁止再次派发',
+    } : null;
     const statusSubscriptionDisplay = remoteStatus ? null : subscriptionDisplay;
     const remoteStatusTitle = [
       remoteLabel || '',
@@ -3722,11 +3743,13 @@ function renderUpiRedeemCdkeyStatusList(state = latestState) {
     cdkeyText.textContent = cdkey;
 
     const status = document.createElement(used ? 'button' : 'span');
-    status.className = `icloud-tag ${statusSubscriptionDisplay?.className || getUpiRedeemRemoteStatusClass(remoteStatus, used, enabled)}${used ? ' upi-redeem-cdkey-status-action' : ''}`;
-    status.textContent = statusSubscriptionDisplay?.label
+    status.className = `icloud-tag ${duplicateCdkeyStatusDisplay?.className || statusSubscriptionDisplay?.className || getUpiRedeemRemoteStatusClass(remoteStatus, used, enabled)}${used ? ' upi-redeem-cdkey-status-action' : ''}`;
+    status.textContent = duplicateCdkeyStatusDisplay?.label
+      || statusSubscriptionDisplay?.label
       || remoteLabel
       || (used ? '已使用' : enabled ? '启用' : '停用');
-    status.title = statusSubscriptionDisplay?.title
+    status.title = duplicateCdkeyStatusDisplay?.title
+      || statusSubscriptionDisplay?.title
       || remoteStatusTitle
       || (used ? '点击清除旧的已用标记；已确认兑换的卡密不会再次提交' : '远端状态');
     if (used) {

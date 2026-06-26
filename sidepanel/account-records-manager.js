@@ -95,6 +95,15 @@
       return redeemStatus === 'failed' && !cdkey && isPreSubmitUpiCredentialMembershipBlockedReason(reason);
     }
 
+    function isDuplicateCdkeyPendingMembershipRow(row = {}) {
+      const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
+      if (!['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus)) {
+        return false;
+      }
+      const reason = String(row.redeemReason || row.reason || '').trim();
+      return /(?:CDK|CDKEY|卡密)[\s\S]*(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)|(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)[\s\S]*(?:CDK|CDKEY|卡密)/i.test(reason);
+    }
+
     function buildRecordId(record = {}) {
       const rawRecordId = String(record.recordId || '').trim();
       if (rawRecordId) {
@@ -976,6 +985,13 @@
         const trialStatus = normalizeTrialEligibilityStatus(row.trialEligibilityStatus);
         const trialReason = row.trialEligibilityReason || row.reason || '';
         const redeemFailureCount = normalizeRetryCount(row.redeemFailureCount);
+        if (isDuplicateCdkeyPendingMembershipRow(row)) {
+          return {
+            className: 'active',
+            label: '可兑换',
+            detail: `${row.redeemReason || row.reason || '卡密重复提交，当前账号未提交成功'}；账号已回到 Free，可重新兑换。`,
+          };
+        }
         if (['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus)) {
           return {
             className: 'pending',
@@ -1137,6 +1153,9 @@
         return false;
       }
       const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
+      if (isDuplicateCdkeyPendingMembershipRow(row)) {
+        return true;
+      }
       if (['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus)) {
         return false;
       }
@@ -1164,6 +1183,9 @@
       }
       if (status !== 'free') {
         return status === 'paid' ? '当前已有会员' : '当前不是无会员状态';
+      }
+      if (isDuplicateCdkeyPendingMembershipRow(row)) {
+        return '上次卡密重复提交，当前账号未提交成功，可重新补兑';
       }
       if (['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus)) {
         return reason || '卡密已提交，等待远端状态刷新';
