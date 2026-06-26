@@ -2495,15 +2495,15 @@
           throw error;
         }
         if (isUpiRedeemDuplicateCdkeyError(error)) {
-          const pendingReason = `${message || '后端提示卡密已提交过'}；已标记为等待远端状态刷新，不计入账号失败次数`;
+          const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，请换下一张卡密。`;
           await addStepLog(
             visibleStep,
-            `UPI 备份账号补兑：后端提示卡密重复提交，已按处理中记录并等待远端状态：${email || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI 备份账号补兑：后端提示卡密重复提交，当前账号未提交成功，将回到 Free 可换卡：${email || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
-            email,
+            email: '',
             usedAt: 0,
             lastAttemptAt: attemptAt,
             lastError: '',
@@ -2518,12 +2518,14 @@
             accessToken,
             active: false,
             planType: '',
-            pendingRemoteConfirmation: true,
+            pendingRemoteConfirmation: false,
+            duplicateCdkeyRejected: true,
             subscriptionCheckedAt: '',
             reason: pendingReason,
             subscription: {
               active: false,
-              pendingRemoteConfirmation: true,
+              pendingRemoteConfirmation: false,
+              duplicateCdkeyRejected: true,
               reason: pendingReason,
             },
           };

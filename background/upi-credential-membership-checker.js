@@ -2340,19 +2340,58 @@
 
             await updateRedeemStage('upi-redeem-plus', '正在使用 UPI 卡密兑换 Plus');
             throwIfStopRequested();
-            const redeemResult = await redeemUpiCredentialWithAccessToken({
-              state: {
-                ...currentResults,
-                visibleStep: 7,
-              },
-              credential,
-              session: session.session || session,
-              accessToken: session.accessToken,
-              skipEligibilityCheck: true,
-              deferSubscriptionConfirmation: true,
-            });
-            attemptedUpiRedeemCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey);
+            let redeemResult = null;
+            const maxDuplicateCdkeyAttempts = 20;
+            for (let duplicateAttempt = 0; duplicateAttempt < maxDuplicateCdkeyAttempts; duplicateAttempt += 1) {
+              redeemResult = await redeemUpiCredentialWithAccessToken({
+                state: {
+                  ...currentResults,
+                  visibleStep: 7,
+                },
+                credential,
+                session: session.session || session,
+                accessToken: session.accessToken,
+                skipEligibilityCheck: true,
+                deferSubscriptionConfirmation: true,
+              });
+              attemptedUpiRedeemCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey);
+              if (redeemResult.duplicateCdkeyRejected !== true) {
+                break;
+              }
+              await addLog(
+                `UPI 无会员补兑：${credential.email} -> 卡密 ${attemptedUpiRedeemCdkey || 'unknown'} 已重复提交，当前账号未提交成功，正在换下一张卡密重试。`,
+                'warn'
+              );
+            }
             throwIfStopRequested();
+            if (redeemResult?.duplicateCdkeyRejected === true) {
+              redeemCompleted += 1;
+              const duplicateReason = redeemResult.reason || '卡密已重复提交，当前账号未提交成功；请补充可用卡密后重新兑换。';
+              items = upsertResultItem(items, {
+                ...baseItem,
+                status: 'free',
+                planType: 'free',
+                reason: duplicateReason,
+                accessTokenMasked: maskAccessToken(session.accessToken),
+                redeemStatus: '',
+                redeemReason: duplicateReason,
+                redeemFailureCount: normalizeRetryCount(baseItem.redeemFailureCount),
+                redeemLastFailedAt: baseItem.redeemLastFailedAt,
+                upiRedeemCdkey: '',
+                upiRedeemSubscriptionCheckedAt: '',
+              });
+              currentResults = await saveResults({
+                ...currentResults,
+                items,
+                redeeming: true,
+                redeemUpdatedAt: new Date().toISOString(),
+                redeemTotal: credentials.length,
+                redeemCompleted,
+                source,
+              });
+              await addLog(`UPI 无会员补兑：${credential.email} -> 重复卡密未提交当前账号，账号已回到 Free，可重新兑换。`, 'warn');
+              continue;
+            }
             await updateRedeemStage('confirm-plus', '正在确认 Plus/Pro/Team 会员');
             const redeemedSubscription = classifyRedeemResult(redeemResult);
             if (redeemResult.pendingRemoteConfirmation === true) {
