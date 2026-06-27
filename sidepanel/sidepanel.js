@@ -6959,7 +6959,7 @@ function collectSettingsPayload() {
         ? inputSub2ApiAccountPriority.value
         : latestState?.sub2apiAccountPriority
     ),
-    sub2apiDefaultProxyName: inputSub2ApiDefaultProxy.value.trim(),
+    sub2apiDefaultProxyName: String(inputSub2ApiDefaultProxy?.value || latestState?.sub2apiDefaultProxyName || '').trim(),
     removedNetworkEnabled: getSelectedRemovedNetworkEnabledSafe(),
     removedNetworkService: selectedRemovedNetworkService,
     removedNetworkMode: currentRemovedNetworkServiceProfile.mode,
@@ -14259,6 +14259,49 @@ async function saveSettings(options = {}) {
   }
 }
 
+function buildCustomEmailPoolSettingsPayload(extraPayload = {}) {
+  const entries = typeof getNormalizedCustomEmailPoolEntriesState === 'function'
+    ? getNormalizedCustomEmailPoolEntriesState()
+    : [];
+  const activeEmails = typeof getActiveCustomEmailPoolEmails === 'function'
+    ? getActiveCustomEmailPoolEmails(entries)
+    : [];
+  const payload = {
+    customEmailPoolEntries: entries,
+    customEmailPool: activeEmails,
+    selectedCustomEmailPoolEmail: String(
+      extraPayload.selectedCustomEmailPoolEmail ?? latestState?.selectedCustomEmailPoolEmail ?? ''
+    ).trim().toLowerCase(),
+  };
+  if (Object.prototype.hasOwnProperty.call(extraPayload, 'email')) {
+    payload.email = String(extraPayload.email || '').trim().toLowerCase();
+  }
+  return payload;
+}
+
+async function persistCustomEmailPoolSettings(extraPayload = {}) {
+  const payload = buildCustomEmailPoolSettingsPayload(extraPayload);
+  const response = await sendRuntimeMessageWithTimeout({
+    type: 'SAVE_SETTING',
+    source: 'sidepanel',
+    payload,
+  }, 15000, '保存自定义邮箱池');
+
+  if (response?.error) {
+    throw new Error(response.error);
+  }
+
+  syncLatestState({
+    customEmailPoolEntries: response?.state?.customEmailPoolEntries ?? payload.customEmailPoolEntries,
+    customEmailPool: response?.state?.customEmailPool ?? payload.customEmailPool,
+    selectedCustomEmailPoolEmail: response?.state?.selectedCustomEmailPoolEmail ?? payload.selectedCustomEmailPoolEmail,
+    ...(Object.prototype.hasOwnProperty.call(payload, 'email')
+      ? { email: response?.state?.email ?? payload.email }
+      : {}),
+  });
+  return response;
+}
+
 async function persistCustomPasswordInput(options = {}) {
   const { silent = true } = options;
   const customPassword = inputPassword.value;
@@ -14786,7 +14829,9 @@ function applySettingsState(state) {
   if (typeof inputSub2ApiAccountPriority !== 'undefined' && inputSub2ApiAccountPriority) {
     inputSub2ApiAccountPriority.value = String(normalizeSub2ApiAccountPriorityValue(state?.sub2apiAccountPriority));
   }
-  inputSub2ApiDefaultProxy.value = state?.sub2apiDefaultProxyName || '';
+  if (inputSub2ApiDefaultProxy) {
+    inputSub2ApiDefaultProxy.value = state?.sub2apiDefaultProxyName || '';
+  }
   const normalizedRemovedNetworkService = resolveRemovedNetworkService(state?.removedNetworkService);
   const normalizedRemovedNetworkServiceProfiles = typeof normalizeRemovedNetworkServiceProfiles === 'function'
     ? normalizeRemovedNetworkServiceProfiles(state?.removedNetworkServiceProfiles || {}, state || {})
@@ -17995,8 +18040,7 @@ const customEmailPoolManager = window.SidepanelCustomEmailPoolManager?.createCus
     persistEntries: async () => {
       syncRunCountFromConfiguredEmailPool();
       updateMailProviderUI();
-      markSettingsDirty(true);
-      await saveSettings({ silent: true });
+      await persistCustomEmailPoolSettings();
     },
     setRuntimeEmail: async (email) => {
       const selectedEmail = String(email || '').trim().toLowerCase();
@@ -18005,8 +18049,10 @@ const customEmailPoolManager = window.SidepanelCustomEmailPoolManager?.createCus
       if (inputEmail) {
         inputEmail.value = selectedEmail || '';
       }
-      markSettingsDirty(true);
-      await saveSettings({ silent: true, force: true });
+      await persistCustomEmailPoolSettings({
+        email: selectedEmail,
+        selectedCustomEmailPoolEmail: selectedEmail,
+      });
     },
   },
   constants: {
@@ -20283,11 +20329,11 @@ btnAddSub2ApiGroup?.addEventListener('click', () => {
   });
 });
 
-inputSub2ApiDefaultProxy.addEventListener('input', () => {
+inputSub2ApiDefaultProxy?.addEventListener('input', () => {
   markSettingsDirty(true);
   scheduleSettingsAutoSave();
 });
-inputSub2ApiDefaultProxy.addEventListener('blur', () => {
+inputSub2ApiDefaultProxy?.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
@@ -23768,33 +23814,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 });
 
-// ============================================================
-// Theme Toggle
-// ============================================================
-
-const btnTheme = document.getElementById('btn-theme');
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('multipage-theme', theme);
-}
-
-function initTheme() {
-  const saved = localStorage.getItem('multipage-theme');
-  if (saved) {
-    setTheme(saved);
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    setTheme('dark');
-  } else {
-    setTheme('dark');
-  }
-}
-
-btnTheme.addEventListener('click', () => {
-  const current = document.documentElement.getAttribute('data-theme');
-  setTheme(current === 'dark' ? 'light' : 'dark');
-});
-
 document.addEventListener('click', (event) => {
   const clickedInsideConfigMenu = Boolean(configMenuShell?.contains(event.target));
   const clickedInsideCountryMenu = Boolean(removedSmsMainCountryMenuShell?.contains(event.target));
@@ -23872,7 +23891,6 @@ document.addEventListener('scroll', () => {
 
 initializeManualStepActions();
 bindPasswordVisibilityToggles();
-initTheme();
 updateRemovedRemovedTextPoolCollapseUI(false);
 updateAuthRemovedRemovedTextPoolCollapseUI(false);
 initHotmailListExpandedState();

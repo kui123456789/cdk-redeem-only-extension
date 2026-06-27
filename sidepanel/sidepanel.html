@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 
@@ -51,7 +52,7 @@
           <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
         </svg>
       </button>
-      <button id="btn-theme" class="theme-toggle" title="切换主题">
+      <button id="btn-theme" class="theme-toggle" type="button" aria-label="切换主题" aria-pressed="true" title="切换主题">
         <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -68,6 +69,7 @@
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
+        <span class="theme-label">浅色</span>
       </button>
       <div id="config-menu-shell" class="header-menu">
         <button id="btn-config-menu" class="btn btn-ghost btn-sm header-config-btn" type="button" aria-haspopup="menu"
