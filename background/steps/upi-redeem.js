@@ -56,7 +56,16 @@
       return String(value || '').trim();
     }
 
+    function getRedeemChannelStateHelpers() {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      return rootScope.MultiPageRedeemChannelState || {};
+    }
+
     function normalizeRedeemChannel(value = '') {
+      const helper = getRedeemChannelStateHelpers().normalizeRedeemChannel;
+      if (typeof helper === 'function') {
+        return helper(value);
+      }
       return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
     }
 
@@ -68,6 +77,10 @@
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
     function getRedeemChannelFailureField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemFailureCount'
         : 'upiRedeemFailureCount';
@@ -88,24 +101,40 @@
     }
 
     function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedAtField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedAt'
         : 'upiRedeemDailyLimitBlockedAt';
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedUntilField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedUntil'
         : 'upiRedeemDailyLimitBlockedUntil';
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitReasonField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitReason'
         : 'upiRedeemDailyLimitReason';
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitReason;
+      if (typeof helper === 'function') {
+        return helper(message);
+      }
       const text = normalizeString(message);
       return /该邮箱/.test(text)
         && /在该渠道今日提交次数已达上限/.test(text)

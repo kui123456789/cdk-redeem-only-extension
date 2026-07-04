@@ -103,6 +103,7 @@ function checkCoreFiles() {
     'background/message-router.js',
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
+    'background/redeem/redeem-channel-state.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
     'background/verification-flow.js',
@@ -136,6 +137,7 @@ function checkStaticContracts() {
   const background = readText('background.js');
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
+  const redeemChannelState = readText('background/redeem/redeem-channel-state.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
   const downloadService = readText('sidepanel/download-service.js');
@@ -171,6 +173,13 @@ function checkStaticContracts() {
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
+  assertIncludes(background, "'background/redeem/redeem-channel-state.js'", 'background redeem channel state script load');
+  assertIncludes(redeemChannelState, 'createRedeemChannelState', 'redeem channel state factory');
+  assertIncludes(redeemChannelState, 'getRedeemChannelFailureField', 'redeem channel failure field helper');
+  assertIncludes(redeemChannelState, 'isRedeemChannelDailyLimitReason', 'redeem daily-limit helper');
+  assertIncludes(upiRedeem, 'getRedeemChannelStateHelpers()', 'UPI redeem channel state wrapper');
+  assertIncludes(checker, 'getRedeemChannelStateHelpers()', 'membership checker channel state wrapper');
+  assertIncludes(router, 'getRedeemChannelStateHelpers()', 'router channel state wrapper');
 
   [
     'btn-upi-redeem-cdkey-status-refresh',
@@ -248,6 +257,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background.js', 20000, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
+  assertFileLineCountAtMost('background/redeem/redeem-channel-state.js', 300, 'redeem channel state size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7000, 'membership checker growth guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
