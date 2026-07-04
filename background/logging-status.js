@@ -103,15 +103,7 @@
 
     function isVerificationMailPollingError(error) {
       const message = getErrorMessage(error);
-      return /未在 .*邮箱中找到新的匹配邮件|未在 Hotmail 收件箱中找到新的匹配验证码|邮箱轮询结束，但未获取到验证码|无法获取新的(?:注册|登录)验证码|页面未能重新就绪|页面通信异常|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|did not respond in \d+s|405\s+method\s+not\s+allowed|route\s+error.*405|did\s+not\s+provide\s+an?\s+[`'"]?action|post\s+request\s+to\s+["']?\/(?:email|phone)-verification/i.test(message);
-    }
-
-    function isAddPhoneAuthFailure(error) {
-      const message = getErrorMessage(error);
-      if (/\u624b\u673a\u53f7\u8f93\u5165\u6a21\u5f0f|phone\s+entry/i.test(message)) {
-        return false;
-      }
-      return /https:\/\/auth\.openai\.com\/(?:add-phone|phone-verification)(?:[/?#]|$)|\badd-phone\b|phone-verification|\u6dfb\u52a0\u624b\u673a\u53f7|\u624b\u673a\u53f7\u7801|\u624b\u673a\u9a8c\u8bc1\u7801\u9875|\u624b\u673a\u9a8c\u8bc1\u9875|\u8fdb\u5165\u624b\u673a\u53f7\u9875\u9762|\u624b\u673a\u53f7\u9875|\u624b\u673a\u53f7\u9875\u9762|phone\s+number|telephone/i.test(message);
+      return /未在 .*邮箱中找到新的匹配邮件|未在 Hotmail 收件箱中找到新的匹配验证码|邮箱轮询结束，但未获取到验证码|无法获取新的(?:注册|登录)验证码|页面未能重新就绪|页面通信异常|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|did not respond in \d+s|405\s+method\s+not\s+allowed|route\s+error.*405|did\s+not\s+provide\s+an?\s+[`'"]?action|post\s+request\s+to\s+["']?\/email-verification/i.test(message);
     }
 
     function getLoginAuthStateLabel(state) {
@@ -128,12 +120,8 @@
           return '认证服务 HTTP 500 错误页';
         case 'oauth_consent_page':
           return 'OAuth 授权页';
-        case 'add_phone_page':
-          return '手机号页';
         case 'add_email_page':
           return '添加邮箱页';
-        case 'phone_verification_page':
-          return '手机验证码页';
         default:
           return '未知页面';
       }
@@ -141,7 +129,7 @@
 
     function isRestartCurrentAttemptError(error) {
       const message = String(typeof error === 'string' ? error : error?.message || '');
-      return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
+      return /当前邮箱已存在，需要重新开始新一轮/i.test(message);
     }
 
     function isSignupUserAlreadyExistsFailure(error) {
@@ -233,7 +221,6 @@
       addLog,
       getAutoRunStatusPayload,
       getFirstUnfinishedNode,
-      isAddPhoneAuthFailure,
       getErrorMessage,
       getFirstUnfinishedStep,
       getLoginAuthStateLabel,
@@ -256,5 +243,3 @@
     createLoggingStatus,
   };
 });
-
-

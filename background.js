@@ -3680,7 +3680,6 @@ async function setPasswordState(password, accountIdentity = {}) {
   const rawAccountIdentifier = String(
     accountIdentity?.accountIdentifier
     || accountIdentity?.email
-    || accountIdentity?.phoneNumber
     || ''
   ).trim();
   const accountIdentifierType = rawAccountIdentifier

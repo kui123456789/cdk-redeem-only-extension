@@ -248,7 +248,6 @@
 
       return {
         email,
-        phoneNumber: '',
         accountIdentifierType,
         accountIdentifier,
       };
@@ -452,7 +451,6 @@
         accountIdentifierType,
         accountIdentifier,
         email,
-        phoneNumber: '',
         password,
         emailVerificationUrl,
         url,
@@ -625,7 +623,6 @@
         accountIdentifierType,
         accountIdentifier,
         email,
-        phoneNumber: '',
         password,
         emailVerificationUrl,
         url,

@@ -198,13 +198,12 @@
     return normalized;
   }
 
-  function normalizeVerificationKind(value = '') {
-    const normalized = normalizeString(value).toLowerCase().replace(/[\s-]+/g, '_');
-    if (['totp', 'mfa', '2fa', 'two_factor', 'authenticator'].includes(normalized)) return 'totp';
-    if (normalized.includes('phone')) return 'phone';
-    if (normalized.includes('email') || normalized.includes('mail')) return 'email';
-    return normalized || 'unknown';
-  }
+    function normalizeVerificationKind(value = '') {
+      const normalized = normalizeString(value).toLowerCase().replace(/[\s-]+/g, '_');
+      if (['totp', 'mfa', '2fa', 'two_factor', 'authenticator'].includes(normalized)) return 'totp';
+      if (normalized.includes('email') || normalized.includes('mail')) return 'email';
+      return normalized || 'unknown';
+    }
 
   function isPaidPlanType(value = '') {
     return PAID_PLANS.has(normalizePlanType(value));
@@ -1522,7 +1521,7 @@
 
     function isNonRetryableUpiRedeemRetryError(message = '') {
       const text = normalizeString(message);
-      return /缺少\s*GPT\s*密码|缺少\s*2FA|登录需要手机验证码|登录需要邮箱一次性验证码|登录后需要手机|登录后需要邮箱|邮箱一次性验证码|手机号验证码|手机验证码|验证码页面|登录密码未通过|密码未通过|2FA\s*动态码被页面拒绝|账号登录态不一致|accessToken\s*属于|未读取到\s*accessToken|未进入\s*ChatGPT\s*已登录态|账号无资格|access[_-]?token\s*无效|access[_-]?token[\s\S]*(?:过期|失效|expired|invalid)|无效或已过期|未登录|会话已过期|重新登录|session\s*expired/i.test(text);
+      return /缺少\s*GPT\s*密码|缺少\s*2FA|登录需要邮箱一次性验证码|登录后需要邮箱|邮箱一次性验证码|验证码页面|登录密码未通过|密码未通过|2FA\s*动态码被页面拒绝|账号登录态不一致|accessToken\s*属于|未读取到\s*accessToken|未进入\s*ChatGPT\s*已登录态|账号无资格|access[_-]?token\s*无效|access[_-]?token[\s\S]*(?:过期|失效|expired|invalid)|无效或已过期|未登录|会话已过期|重新登录|session\s*expired/i.test(text);
     }
 
     function isAccessTokenInvalidMembershipError(error) {
@@ -2565,7 +2564,6 @@
         || pageState.verificationVisible
         || pageState.hasVerificationTarget
         || liveState === 'verification_page'
-        || liveState === 'phone_verification_page'
       );
       const shouldDiscardStaleVerificationFlags = pageStateHasFreshState && !pageStateIndicatesVerification;
       return {
@@ -2594,7 +2592,6 @@
         || snapshot.verificationVisible
         || snapshot.hasVerificationTarget
         || state === 'verification_page'
-        || state === 'phone_verification_page'
       );
     }
 
@@ -2604,14 +2601,6 @@
       return kind === 'email'
         || Boolean(snapshot.displayedEmail)
         || /\/email-verification(?:[/?#]|$)/i.test(pathAndUrl);
-    }
-
-    function isPhoneVerificationChallenge(snapshot = {}) {
-      const kind = normalizeVerificationKind(snapshot.verificationKind);
-      const state = normalizeString(snapshot.state);
-      return kind === 'phone'
-        || state === 'phone_verification_page'
-        || Boolean(snapshot.phoneVerificationPage);
     }
 
     function isTotpVerificationChallenge(snapshot = {}) {
@@ -2676,8 +2665,6 @@
 
     function buildLoginFailureReason(snapshot = {}, fallback = '') {
       const state = normalizeString(snapshot.state);
-      if (state === 'phone_verification_page' || snapshot.phoneVerificationPage) return '登录后需要手机号验证码';
-      if (state === 'add_phone_page' || snapshot.addPhonePage) return '登录后需要添加/验证手机号';
       if (state === 'verification_page' || snapshot.verificationVisible) {
         if (isEmailVerificationChallenge(snapshot)) return '登录后需要邮箱一次性验证码';
         if (isTotpVerificationChallenge(snapshot)) return '登录后仍停留在 2FA 验证码页面';
@@ -2897,9 +2884,6 @@
         if (codeResult?.invalidCode) {
           throw new Error(`2FA 动态码被页面拒绝：${codeResult.errorText || 'Incorrect code'}`);
         }
-        if (codeResult?.addPhonePage) {
-          throw new Error('登录后需要添加/验证手机号');
-        }
         return null;
       } catch (error) {
         if (isMembershipStopError(error)) throw error;
@@ -2999,9 +2983,6 @@
           );
           return currentSession;
         }
-        if (isPhoneVerificationChallenge(loginChallenge)) {
-          throw new Error('登录需要手机验证码，备份会员核验暂不处理手机号验证。');
-        }
         if (isEmailVerificationChallenge(loginChallenge)) {
           throw new Error('登录需要邮箱一次性验证码，不能使用 2FA 动态码；请先在网页完成登录验证或换用不触发邮箱验证码的环境后重试。');
         }
@@ -3027,9 +3008,6 @@
             'warn'
           );
         } else {
-          if (isPhoneVerificationChallenge(latestChallenge)) {
-            throw new Error('登录需要手机验证码，备份会员核验暂不处理手机号验证。');
-          }
           if (isEmailVerificationChallenge(latestChallenge)) {
             throw new Error('登录需要邮箱一次性验证码，不能使用 2FA 动态码；请先在网页完成登录验证或换用不触发邮箱验证码的环境后重试。');
           }

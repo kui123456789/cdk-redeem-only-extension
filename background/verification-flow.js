@@ -508,8 +508,8 @@
       const prioritized = [];
       const fallback = [];
       const visited = new Set();
-      const priorityKeyPattern = /(?:message|sms|body|text|content|mail|email|subject|snippet|code|otp|verification)/i;
-      const metadataKeyPattern = /(?:order|id|phone|time|date|expire|created|updated|status|count|timestamp)/i;
+      const priorityKeyPattern = /(?:message|body|text|content|mail|email|subject|snippet|code|otp|verification)/i;
+      const metadataKeyPattern = /(?:order|id|time|date|expire|created|updated|status|count|timestamp)/i;
 
       function visit(value, key = '') {
         if (value === null || value === undefined) {
@@ -1434,7 +1434,7 @@
           return false;
         }
         const path = String(parsed.pathname || '');
-        if (/^\/(?:auth\/|create-account\/|email-verification|log-in|add-phone)(?:[/?#]|$)/i.test(path)) {
+        if (/^\/(?:auth\/|create-account\/|email-verification|log-in)(?:[/?#]|$)/i.test(path)) {
           return false;
         }
         return true;
@@ -1470,22 +1470,6 @@
           return false;
         }
         return /\/create-account-enroll-passkey(?:[/?#]|$)/i.test(String(parsed.pathname || ''));
-      } catch {
-        return false;
-      }
-    }
-
-    function isPhoneVerificationOrAddPhonePageUrl(rawUrl) {
-      const url = String(rawUrl || '').trim();
-      if (!url) return false;
-
-      try {
-        const parsed = new URL(url);
-        const host = String(parsed.hostname || '').toLowerCase();
-        if (!['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(host)) {
-          return false;
-        }
-        return /\/(?:add-phone|phone-verification|contact-verification)(?:[/?#]|$)/i.test(String(parsed.pathname || ''));
       } catch {
         return false;
       }
@@ -1617,15 +1601,6 @@
             };
           }
 
-          if (isPhoneVerificationOrAddPhonePageUrl(currentUrl)) {
-            return {
-              success: true,
-              reason: 'phone_verification',
-              addPhonePage: true,
-              skipProfileStep: false,
-              url: currentUrl,
-            };
-          }
         } catch (error) {
           const message = String(error?.message || error || '').trim();
           if (/^(?:CF_SECURITY_BLOCKED::|SIGNUP_USER_ALREADY_EXISTS::)/i.test(message)) {
@@ -1653,8 +1628,6 @@
           return '注册资料页';
         case 'passkey_enrollment':
           return '通行密钥页';
-        case 'phone_verification':
-          return '手机号验证页';
         default:
           return '后续页面';
       }
@@ -1665,7 +1638,6 @@
         success: true,
         assumed: true,
         transportRecovered: true,
-        addPhonePage: Boolean(fallback.addPhonePage),
         passkeyEnrollmentRequired: Boolean(fallback.passkeyEnrollmentRequired),
         skipProfileStep: Boolean(fallback.skipProfileStep),
         url: fallback.url || '',
@@ -1728,16 +1700,7 @@
             return {
               success: true,
               reason: 'oauth_consent_page',
-              addPhonePage: false,
               url: authUrl,
-            };
-          }
-          if (authState === 'add_phone_page' || authState === 'phone_verification_page') {
-            return {
-              success: true,
-              reason: 'add_phone_page',
-              addPhonePage: true,
-              url: authUrl || 'https://auth.openai.com/add-phone',
             };
           }
           if (authState === 'login_timeout_error_page') {
@@ -1863,9 +1826,6 @@
 
       if (response?.error) {
         throw new Error(response.error);
-      }
-      if (step === 8 && response?.addPhoneDetected) {
-        throw new Error(`步骤 ${completionStep}：验证码提交后页面进入手机号页面，当前流程无法继续自动授权。 URL: https://auth.openai.com/add-phone`);
       }
       if (!response?.confirmed) {
         throw new Error(`步骤 ${completionStep}：已取消手动${verificationLabel}验证码确认。`);
@@ -2721,22 +2681,14 @@
               pollIntervalMs: 300,
             });
             if (fallback.success) {
-              if (fallback.addPhonePage) {
-                await addLog('验证码提交后通信中断，但页面已进入手机号验证页，按提交成功继续。', 'warn', {
-                  step: completionStep,
-                  stepKey: 'fetch-login-code',
-                });
-              } else {
-                await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
-                  step: completionStep,
-                  stepKey: 'fetch-login-code',
-                });
-              }
+              await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
+                step: completionStep,
+                stepKey: 'fetch-login-code',
+              });
               return {
                 success: true,
                 assumed: true,
                 transportRecovered: true,
-                addPhonePage: Boolean(fallback.addPhonePage),
                 url: fallback.url || '',
               };
             }
@@ -2771,22 +2723,14 @@
               };
             }
             if (fallback.success) {
-              if (fallback.addPhonePage) {
-                await addLog('验证码提交后通信中断，但页面已进入手机号验证页，按提交成功继续。', 'warn', {
-                  step: completionStep,
-                  stepKey: 'fetch-login-code',
-                });
-              } else {
-                await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
-                  step: completionStep,
-                  stepKey: 'fetch-login-code',
-                });
-              }
+              await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
+                step: completionStep,
+                stepKey: 'fetch-login-code',
+              });
               return {
                 success: true,
                 assumed: true,
                 transportRecovered: true,
-                addPhonePage: Boolean(fallback.addPhonePage),
                 url: fallback.url || '',
               };
             }
@@ -3148,7 +3092,6 @@
         await completeNodeFromBackground(completionNodeId, {
           emailTimestamp: result.emailTimestamp,
           code: result.code,
-          phoneVerificationRequired: Boolean(submitResult.addPhonePage),
           ...(step === 4 && (submitResult?.passwordSubmittedAfterVerification || options.passwordSubmittedAfterVerification) ? { passwordSubmittedAfterVerification: true } : {}),
           ...(step === 4 && submitResult?.skipProfileStep ? { skipProfileStep: true } : {}),
           ...(step === 4 && submitResult?.skipProfileStepReason
@@ -3160,7 +3103,6 @@
           handled: true,
           code: result.code,
           emailTimestamp: result.emailTimestamp,
-          phoneVerificationRequired: Boolean(submitResult.addPhonePage),
           url: submitResult.url || '',
           verificationUrl: result.verificationUrl,
         };
@@ -3401,7 +3343,6 @@
           await completeNodeFromBackground(completionNodeId, {
             emailTimestamp: result.emailTimestamp,
             code: result.code,
-            phoneVerificationRequired: Boolean(submitResult.addPhonePage),
             ...(step === 4 && (submitResult?.passwordSubmittedAfterVerification || options.passwordSubmittedAfterVerification) ? { passwordSubmittedAfterVerification: true } : {}),
             ...(step === 4 && submitResult?.skipProfileStep ? { skipProfileStep: true } : {}),
             ...(step === 4 && submitResult?.skipProfileStepReason
@@ -3410,7 +3351,6 @@
           });
           triggerPostSuccessMailboxCleanup(step, mail);
           return {
-            phoneVerificationRequired: Boolean(submitResult.addPhonePage),
             url: submitResult.url || '',
           };
         }

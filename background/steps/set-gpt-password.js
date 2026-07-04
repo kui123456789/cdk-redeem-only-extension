@@ -67,7 +67,7 @@
         return false;
       }
       const path = String(parsed.pathname || '');
-      return !/^\/(?:auth\/|reset-password\/|create-account\/|email-verification|log-in|login|add-phone)(?:[/?#]|$)/i.test(path);
+      return !/^\/(?:auth\/|reset-password\/|create-account\/|email-verification|log-in|login)(?:[/?#]|$)/i.test(path);
     } catch {
       return /^https?:\/\/(?:www\.)?(?:chatgpt\.com|chat\.openai\.com)(?:[/?#]|$)/i.test(String(url || ''));
     }
@@ -157,30 +157,19 @@
       };
     }
 
-    function normalizePasswordAccountIdentifierType(value = '') {
-      return String(value || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email';
-    }
-
-    function normalizePasswordAccountIdentifierValue(type, value = '') {
-      const normalizedType = normalizePasswordAccountIdentifierType(type);
+    function normalizePasswordAccountIdentifierValue(value = '') {
       const normalizedValue = normalizeString(value);
-      return normalizedType === 'email' ? normalizedValue.toLowerCase() : normalizedValue;
+      return normalizedValue.toLowerCase();
     }
 
     function isStatePasswordForIdentity(state = {}, identity = {}) {
       const password = normalizeString(state?.password);
       if (!password) return false;
-      const accountIdentifier = normalizePasswordAccountIdentifierValue(
-        identity.accountIdentifierType,
-        identity.accountIdentifier
-      );
+      const accountIdentifier = normalizePasswordAccountIdentifierValue(identity.accountIdentifier);
       if (!accountIdentifier) return false;
-      const stateIdentifier = normalizePasswordAccountIdentifierValue(
-        state?.passwordAccountIdentifierType,
-        state?.passwordAccountIdentifier
-      );
-      const stateType = normalizePasswordAccountIdentifierType(state?.passwordAccountIdentifierType);
-      const identityType = normalizePasswordAccountIdentifierType(identity.accountIdentifierType);
+      const stateIdentifier = normalizePasswordAccountIdentifierValue(state?.passwordAccountIdentifier);
+      const stateType = 'email';
+      const identityType = 'email';
       return Boolean(stateIdentifier && stateIdentifier === accountIdentifier && stateType === identityType);
     }
 
