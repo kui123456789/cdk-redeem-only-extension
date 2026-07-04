@@ -15,6 +15,7 @@ importScripts(
   'background/registration-email-state.js',
   'background/workflow-engine.js',
   'background/runtime-state.js',
+  'background/flow-definition-resolver.js',
   'background/generated-email-helpers.js',
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
@@ -851,6 +852,40 @@ function normalizePlusPaymentMethod(value = '') {
   return PLUS_PAYMENT_METHOD_UPI;
 }
 
+const flowDefinitionResolver = self.MultiPageFlowDefinitionResolver?.createFlowDefinitionResolver?.({
+  defaultActiveFlowId: DEFAULT_ACTIVE_FLOW_ID,
+  finalOauthChainStartStep: FINAL_OAUTH_CHAIN_START_STEP,
+  getPanelMode: (state) => getPanelMode(state),
+  getRootScope: () => self,
+  getWorkflowEngine: () => {
+    try {
+      return workflowEngine || null;
+    } catch {
+      return null;
+    }
+  },
+  isPlusModeState,
+  normalStepDefinitions: NORMAL_STEP_DEFINITIONS,
+  normalStepIds: NORMAL_STEP_IDS,
+  normalizePlusAccountAccessStrategyForState,
+  normalizePlusPaymentMethod,
+  plusAccountAccessStrategyCpaSession: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
+  plusAccountAccessStrategySub2ApiSession: PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
+  plusStepDefinitions: PLUS_UPI_STEP_DEFINITIONS,
+  plusStepIds: PLUS_UPI_STEP_IDS,
+  plusUpiCpaSessionStepDefinitions: PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS,
+  plusUpiRedeemOnlyStepDefinitions: PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS,
+  plusUpiSub2ApiSessionStepDefinitions: PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS,
+  signupMethodEmail: SIGNUP_METHOD_EMAIL,
+});
+
+function requireFlowDefinitionResolver() {
+  if (!flowDefinitionResolver) {
+    throw new Error('流程定义解析模块未加载。');
+  }
+  return flowDefinitionResolver;
+}
+
 function normalizeCardHelperHelperPhoneMode(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   return normalized === 'auto' || normalized === 'builtin' ? 'auto' : 'manual';
@@ -891,167 +926,59 @@ function resolveContributionModeRoutingState(state = {}) {
 }
 
 function getSignupMethodForStepDefinitions(state = {}) {
-  return SIGNUP_METHOD_EMAIL;
+  return requireFlowDefinitionResolver().getSignupMethodForStepDefinitions(state);
 }
 
 function getStepDefinitionsForState(state = {}) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.MultiPageStepDefinitions?.getSteps) {
-    const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
-    const activeFlowId = String(state?.activeFlowId || '').trim().toLowerCase() || defaultFlowId;
-    const panelMode = typeof getPanelMode === 'function'
-      ? getPanelMode(state)
-      : String(state?.panelMode || '').trim().toLowerCase() || 'cpa';
-    const definitions = rootScope.MultiPageStepDefinitions.getSteps({
-      activeFlowId,
-      panelMode,
-      plusModeEnabled: isPlusModeState(state),
-      plusPaymentMethod: normalizePlusPaymentMethod(state?.plusPaymentMethod),
-      plusAccountAccessStrategy: normalizePlusAccountAccessStrategyForState(state),
-      signupMethod: SIGNUP_METHOD_EMAIL,
-      upiRedeemStopAfterRedeem: Boolean(state?.upiRedeemStopAfterRedeem ?? state?.pixRedeemStopAfterRedeem),
-      upiRedeemContinueAfterRedeem: Boolean(state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem),
-      totpMfaAfterProfileEnabled: state?.totpMfaAfterProfileEnabled !== false,
-    });
-    if (Array.isArray(definitions)) {
-      return definitions;
-    }
-  }
-  const activeFlowId = String(state?.activeFlowId || '').trim().toLowerCase();
-  if (activeFlowId && activeFlowId !== DEFAULT_ACTIVE_FLOW_ID) {
-    return [];
-  }
-  if (!isPlusModeState(state)) {
-    return NORMAL_STEP_DEFINITIONS;
-  }
-  const plusAccountAccessStrategy = normalizePlusAccountAccessStrategyForState(state);
-  if ((state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem) !== true) {
-    return PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS;
-  }
-  if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-    return PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS;
-  }
-  if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-    return PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS;
-  }
-  return PLUS_UPI_STEP_DEFINITIONS;
+  return requireFlowDefinitionResolver().getStepDefinitionsForState(state);
 }
 
 function getStepIdsForState(state = {}) {
-  const definitions = getStepDefinitionsForState(state);
-  if (Array.isArray(definitions) && definitions.length) {
-    return definitions
-      .map((definition) => Number(definition?.id))
-      .filter(Number.isFinite)
-      .sort((left, right) => left - right);
-  }
-  if (!isPlusModeState(state)) {
-    return NORMAL_STEP_IDS;
-  }
-  return PLUS_UPI_STEP_IDS;
+  return requireFlowDefinitionResolver().getStepIdsForState(state);
 }
 
 function getLastStepIdForState(state = {}) {
-  const ids = getStepIdsForState(state);
-  if (ids.length) {
-    return ids[ids.length - 1];
-  }
-  return String(state?.activeFlowId || '').trim().toLowerCase() === DEFAULT_ACTIVE_FLOW_ID ? 10 : 0;
+  return requireFlowDefinitionResolver().getLastStepIdForState(state);
 }
 
 function getAuthChainStartStepId(state = {}) {
-  const authStepId = typeof getStepIdByKeyForState === 'function'
-    ? getStepIdByKeyForState('oauth-login', state)
-    : null;
-  if (Number.isInteger(authStepId) && authStepId > 0) {
-    return authStepId;
-  }
-  return isPlusModeState(state) ? 10 : FINAL_OAUTH_CHAIN_START_STEP;
+  return requireFlowDefinitionResolver().getAuthChainStartStepId(state);
 }
 
 function getStepDefinitionForState(step, state = {}) {
-  const numericStep = Number(step);
-  return getStepDefinitionsForState(state).find((definition) => Number(definition.id) === numericStep) || null;
+  return requireFlowDefinitionResolver().getStepDefinitionForState(step, state);
 }
 
 function getStepIdByKeyForState(stepKey, state = {}) {
-  const normalizedKey = String(stepKey || '').trim();
-  if (!normalizedKey) return null;
-  const ids = getStepIdsForState(state);
-  for (const id of ids) {
-    if (String(getStepDefinitionForState(id, state)?.key || '').trim() === normalizedKey) {
-      return Number(id);
-    }
-  }
-  return null;
+  return requireFlowDefinitionResolver().getStepIdByKeyForState(stepKey, state);
 }
 
 function getNodeDefinitionsForState(state = {}) {
-  if (workflowEngine?.getNodesForState) {
-    return workflowEngine.getNodesForState(state);
-  }
-  if (self.MultiPageStepDefinitions?.getNodes) {
-    return self.MultiPageStepDefinitions.getNodes({
-      ...state,
-      activeFlowId: state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID,
-      flowId: state?.flowId || state?.activeFlowId || DEFAULT_ACTIVE_FLOW_ID,
-    });
-  }
-  return getStepDefinitionsForState(state)
-    .map((definition) => ({
-      legacyStepId: Number(definition?.id),
-      nodeId: String(definition?.key || '').trim(),
-      displayOrder: Number.isFinite(Number(definition?.order)) ? Number(definition.order) : Number(definition?.id),
-      title: String(definition?.title || '').trim(),
-      executeKey: String(definition?.key || '').trim(),
-    }))
-    .filter((definition) => definition.nodeId);
+  return requireFlowDefinitionResolver().getNodeDefinitionsForState(state);
 }
 
 function getNodeIdsForState(state = {}) {
-  if (workflowEngine?.getNodeIdsForState) {
-    return workflowEngine.getNodeIdsForState(state);
-  }
-  return getNodeDefinitionsForState(state).map((definition) => definition.nodeId).filter(Boolean);
+  return requireFlowDefinitionResolver().getNodeIdsForState(state);
 }
 
 function getNodeDefinitionForState(nodeId, state = {}) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  if (!normalizedNodeId) return null;
-  if (workflowEngine?.getNodeById) {
-    return workflowEngine.getNodeById(normalizedNodeId, state);
-  }
-  return getNodeDefinitionsForState(state).find((definition) => definition.nodeId === normalizedNodeId) || null;
+  return requireFlowDefinitionResolver().getNodeDefinitionForState(nodeId, state);
 }
 
 function getLastNodeIdForState(state = {}) {
-  const nodeIds = getNodeIdsForState(state);
-  return nodeIds[nodeIds.length - 1] || '';
+  return requireFlowDefinitionResolver().getLastNodeIdForState(state);
 }
 
 function getNodeIdByStepForState(step, state = {}) {
-  const definition = getStepDefinitionForState(step, state);
-  return String(definition?.key || '').trim();
+  return requireFlowDefinitionResolver().getNodeIdByStepForState(step, state);
 }
 
 function getStepIdByNodeIdForState(nodeId, state = {}) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  if (!normalizedNodeId) return null;
-  const node = getNodeDefinitionForState(normalizedNodeId, state);
-  const legacyStepId = Number(node?.legacyStepId);
-  if (Number.isInteger(legacyStepId) && legacyStepId > 0) {
-    return legacyStepId;
-  }
-  return getStepIdByKeyForState(normalizedNodeId, state);
+  return requireFlowDefinitionResolver().getStepIdByNodeIdForState(nodeId, state);
 }
 
 function getNodeTitleForState(nodeId, state = {}) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  if (!normalizedNodeId) return '';
-  if (workflowEngine?.getNodeTitle) {
-    return workflowEngine.getNodeTitle(normalizedNodeId, state);
-  }
-  return getNodeDefinitionForState(normalizedNodeId, state)?.title || normalizedNodeId;
+  return requireFlowDefinitionResolver().getNodeTitleForState(nodeId, state);
 }
 
 initializeSessionStorageAccess();

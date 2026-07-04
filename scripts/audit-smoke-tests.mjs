@@ -101,6 +101,7 @@ function checkCoreFiles() {
   [
     'background.js',
     'background/message-router.js',
+    'background/flow-definition-resolver.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
     'background/verification-flow.js',
@@ -132,6 +133,7 @@ function checkSyntax() {
 
 function checkStaticContracts() {
   const background = readText('background.js');
+  const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
   const downloadService = readText('sidepanel/download-service.js');
@@ -157,6 +159,11 @@ function checkStaticContracts() {
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
   assertIncludes(settingsTransferManager, 'multipage-settings-', 'settings export filename');
   assertIncludes(background, 'containsSensitiveRuntimeData: true', 'settings export sensitive data marker');
+  assertIncludes(background, "'background/flow-definition-resolver.js'", 'background flow resolver script load');
+  assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
+  assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
+  assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
+  assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
 
   [
     'btn-upi-redeem-cdkey-status-refresh',
@@ -232,6 +239,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
   assertFileLineCountAtMost('background.js', 20000, 'background service worker growth guard');
+  assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7000, 'membership checker growth guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
