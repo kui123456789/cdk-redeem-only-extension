@@ -315,14 +315,14 @@ const RESEND_VERIFICATION_CODE_PATTERN = /重新发送(?:验证码)?|再次发�
 const PHONE_RESEND_SERVER_ERROR_PREFIX = 'PHONE_RESEND_SERVER_ERROR::';
 const CONTACT_VERIFICATION_SERVER_ERROR_PATTERN = /this\s+page\s+isn['’]?t\s+working|currently\s+unable\s+to\s+handle\s+this\s+request|http\s+error\s+500|500\s+internal\s+server\s+error/i;
 
+function getSignupDomUtils() {
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  return rootScope.MultiPageSignupDomUtils || {};
+}
+
 function isVisibleElement(el) {
-  if (!el) return false;
-  const style = window.getComputedStyle(el);
-  const rect = el.getBoundingClientRect();
-  return style.display !== 'none'
-    && style.visibility !== 'hidden'
-    && rect.width > 0
-    && rect.height > 0;
+  const helper = getSignupDomUtils().isVisibleElement;
+  return typeof helper === 'function' ? helper(el) : false;
 }
 
 function getVisibleSplitVerificationInputs() {
@@ -331,24 +331,8 @@ function getVisibleSplitVerificationInputs() {
 }
 
 function getAssociatedInputText(input) {
-  const parts = [
-    input?.getAttribute?.('aria-label'),
-    input?.getAttribute?.('placeholder'),
-    input?.getAttribute?.('name'),
-    input?.getAttribute?.('id'),
-    input?.getAttribute?.('data-testid'),
-  ];
-  try {
-    Array.from(input?.labels || []).forEach((label) => {
-      parts.push(label?.textContent || '');
-    });
-  } catch {}
-  let node = input?.parentElement || null;
-  for (let depth = 0; node && depth < 3; depth += 1) {
-    parts.push(node.textContent || '');
-    node = node.parentElement;
-  }
-  return parts.filter(Boolean).join(' ');
+  const helper = getSignupDomUtils().getAssociatedInputText;
+  return typeof helper === 'function' ? helper(input) : '';
 }
 
 function getFallbackVerificationCodeInput() {
@@ -436,22 +420,13 @@ function getLoginVerificationKind() {
 }
 
 function getActionText(el) {
-  return [
-    el?.textContent,
-    el?.value,
-    el?.getAttribute?.('aria-label'),
-    el?.getAttribute?.('title'),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const helper = getSignupDomUtils().getActionText;
+  return typeof helper === 'function' ? helper(el) : '';
 }
 
 function isActionEnabled(el) {
-  return Boolean(el)
-    && !el.disabled
-    && el.getAttribute('aria-disabled') !== 'true';
+  const helper = getSignupDomUtils().isActionEnabled;
+  return typeof helper === 'function' ? helper(el) : false;
 }
 
 function findOneTimeCodeLoginTrigger() {
