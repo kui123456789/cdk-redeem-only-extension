@@ -13,17 +13,6 @@
       'sourceLastUrls',
       'flowStartTime',
     ]);
-    const RUNTIME_PROXY_FIELDS = Object.freeze([
-      'removedNetworkApiPool',
-      'removedNetworkApiCurrentIndex',
-      'removedNetworkApiCurrent',
-      'removedNetworkAccountPool',
-      'removedNetworkAccountCurrentIndex',
-      'removedNetworkAccountCurrent',
-      'removedNetworkPool',
-      'removedNetworkCurrentIndex',
-      'removedNetworkCurrent',
-    ]);
     const OPENAI_FLOW_FIELD_GROUPS = Object.freeze({
       auth: Object.freeze([
         'oauthUrl',
@@ -207,15 +196,10 @@
       };
     }
 
-    function buildServiceState(baseValue = {}, state = {}) {
-      const base = cloneValue(normalizePlainObject(baseValue));
-      return {
-        ...base,
-        proxy: {
-          ...cloneValue(normalizePlainObject(base.proxy)),
-          ...pickDefinedFields(state, RUNTIME_PROXY_FIELDS),
-        },
-      };
+    function buildServiceState(baseValue = {}) {
+      const next = cloneValue(normalizePlainObject(baseValue));
+      delete next.proxy;
+      return next;
     }
 
     function flattenOpenAiFlowState(flowState = {}) {
@@ -261,9 +245,7 @@
         currentNodeId: '',
         nodeStatuses: {},
         sharedState: {},
-        serviceState: {
-          proxy: {},
-        },
+        serviceState: {},
         flowState: {
           openai: {
             auth: {},
@@ -327,7 +309,7 @@
         currentNodeId,
         nodeStatuses,
         sharedState: buildSharedState(baseRuntimeState.sharedState, state),
-        serviceState: buildServiceState(baseRuntimeState.serviceState, state),
+        serviceState: buildServiceState(baseRuntimeState.serviceState),
         flowState: buildOpenAiFlowState(baseRuntimeState.flowState, state),
       };
     }
@@ -342,7 +324,6 @@
       }
       const runtimeState = normalizePlainObject(updates.runtimeState);
       const sharedState = normalizePlainObject(updates.sharedState);
-      const serviceState = normalizePlainObject(updates.serviceState);
       const flowState = normalizePlainObject(updates.flowState);
 
       if (Object.prototype.hasOwnProperty.call(runtimeState, 'activeFlowId')) {
@@ -370,16 +351,6 @@
         Object.assign(
           next,
           pickDefinedFields(normalizePlainObject(runtimeState.sharedState), RUNTIME_SHARED_FIELDS)
-        );
-      }
-
-      const serviceProxy = normalizePlainObject(serviceState.proxy);
-      Object.assign(next, pickDefinedFields(serviceProxy, RUNTIME_PROXY_FIELDS));
-      if (Object.prototype.hasOwnProperty.call(runtimeState, 'serviceState')) {
-        const runtimeServiceState = normalizePlainObject(runtimeState.serviceState);
-        Object.assign(
-          next,
-          pickDefinedFields(normalizePlainObject(runtimeServiceState.proxy), RUNTIME_PROXY_FIELDS)
         );
       }
 
@@ -431,7 +402,6 @@
     return {
       DEFAULT_ACTIVE_FLOW_ID,
       OPENAI_FLOW_FIELD_GROUPS,
-      RUNTIME_PROXY_FIELDS,
       RUNTIME_SHARED_FIELDS,
       buildDefaultRuntimeState: buildRuntimeStateDefault,
       buildSessionStatePatch,
@@ -444,6 +414,4 @@
     createRuntimeStateHelpers,
   };
 });
-
-
 

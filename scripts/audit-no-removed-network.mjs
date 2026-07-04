@@ -4,12 +4,64 @@ import process from 'node:process';
 
 const ROOT_DIR = process.cwd();
 const TARGET_FILES = [
+  'manifest.json',
   'background.js',
   'background/message-router.js',
+  'background/runtime-state.js',
+  'background/settings-normalizers.js',
   'sidepanel/sidepanel.js',
+  'sidepanel/sidepanel.css',
   'sidepanel/sidepanel.html',
+  'sidepanel/settings-transfer-manager.js',
   'sidepanel/styles/settings.css',
   'scripts/audit-smoke-tests.mjs',
+];
+
+const FORMER_STORAGE_KEY_PREFIX = 'removed' + 'Network';
+const FORMER_STORAGE_KEY_SUFFIXES = [
+  'AccountCurrent',
+  'AccountCurrentIndex',
+  'AccountLifeMinutes',
+  'AccountList',
+  'AccountPool',
+  'AccountSessionPrefix',
+  'ApiCurrent',
+  'ApiCurrentIndex',
+  'ApiPool',
+  'ApiUrl',
+  'Applied',
+  'AppliedAt',
+  'AppliedError',
+  'AppliedExitDetecting',
+  'AppliedExitEndpoint',
+  'AppliedExitError',
+  'AppliedExitIp',
+  'AppliedExitRegion',
+  'AppliedExitSource',
+  'AppliedHasAuth',
+  'AppliedHost',
+  'AppliedPort',
+  'AppliedProvider',
+  'AppliedReason',
+  'AppliedRegion',
+  'AppliedWarning',
+  'AutoSyncEnabled',
+  'AutoSyncIntervalMinutes',
+  'Current',
+  'CurrentIndex',
+  'Enabled',
+  'ExitRegion',
+  'Host',
+  'Mode',
+  'Password',
+  'Pool',
+  'PoolTargetCount',
+  'Port',
+  'Protocol',
+  'Region',
+  'Service',
+  'ServiceProfiles',
+  'Username',
 ];
 
 const REMNANT_PATTERNS = [
@@ -19,6 +71,11 @@ const REMNANT_PATTERNS = [
   { label: 'removed-network token', pattern: /removed-network/i },
   { label: 'Removed Network label', pattern: /Removed\s+Network/i },
   { label: 'IP proxy pool text', pattern: /(?:IP\s*代理|IP\s*proxy|proxy\s+pool|代理池)/i },
+  { label: 'runtime proxy field mapping', pattern: /RUNTIME_PROXY_FIELDS|serviceState\.proxy/ },
+  ...FORMER_STORAGE_KEY_SUFFIXES.map((suffix) => ({
+    label: `former storage key ${FORMER_STORAGE_KEY_PREFIX}${suffix}`,
+    pattern: new RegExp(`${FORMER_STORAGE_KEY_PREFIX}${suffix}`),
+  })),
 ];
 
 const matches = [];

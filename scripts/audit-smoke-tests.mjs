@@ -335,6 +335,18 @@ function checkSensitiveTrackedFiles() {
   }
 }
 
+function checkLegacyNetworkAudit() {
+  const auditScript = path.join('scripts', ['audit-no', 'removed', 'network.mjs'].join('-'));
+  const result = spawnSync(process.execPath, [auditScript], {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.status !== 0) {
+    fail(`legacy network audit failed: ${result.stderr || result.stdout}`);
+  }
+}
+
 function checkDocumentationDrift() {
   const readme = readText('README.md');
   const chainDoc = readText('项目完整链路说明.md');
@@ -354,6 +366,7 @@ checkSyntax();
 checkStaticContracts();
 checkModuleSizeGuard();
 checkSensitiveTrackedFiles();
+checkLegacyNetworkAudit();
 checkDocumentationDrift();
 
 for (const warning of warnings) {

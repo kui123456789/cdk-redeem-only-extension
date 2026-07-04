@@ -5,10 +5,6 @@
    Themes: Light (default) + Dark (toggle)
    ============================================================ */
 
-#removed-network-section {
-  display: none !important;
-}
-
 body.upi-only #btn-repo-home,
 body.upi-only #btn-contribution-mode,
 body.upi-only #btn-release-log,
@@ -59,7 +55,6 @@ body.upi-only #row-legacyPay-phone,
 body.upi-only #row-legacyPay-otp,
 body.upi-only #row-legacyPay-pin,
 body.upi-only #removedPaymentWorker-section,
-body.upi-only #removed-network-section,
 body.upi-only #auth-verification-section,
 body.upi-only #oauth-status-section {
   display: none !important;

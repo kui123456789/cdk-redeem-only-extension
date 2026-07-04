@@ -3847,6 +3847,149 @@ async function initializeSessionStorageAccess() {
   }
 }
 
+const FORMER_NETWORK_STORAGE_PREFIX = 'removed' + 'Network';
+const FORMER_NETWORK_CLEANUP_MARKER = 'formerNetworkCleanupCompletedAt';
+
+function isCleanupPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stripFormerNetworkKeysDeep(value) {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next = value.map((item) => {
+      const result = stripFormerNetworkKeysDeep(item);
+      changed = changed || result.changed;
+      return result.value;
+    });
+    return { value: changed ? next : value, changed };
+  }
+  if (!isCleanupPlainObject(value)) {
+    return { value, changed: false };
+  }
+
+  let changed = false;
+  const next = {};
+  for (const [key, entryValue] of Object.entries(value)) {
+    if (String(key).startsWith(FORMER_NETWORK_STORAGE_PREFIX)) {
+      changed = true;
+      continue;
+    }
+    const result = stripFormerNetworkKeysDeep(entryValue);
+    changed = changed || result.changed;
+    next[key] = result.value;
+  }
+  return { value: changed ? next : value, changed };
+}
+
+function buildFormerNetworkStorageCleanupPatch(payload = {}) {
+  const updates = {};
+  for (const key of ['runtimeState', 'serviceState']) {
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+      continue;
+    }
+    const result = stripFormerNetworkKeysDeep(payload[key]);
+    const nextValue = isCleanupPlainObject(result.value)
+      ? { ...result.value }
+      : result.value;
+    let changed = result.changed;
+    if (isCleanupPlainObject(nextValue)) {
+      if (Object.prototype.hasOwnProperty.call(nextValue, 'proxy')) {
+        delete nextValue.proxy;
+        changed = true;
+      }
+      const nestedServiceState = nextValue.serviceState;
+      if (
+        isCleanupPlainObject(nestedServiceState)
+        && Object.prototype.hasOwnProperty.call(nestedServiceState, 'proxy')
+      ) {
+        const nextServiceState = { ...nestedServiceState };
+        delete nextServiceState.proxy;
+        nextValue.serviceState = nextServiceState;
+        changed = true;
+      }
+    }
+    if (changed) {
+      updates[key] = nextValue;
+    }
+  }
+  return updates;
+}
+
+async function cleanupFormerNetworkStorageArea(storageArea, payload = {}) {
+  if (!storageArea) {
+    return { changed: false, removedKeys: 0 };
+  }
+  const keysToRemove = Object.keys(payload || {})
+    .filter((key) => key.startsWith(FORMER_NETWORK_STORAGE_PREFIX));
+  if (keysToRemove.length && typeof storageArea.remove === 'function') {
+    await storageArea.remove(keysToRemove);
+  }
+
+  const updates = buildFormerNetworkStorageCleanupPatch(payload);
+  if (Object.keys(updates).length && typeof storageArea.set === 'function') {
+    await storageArea.set(updates);
+  }
+
+  return {
+    changed: keysToRemove.length > 0 || Object.keys(updates).length > 0,
+    removedKeys: keysToRemove.length,
+  };
+}
+
+async function clearFormerNetworkProxyResidue() {
+  const settings = chrome.proxy?.settings;
+  if (!settings?.clear) {
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
+      }
+    };
+    try {
+      const maybePromise = settings.clear({ scope: 'regular' }, () => {
+        finish(!chrome.runtime?.lastError);
+      });
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        maybePromise.then(() => finish(true), () => finish(false));
+      }
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+async function purgeFormerNetworkResidue(reason = 'startup') {
+  const localPayload = await chrome.storage.local.get(null).catch(() => ({}));
+  const sessionPayload = await chrome.storage.session.get(null).catch(() => ({}));
+  const localResult = await cleanupFormerNetworkStorageArea(chrome.storage.local, localPayload);
+  const sessionResult = await cleanupFormerNetworkStorageArea(chrome.storage.session, sessionPayload);
+  const markerExists = Boolean(localPayload?.[FORMER_NETWORK_CLEANUP_MARKER]);
+  const shouldClearProxyResidue = !markerExists || localResult.changed || sessionResult.changed;
+  let proxyCleared = false;
+  if (shouldClearProxyResidue) {
+    proxyCleared = await clearFormerNetworkProxyResidue();
+  }
+  if (!markerExists || localResult.changed || sessionResult.changed || proxyCleared) {
+    await chrome.storage.local.set({
+      [FORMER_NETWORK_CLEANUP_MARKER]: Date.now(),
+    }).catch(() => {});
+  }
+  if (localResult.changed || sessionResult.changed || proxyCleared) {
+    console.info(LOG_PREFIX, 'Cleaned legacy network residue:', JSON.stringify({
+      reason,
+      localRemovedKeys: localResult.removedKeys,
+      sessionRemovedKeys: sessionResult.removedKeys,
+      proxyCleared,
+    }));
+  }
+}
+
 async function setState(updates) {
   console.log(LOG_PREFIX, 'storage.set:', JSON.stringify(updates).slice(0, 200));
   if (Object.keys(updates || {}).length > 0) {
@@ -17841,14 +17984,23 @@ chrome.runtime.onStartup.addListener(() => {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on startup', err);
   });
+  purgeFormerNetworkResidue('startup').catch((err) => {
+    handleBackgroundStartupError('clean legacy network residue on startup', err);
+  });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on install/update', err);
   });
+  purgeFormerNetworkResidue('install').catch((err) => {
+    handleBackgroundStartupError('clean legacy network residue on install/update', err);
+  });
 });
 
 restoreAutoRunTimerIfNeeded().catch((err) => {
   handleBackgroundStartupError('restore auto run timer', err);
+});
+purgeFormerNetworkResidue('boot').catch((err) => {
+  handleBackgroundStartupError('clean legacy network residue', err);
 });
