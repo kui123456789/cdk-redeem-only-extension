@@ -40,8 +40,6 @@
       STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS,
       throwIfStopped,
       waitForTabStableComplete = null,
-      phoneVerificationHelpers = null,
-      resolveSignupMethod = () => 'email',
     } = deps;
 
     function buildSignupProfileForVerificationStep() {
@@ -71,12 +69,6 @@
       }
 
       return String(state?.mail2925BaseEmail || '').trim().toLowerCase();
-    }
-
-    function isPhoneSignupState(state = {}) {
-      return resolveSignupMethod(state) === 'phone'
-        || state?.accountIdentifierType === 'phone'
-        || Boolean(state?.signupPhoneActivation);
     }
 
     function isRegisteredLoginTotpVerificationState(snapshot = null) {
@@ -174,7 +166,7 @@
     }
 
     function normalizePasswordAccountIdentifierType(value = '') {
-      return String(value || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email';
+      return 'email';
     }
 
     function normalizePasswordAccountIdentifierValue(type, value = '') {
@@ -185,31 +177,16 @@
 
     function resolvePasswordAccountIdentity(state = {}) {
       const rawType = normalizePasswordAccountIdentifierType(state?.accountIdentifierType);
-      const phoneNumber = String(
-        state?.signupPhoneNumber
-        || state?.phoneNumber
-        || (rawType === 'phone' ? state?.accountIdentifier : '')
-        || ''
-      ).trim();
       const email = String(
         state?.email
         || state?.registrationEmailState?.current
         || (rawType === 'email' ? state?.accountIdentifier : '')
         || ''
       ).trim();
-      if (rawType === 'phone' && phoneNumber) {
-        return {
-          accountIdentifierType: 'phone',
-          accountIdentifier: phoneNumber,
-          email,
-          phoneNumber,
-        };
-      }
       return {
         accountIdentifierType: 'email',
         accountIdentifier: email,
         email,
-        phoneNumber,
       };
     }
 
@@ -248,32 +225,6 @@
       }
       await addLog('步骤 4：步骤 3 已跳过且未设置自定义密码，已自动生成 GPT 密码用于注册后的密码页。', 'info');
       return password;
-    }
-
-    async function executeSignupPhoneCodeStep(state, signupTabId) {
-      if (typeof phoneVerificationHelpers?.completeSignupPhoneVerificationFlow !== 'function') {
-        throw new Error('步骤 4：手机号注册验证码流程不可用，接码模块尚未初始化。');
-      }
-
-      const signupProfile = buildSignupProfileForVerificationStep();
-      const result = await phoneVerificationHelpers.completeSignupPhoneVerificationFlow(signupTabId, {
-        state,
-        signupProfile,
-        password: state.password || state.customPassword || '',
-      });
-
-      if (result?.emailVerificationRequired || result?.emailVerificationPage) {
-        return result || {};
-      }
-
-      await completeNodeFromBackground('fetch-signup-code', {
-        phoneVerification: true,
-        code: result?.code || '',
-        ...(result?.passwordSubmittedAfterVerification ? { passwordSubmittedAfterVerification: true } : {}),
-        ...(result?.skipProfileStep ? { skipProfileStep: true } : {}),
-        ...(result?.skipProfileStepReason ? { skipProfileStepReason: result.skipProfileStepReason } : {}),
-      });
-      return result || {};
     }
 
     async function executeSignupEmailVerificationStep(state, stepStartedAt, verificationSessionKey, signupTabId = null) {
@@ -569,15 +520,6 @@
       if (prepareResult?.alreadyVerified) {
         await completeNodeFromBackground('fetch-signup-code', prepareResult?.skipProfileStep ? { skipProfileStep: true } : {});
         return;
-      }
-
-      if (isPhoneSignupState(state)) {
-        const phoneResult = await executeSignupPhoneCodeStep(stateWithPassword, signupTabId);
-        if (phoneResult?.emailVerificationRequired || phoneResult?.emailVerificationPage) {
-          await addLog('步骤 4：手机验证码已通过，OpenAI 要求继续邮箱验证，切换到邮箱验证码轮询。', 'info');
-          return executeSignupEmailVerificationStep(stateWithPassword, stepStartedAt, verificationSessionKey, signupTabId);
-        }
-        return phoneResult;
       }
 
       return executeSignupEmailVerificationStep(stateWithPassword, stepStartedAt, verificationSessionKey, signupTabId);

@@ -83,22 +83,6 @@
         'legacyPayHelperOtpRequestId',
         'legacyPayHelperOtpReferenceId',
       ]),
-      phoneVerification: Object.freeze([
-        'currentPhoneActivation',
-        'phoneNumber',
-        'currentPhoneVerificationCode',
-        'currentPhoneVerificationCountdownEndsAt',
-        'currentPhoneVerificationCountdownWindowIndex',
-        'currentPhoneVerificationCountdownWindowTotal',
-        'reusablePhoneActivation',
-        'freeReusablePhoneActivation',
-        'phoneReusableActivationPool',
-        'signupPhoneNumber',
-        'signupPhoneActivation',
-        'signupPhoneCompletedActivation',
-        'signupPhoneVerificationRequestedAt',
-        'signupPhoneVerificationPurpose',
-      ]),
       luckmail: Object.freeze([
         'currentLuckmailPurchase',
         'currentLuckmailMailCursor',
@@ -251,7 +235,6 @@
             auth: {},
             platformBinding: {},
             plus: {},
-            phoneVerification: {},
             luckmail: {},
             identity: {},
           },
@@ -414,4 +397,3 @@
     createRuntimeStateHelpers,
   };
 });
-

@@ -15,7 +15,6 @@
       clearAccountRunHistory,
       deleteAccountRunHistoryRecords,
       clearAutoRunTimerAlarm,
-      clearFreeReusablePhoneActivation,
       clearLuckmailRuntimeState,
       clearStopRequest,
       closeLocalhostCallbackTabs,
@@ -62,7 +61,6 @@
       retryUpiRedeemCdkeyJobs = null,
       checkUpiRedeemSubscriptionStatuses = null,
       refreshOAuthTimeoutWindowAfterCheckoutSuccess = null,
-      finalizePhoneActivationAfterSuccessfulFlow,
       finalizeStep3Completion,
       finalizeIcloudAliasAfterSuccessfulFlow,
       findHotmailAccount,
@@ -80,29 +78,15 @@
       getStepDefinitionForState,
       getStepIdsForState,
       getLastStepIdForState,
-      normalizeSignupMethod = (value = '') => String(value || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email',
-      canUsePhoneSignup = (state = {}) => {
-        const rootScope = typeof self !== 'undefined' ? self : globalThis;
-        const capabilityRegistry = rootScope.MultiPageFlowCapabilities?.createFlowCapabilityRegistry?.({
-          defaultFlowId: 'openai',
-        }) || null;
-        if (capabilityRegistry?.canUsePhoneSignup) {
-          return capabilityRegistry.canUsePhoneSignup(state);
-        }
-        return Boolean(state?.phoneVerificationEnabled)
-          && !Boolean(state?.plusModeEnabled)
-          && !Boolean(state?.contributionMode);
-      },
       resolveSignupMethod = (state = {}) => {
-        const method = normalizeSignupMethod(state?.signupMethod);
         const rootScope = typeof self !== 'undefined' ? self : globalThis;
         const capabilityRegistry = rootScope.MultiPageFlowCapabilities?.createFlowCapabilityRegistry?.({
           defaultFlowId: 'openai',
         }) || null;
         if (capabilityRegistry?.resolveSignupMethod) {
-          return capabilityRegistry.resolveSignupMethod(state, method);
+          return capabilityRegistry.resolveSignupMethod(state, 'email');
         }
-        return method === 'phone' && canUsePhoneSignup(state) ? 'phone' : 'email';
+        return 'email';
       },
       validateAutoRunStart = (state = {}, options = {}) => {
         const validationState = options?.state || state;
@@ -187,9 +171,6 @@
       setEmailState,
       setEmailStateSilently,
       persistRegistrationEmailState,
-      setFreeReusablePhoneActivation,
-      setSignupPhoneState,
-      setSignupPhoneStateSilently,
       setIcloudAliasPreservedState,
       setIcloudAliasUsedState,
       setLuckmailPurchaseDisabledState,
@@ -213,58 +194,6 @@
       upsertHotmailAccount,
       verifyHotmailAccount,
     } = deps;
-
-    function preserveKeyFromState(updates, currentState, key) {
-      if (!Object.prototype.hasOwnProperty.call(updates, key)) {
-        return;
-      }
-      if (currentState?.[key] !== undefined) {
-        updates[key] = currentState[key];
-      } else {
-        delete updates[key];
-      }
-    }
-
-    function preservePhoneReuseSettingsForPhoneSignup(updates, currentState = {}) {
-      if (!updates || typeof updates !== 'object') {
-        return;
-      }
-
-      if (
-        Object.prototype.hasOwnProperty.call(updates, 'removedPhoneReuseEnabled')
-        || Object.prototype.hasOwnProperty.call(updates, 'removedSmsMainReuseEnabled')
-      ) {
-        const currentReuseEnabled = currentState?.removedPhoneReuseEnabled ?? currentState?.removedSmsMainReuseEnabled;
-        if (currentReuseEnabled !== undefined) {
-          const normalizedReuseEnabled = Boolean(currentReuseEnabled);
-          updates.removedPhoneReuseEnabled = normalizedReuseEnabled;
-          updates.removedSmsMainReuseEnabled = normalizedReuseEnabled;
-        } else {
-          delete updates.removedPhoneReuseEnabled;
-          delete updates.removedSmsMainReuseEnabled;
-        }
-      }
-
-      preserveKeyFromState(updates, currentState, 'freePhoneReuseEnabled');
-      preserveKeyFromState(updates, currentState, 'freePhoneReuseAutoEnabled');
-      preserveKeyFromState(updates, currentState, 'phonePreferredActivation');
-    }
-
-    function forceDisablePhoneReuseForRemovedSmsVendorB(updates, currentState = {}) {
-      if (!updates || typeof updates !== 'object') {
-        return;
-      }
-      const nextProvider = normalizeRemovedPhoneProvider(
-        Object.prototype.hasOwnProperty.call(updates, 'removedPhoneProvider')
-          ? updates.removedPhoneProvider
-          : currentState?.removedPhoneProvider
-      );
-      if (nextProvider !== 'removed-sms-vendor-b') {
-        return;
-      }
-      updates.removedPhoneReuseEnabled = false;
-      updates.removedSmsMainReuseEnabled = false;
-    }
 
     async function appendManualAccountRunRecordIfNeeded(status, stateOverride = null, reason = '') {
       if (typeof appendAccountRunRecord !== 'function') {
@@ -2355,20 +2284,6 @@
       return ['completed', 'manual_completed', 'skipped', 'failed', 'stopped'].includes(currentStatus);
     }
 
-    function resolveSignupPhonePayload(payload = {}) {
-      const directPhone = String(
-        payload?.signupPhoneNumber
-        || payload?.phoneNumber
-        || ''
-      ).trim();
-      if (directPhone) {
-        return directPhone;
-      }
-      return String(payload?.accountIdentifierType || '').trim().toLowerCase() === 'phone'
-        ? String(payload?.accountIdentifier || '').trim()
-        : '';
-    }
-
     function resolveEmailIdentityPayload(payload = {}) {
       const directEmail = String(payload?.email || '').trim();
       if (directEmail) {
@@ -2379,40 +2294,11 @@
         : '';
     }
 
-    function hasPhoneSignupIdentity(state = {}) {
-      const identifierType = String(state?.accountIdentifierType || '').trim().toLowerCase();
-      return Boolean(
-        String(state?.signupPhoneNumber || '').trim()
-        || (identifierType === 'phone' && String(state?.accountIdentifier || '').trim())
-        || state?.signupPhoneActivation
-        || state?.signupPhoneCompletedActivation
-      );
-    }
-
-    function shouldPreservePhoneIdentityForEmailPayload(payload = {}, state = {}) {
-      const identifierType = String(payload?.accountIdentifierType || '').trim().toLowerCase();
-      if (identifierType === 'email') {
-        return false;
-      }
-      return hasPhoneSignupIdentity(state);
-    }
-
     async function persistEmailIdentityFromStepPayload(email, payload = {}, source = 'step_payload') {
       if (!email) {
         return;
       }
-      const state = await getState();
-      const preserveAccountIdentity = shouldPreservePhoneIdentityForEmailPayload(payload, state);
-      if (preserveAccountIdentity && typeof persistRegistrationEmailState === 'function') {
-        await persistRegistrationEmailState(state, email, {
-          source,
-          preserveAccountIdentity: true,
-        });
-        return;
-      }
-      await setEmailState(email, preserveAccountIdentity
-        ? { source, preserveAccountIdentity: true }
-        : { source });
+      await setEmailState(email, { source });
     }
 
     function normalizeAutomationWindowId(value) {
@@ -2445,25 +2331,6 @@
 
     async function syncStepAccountIdentityFromPayload(payload = {}) {
       const identifierType = String(payload?.accountIdentifierType || '').trim().toLowerCase();
-      const signupPhoneNumber = resolveSignupPhonePayload(payload);
-      if (identifierType === 'phone' || signupPhoneNumber) {
-        if (signupPhoneNumber) {
-          await setSignupPhoneStateSilently(signupPhoneNumber);
-        }
-        const updates = {};
-        if (Object.prototype.hasOwnProperty.call(payload, 'signupPhoneActivation')) {
-          updates.signupPhoneActivation = payload.signupPhoneActivation || null;
-        }
-        if (Object.prototype.hasOwnProperty.call(payload, 'signupPhoneCompletedActivation')) {
-          updates.signupPhoneCompletedActivation = payload.signupPhoneCompletedActivation || null;
-        }
-        if (Object.keys(updates).length) {
-          await setState(updates);
-          broadcastDataUpdate(updates);
-        }
-        return;
-      }
-
       const email = resolveEmailIdentityPayload(payload);
       if (identifierType === 'email' || email) {
         if (email) {
@@ -2473,20 +2340,15 @@
           return;
         }
         const updates = {
-          phoneNumber: '',
-          signupPhoneNumber: '',
-          signupPhoneActivation: null,
-          signupPhoneCompletedActivation: null,
-          signupPhoneVerificationRequestedAt: null,
-          signupPhoneVerificationPurpose: '',
           ...(email ? {
             accountIdentifierType: 'email',
             accountIdentifier: email,
           } : {}),
         };
-        await setSignupPhoneStateSilently(null);
-        await setState(updates);
-        broadcastDataUpdate(updates);
+        if (Object.keys(updates).length) {
+          await setState(updates);
+          broadcastDataUpdate(updates);
+        }
       }
     }
 
@@ -2554,10 +2416,6 @@
       return method === 'legacyPay' ? 'LegacyPay' : 'LegacyWallet';
     }
 
-    function shouldDeferHotmailUsedMarkForPhoneSignup(state = {}) {
-      return Boolean(isHotmailProvider?.(state)) && resolveSignupMethod(state) === 'phone';
-    }
-
     async function handlePlatformVerifyStepData(payload) {
       if (payload.localhostUrl) {
         await closeLocalhostCallbackTabs(payload.localhostUrl);
@@ -2602,9 +2460,6 @@
       if (typeof markCurrentRegistrationAccountUsed !== 'function') {
         await finalizeIcloudAliasAfterSuccessfulFlow(latestState);
       }
-      if (typeof finalizePhoneActivationAfterSuccessfulFlow === 'function') {
-        await finalizePhoneActivationAfterSuccessfulFlow(latestState);
-      }
     }
 
     async function handleStepData(step, payload) {
@@ -2643,7 +2498,6 @@
         if (
           latestState.currentHotmailAccountId
           && isHotmailProvider(latestState)
-          && !shouldDeferHotmailUsedMarkForPhoneSignup(latestState)
         ) {
           if (typeof markCurrentRegistrationAccountUsed === 'function') {
             await markCurrentRegistrationAccountUsed(latestState, {
@@ -2690,23 +2544,8 @@
 
       if (stepKey === 'fetch-login-code' || stepKey === 'fetch-bound-email-login-code') {
         await setState({
-          ...(payload.phoneVerification || payload.loginPhoneVerification ? {
-            currentPhoneVerificationCode: '',
-            signupPhoneVerificationRequestedAt: null,
-            signupPhoneVerificationPurpose: '',
-          } : {
-            lastEmailTimestamp: payload.emailTimestamp || null,
-          }),
+          lastEmailTimestamp: payload.emailTimestamp || null,
           loginVerificationRequestedAt: null,
-        });
-        return;
-      }
-
-      if (stepKey === 'post-login-phone-verification' || stepKey === 'post-bound-email-phone-verification') {
-        await setState({
-          currentPhoneVerificationCode: '',
-          signupPhoneVerificationRequestedAt: null,
-          signupPhoneVerificationPurpose: '',
         });
         return;
       }
@@ -2816,8 +2655,7 @@
             const step3Status = getNodeStatusByStep(3, latestState);
             if (step3Status !== 'running' && step3Status !== 'completed' && step3Status !== 'manual_completed') {
               await setNodeStatusByStep(3, 'skipped', latestState);
-              const identityLabel = payload.accountIdentifierType === 'phone' ? '手机号' : '邮箱';
-              await addLog(`步骤 2：提交${identityLabel}后页面直接进入验证码页，已自动跳过步骤 3。`, 'warn');
+              await addLog('步骤 2：提交邮箱后页面直接进入验证码页，已自动跳过步骤 3。', 'warn');
             }
           }
           break;
@@ -2831,10 +2669,7 @@
             const step5Status = getNodeStatusByStep(5, latestState);
             if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
               await setNodeStatusByStep(5, 'skipped', latestState);
-              if (
-                typeof markCurrentRegistrationAccountUsed === 'function'
-                && !shouldDeferHotmailUsedMarkForPhoneSignup(latestState)
-              ) {
+              if (typeof markCurrentRegistrationAccountUsed === 'function') {
                 await markCurrentRegistrationAccountUsed(latestState, {
                   logPrefix: '步骤 3 跳过步骤 5',
                   level: 'ok',
@@ -2849,13 +2684,7 @@
           break;
         case 4:
           await setState({
-            ...(payload.phoneVerification ? {
-              currentPhoneVerificationCode: '',
-              signupPhoneVerificationRequestedAt: null,
-              signupPhoneVerificationPurpose: '',
-            } : {
-              lastEmailTimestamp: payload.emailTimestamp || null,
-            }),
+            lastEmailTimestamp: payload.emailTimestamp || null,
             signupVerificationRequestedAt: null,
           });
           if (payload.passwordSubmittedAfterVerification) {
@@ -2878,10 +2707,7 @@
             const step5Status = getNodeStatusByStep(5, latestState);
             if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
               await setNodeStatusByStep(5, 'skipped', latestState);
-              if (
-                typeof markCurrentRegistrationAccountUsed === 'function'
-                && !shouldDeferHotmailUsedMarkForPhoneSignup(latestState)
-              ) {
+              if (typeof markCurrentRegistrationAccountUsed === 'function') {
                 await markCurrentRegistrationAccountUsed(latestState, {
                   logPrefix: '步骤 4 跳过步骤 5',
                   level: 'ok',
@@ -2908,16 +2734,10 @@
         case 8:
           {
             const step8StateUpdates = {
-              ...(payload.phoneVerification || payload.loginPhoneVerification ? {
-                currentPhoneVerificationCode: '',
-                signupPhoneVerificationRequestedAt: null,
-                signupPhoneVerificationPurpose: '',
-              } : {
-                lastEmailTimestamp: payload.emailTimestamp || null,
-                ...(Object.prototype.hasOwnProperty.call(payload, 'code') ? {
-                  lastLoginCode: payload.code || null,
-                } : {}),
-              }),
+              lastEmailTimestamp: payload.emailTimestamp || null,
+              ...(Object.prototype.hasOwnProperty.call(payload, 'code') ? {
+                lastLoginCode: payload.code || null,
+              } : {}),
               loginVerificationRequestedAt: null,
             };
             await setState(step8StateUpdates);
@@ -3268,20 +3088,6 @@
           return { ok: true };
         }
 
-        case 'CLEAR_FREE_REUSABLE_PHONE': {
-          if (typeof clearFreeReusablePhoneActivation !== 'function') {
-            throw new Error('白嫖复用手机号清除能力未接入。');
-          }
-          return await clearFreeReusablePhoneActivation();
-        }
-
-        case 'SET_FREE_REUSABLE_PHONE': {
-          if (typeof setFreeReusablePhoneActivation !== 'function') {
-            throw new Error('白嫖复用手机号记录能力未接入。');
-          }
-          return await setFreeReusablePhoneActivation(message.payload || {});
-        }
-
         case 'SET_CONTRIBUTION_MODE': {
           const enabled = Boolean(message.payload?.enabled);
           const state = await ensureManualInteractionAllowed(enabled ? '进入贡献模式' : '退出贡献模式');
@@ -3583,8 +3389,7 @@
             resolvedSignupMethod: null,
           };
           if (
-            Object.prototype.hasOwnProperty.call(updates, 'phoneVerificationEnabled')
-            || Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
+            Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
             || Object.prototype.hasOwnProperty.call(updates, 'signupMethod')
             || Object.prototype.hasOwnProperty.call(updates, 'panelMode')
             || Object.prototype.hasOwnProperty.call(updates, 'activeFlowId')
@@ -3592,26 +3397,16 @@
           ) {
             updates.signupMethod = resolveSignupMethod(nextSignupState);
           }
-          const nextPersistedSignupMethod = Object.prototype.hasOwnProperty.call(updates, 'signupMethod')
-            ? updates.signupMethod
-            : currentState?.signupMethod;
-          if (normalizeSignupMethod(nextPersistedSignupMethod) === 'phone') {
-            preservePhoneReuseSettingsForPhoneSignup(updates, currentState);
-          }
-          forceDisablePhoneReuseForRemovedSmsVendorB(updates, currentState);
           const modeChanged = Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
             && Boolean(currentState?.plusModeEnabled) !== Boolean(updates.plusModeEnabled);
           const plusPaymentChanged = Object.prototype.hasOwnProperty.call(updates, 'plusPaymentMethod')
             && normalizePlusPaymentMethodForDisplay(currentState?.plusPaymentMethod || 'legacyWallet')
               !== normalizePlusPaymentMethodForDisplay(updates.plusPaymentMethod || 'legacyWallet');
-          const phoneSignupReloginAfterBindEmailChanged = Object.prototype.hasOwnProperty.call(updates, 'phoneSignupReloginAfterBindEmailEnabled')
-            && Boolean(currentState?.phoneSignupReloginAfterBindEmailEnabled) !== Boolean(updates.phoneSignupReloginAfterBindEmailEnabled);
           const nextPlusModeEnabled = Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
             ? Boolean(updates.plusModeEnabled)
             : Boolean(currentState?.plusModeEnabled);
           const stepModeChanged = modeChanged
-            || (nextPlusModeEnabled && plusPaymentChanged)
-            || phoneSignupReloginAfterBindEmailChanged;
+            || (nextPlusModeEnabled && plusPaymentChanged);
           const oauthFlowTimeoutDisabled = Object.prototype.hasOwnProperty.call(updates, 'oauthFlowTimeoutEnabled')
             && updates.oauthFlowTimeoutEnabled === false;
           await setPersistentSettings(updates);
@@ -4050,26 +3845,6 @@
           await setEmailState(message.payload.email, { source: 'manual' });
           await resumeAutoRun();
           return { ok: true, email: message.payload.email };
-        }
-
-        case 'SET_SIGNUP_PHONE_STATE': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改注册手机号。');
-          }
-          const phoneNumber = resolveSignupPhonePayload(message.payload) || null;
-          await setSignupPhoneStateSilently(phoneNumber);
-          return { ok: true, phoneNumber };
-        }
-
-        case 'SAVE_SIGNUP_PHONE': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改注册手机号。');
-          }
-          const phoneNumber = resolveSignupPhonePayload(message.payload) || null;
-          await setSignupPhoneState(phoneNumber);
-          return { ok: true, phoneNumber };
         }
 
         case 'FETCH_GENERATED_EMAIL': {

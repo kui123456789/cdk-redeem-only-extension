@@ -347,13 +347,6 @@ function buildClearedRegistrationEmailStateUpdates(state = {}, options = {}) {
   });
 }
 
-function getPreservedPhoneIdentity(state = {}) {
-  if (registrationEmailStateHelpers?.getPreservedPhoneIdentity) {
-    return registrationEmailStateHelpers.getPreservedPhoneIdentity(state);
-  }
-  return null;
-}
-
 function buildStateViewWithRuntimeState(state = {}) {
   if (runtimeStateHelpers?.buildStateView) {
     return runtimeStateHelpers.buildStateView(state);
@@ -538,7 +531,6 @@ const CLOUDFLARE_SECURITY_BLOCK_ERROR_PREFIX = 'CF_SECURITY_BLOCKED::';
 const CLOUDFLARE_SECURITY_BLOCK_USER_MESSAGE = '您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器';
 const BROWSER_SWITCH_REQUIRED_ERROR_PREFIX = 'BROWSER_SWITCH_REQUIRED::';
 const HOTMAIL_MAILBOX_UNAVAILABLE_PREFIX = 'HOTMAIL_MAILBOX_UNAVAILABLE::';
-const STEP9_WHATSAPP_PAGE_RESTART_ERROR_PREFIX = 'STEP9_WHATSAPP_PAGE_RESTART::';
 const HUMAN_STEP_DELAY_MIN = 700;
 const HUMAN_STEP_DELAY_MAX = 2200;
 const STEP6_MAX_ATTEMPTS = 3;
@@ -595,27 +587,6 @@ const OUTLOOK_SUBSCRIPTION_USED_KEYWORD = 'ChatGPT Plus Subscription';
 const VERIFICATION_RESEND_COUNT_MIN = 0;
 const VERIFICATION_RESEND_COUNT_MAX = 20;
 const DEFAULT_VERIFICATION_RESEND_COUNT = 0;
-const PHONE_REPLACEMENT_LIMIT_MIN = 1;
-const PHONE_REPLACEMENT_LIMIT_MAX = 100;
-const DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT = 3;
-const WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MIN = 1;
-const WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MAX = 20;
-const DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS = 5;
-const PHONE_CODE_WAIT_SECONDS_MIN = 15;
-const PHONE_CODE_WAIT_SECONDS_MAX = 300;
-const DEFAULT_PHONE_CODE_WAIT_SECONDS = 120;
-const PHONE_CODE_TIMEOUT_WINDOWS_MIN = 1;
-const PHONE_CODE_TIMEOUT_WINDOWS_MAX = 10;
-const DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS = 2;
-const PHONE_CODE_POLL_INTERVAL_SECONDS_MIN = 1;
-const PHONE_CODE_POLL_INTERVAL_SECONDS_MAX = 30;
-const DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS = 5;
-const PHONE_CODE_POLL_ROUNDS_MIN = 1;
-const PHONE_CODE_POLL_ROUNDS_MAX = 120;
-const DEFAULT_PHONE_CODE_POLL_ROUNDS = 4;
-const PHONE_ACTIVATION_RETRY_ROUNDS_MIN = 1;
-const PHONE_ACTIVATION_RETRY_ROUNDS_MAX = 10;
-const DEFAULT_PHONE_ACTIVATION_RETRY_ROUNDS = 3;
 const LEGACY_AUTO_STEP_DELAY_KEYS = ['autoStepRandomDelayMinSeconds', 'autoStepRandomDelayMaxSeconds'];
 const LEGACY_VERIFICATION_RESEND_COUNT_KEYS = ['signupVerificationResendCount', 'loginVerificationResendCount'];
 const DEFAULT_LOCAL_CPA_STEP9_MODE = 'submit';
@@ -633,101 +604,6 @@ const DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL = DEFAULT_HOTMAIL_LOCAL_BASE_U
 const DEFAULT_LOCAL_CPA_JSON_RELATIVE_AUTH_DIR = '.cli-proxy-api';
 const HOTMAIL_LOCAL_HELPER_TIMEOUT_MS = 45000;
 const DEFAULT_LUCKMAIL_PROJECT_CODE = 'openai';
-const DEFAULT_REMOVED_SMS_MAIN_BASE_URL = 'https://removed-sms-main.com/stubs/handler_api.php';
-const REMOVED_SMS_MAIN_SERVICE_CODE = 'dr';
-const REMOVED_SMS_MAIN_SERVICE_LABEL = 'OpenAI';
-const REMOVED_SMS_MAIN_COUNTRY_ID = 52;
-const REMOVED_SMS_MAIN_COUNTRY_LABEL = '泰国 (Thailand)';
-const DEFAULT_HANDLER_API_COUNTRY_FALLBACK = Object.freeze([
-  { id: 55, label: '台湾 +886 (Taiwan)' },
-  { id: 187, label: '美国 +1 (USA)' },
-  { id: 182, label: '日本 +81 (Japan)' },
-  { id: 204, label: '纽埃 +683 (Niue)' },
-  { id: 36, label: '加拿大 +1 (Canada)' },
-  { id: 78, label: '法国 +33 (France)' },
-  { id: 91, label: '东帝汶 +670 (Timor-Leste)' },
-]);
-const REMOVED_PHONE_PROVIDER_HERO = 'removed-sms-main';
-const REMOVED_PHONE_PROVIDER_5SIM = '5sim';
-const REMOVED_PHONE_PROVIDER_REMOVED_SMS_MAIN = REMOVED_PHONE_PROVIDER_HERO;
-const REMOVED_PHONE_PROVIDER_FIVE_SIM = REMOVED_PHONE_PROVIDER_5SIM;
-const REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR = 'removed-sms-vendor';
-const REMOVED_PHONE_PROVIDER_REMOVED_SMS = 'removed-sms';
-const REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B = 'removed-sms-vendor-b';
-const REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER = 'sms-verification-number';
-const REMOVED_PHONE_PROVIDER_GRIZZLYSMS = 'grizzlysms';
-const REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL = 'removed-text-pool';
-const REMOVED_PHONE_PROVIDER_CHATGPT_API = 'chatgpt-api';
-const DEFAULT_REMOVED_PHONE_PROVIDER = REMOVED_PHONE_PROVIDER_HERO;
-const DEFAULT_REMOVED_PHONE_PROVIDER_ORDER = Object.freeze([
-  REMOVED_PHONE_PROVIDER_HERO,
-  REMOVED_PHONE_PROVIDER_5SIM,
-  REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR,
-  REMOVED_PHONE_PROVIDER_REMOVED_SMS,
-  REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B,
-  REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER,
-  REMOVED_PHONE_PROVIDER_GRIZZLYSMS,
-  REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL,
-  REMOVED_PHONE_PROVIDER_CHATGPT_API,
-]);
-const DEFAULT_FIVE_SIM_BASE_URL = 'https://5sim.net/v1';
-const DEFAULT_FIVE_SIM_PRODUCT = 'openai';
-const DEFAULT_FIVE_SIM_OPERATOR = 'any';
-const DEFAULT_FIVE_SIM_COUNTRY_ORDER = Object.freeze([
-  'thailand',
-  'taiwan',
-  'usa',
-  'japan',
-  'canada',
-  'france',
-  'easttimor',
-]);
-const DEFAULT_REMOVED_SMS_VENDOR_BASE_URL = 'https://api.removed-sms-vendor.net';
-const DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE = 'dr';
-const DEFAULT_REMOVED_SMS_VENDOR_COUNTRY_ORDER = Object.freeze([52, 55, 187, 182, 204, 36, 78, 91]);
-const DEFAULT_REMOVED_SMS_VENDOR_B_BASE_URL = 'https://removed-sms-vendor-b.page/stubs/handler_api.php';
-const DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE = 'dr';
-const DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER = Object.freeze([52, 55, 12, 187, 182, 204, 36, 78, 91, 19, 38, 7]);
-const DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL = 'https://sms-verification-number.com/stubs/handler_api';
-const DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE = 'dr';
-const DEFAULT_GRIZZLY_SMS_BASE_URL = 'https://api.grizzlysms.com/stubs/handler_api.php';
-const DEFAULT_GRIZZLY_SMS_SERVICE_CODE = 'dr';
-const DEFAULT_REMOVED_TEXT_POOL_BASE_URL = 'https://api.removed-text-pool.net/stubs/handler_api.php?setting=removed-text-pool';
-const DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE = '671';
-const DEFAULT_REMOVED_TEXT_POOL_COUNTRY_ID = 1;
-const DEFAULT_REMOVED_TEXT_POOL_COUNTRY_LABEL = '美国 +1 (United States)';
-const DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED = true;
-const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY = 'country';
-const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE = 'price';
-const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
-const DEFAULT_REMOVED_SMS_MAIN_ACQUIRE_PRIORITY = REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY;
-const FIVE_SIM_COUNTRY_ID = 'thailand';
-const FIVE_SIM_COUNTRY_LABEL = '泰国 (Thailand)';
-const FIVE_SIM_SUPPORTED_COUNTRY_IDS = ['indonesia', 'thailand', 'taiwan', 'usa', 'japan', 'canada', 'france', 'easttimor', 'vietnam'];
-const FIVE_SIM_SUPPORTED_COUNTRY_ID_SET = new Set(FIVE_SIM_SUPPORTED_COUNTRY_IDS);
-const REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_IDS = [4, 6, 8, 10, 15, 16, 32, 33, 36, 43, 52, 55, 73, 78, 91, 151, 182, 187, 204];
-const REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_ID_SET = new Set(REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_IDS.map(String));
-const REMOVED_SMS_MAIN_COUNTRY_BY_PHONE_PREFIX = Object.freeze([
-  { prefix: '63', id: 4, label: 'Philippines' },
-  { prefix: '84', id: 10, label: 'Vietnam' },
-  { prefix: '48', id: 15, label: 'Poland' },
-  { prefix: '254', id: 8, label: 'Kenya' },
-  { prefix: '66', id: 52, label: 'Thailand' },
-  { prefix: '40', id: 32, label: 'Romania' },
-  { prefix: '57', id: 33, label: 'Colombia' },
-  { prefix: '62', id: 6, label: 'Indonesia' },
-  { prefix: '44', id: 16, label: 'United Kingdom' },
-  { prefix: '886', id: 55, label: 'Taiwan' },
-  { prefix: '670', id: 91, label: 'Timor-Leste' },
-  { prefix: '683', id: 204, label: 'Niue' },
-  { prefix: '81', id: 182, label: 'Japan' },
-  { prefix: '49', id: 43, label: 'Germany' },
-  { prefix: '55', id: 73, label: 'Brazil' },
-  { prefix: '33', id: 78, label: 'France' },
-  { prefix: '56', id: 151, label: 'Chile' },
-  { prefix: '1', id: 187, label: 'USA' },
-]);
-const FIVE_SIM_OPERATOR = DEFAULT_FIVE_SIM_OPERATOR;
 const PLUS_PAYMENT_METHOD_UPI = 'upi';
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_UPI;
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
@@ -1109,80 +985,6 @@ Object.assign(PERSISTED_SETTING_DEFAULTS, {
   chatGptApiRemovedTextPoolText: '',
   chatGptApiRemovedTextPoolUsage: {},
   chatGptApiRemovedTextPoolAutoDisableEnabled: false,
-  authVerificationEnabled: false,
-  phoneSignupReloginAfterBindEmailEnabled: false,
-  removedPhoneProvider: DEFAULT_REMOVED_PHONE_PROVIDER,
-  removedPhoneProviderOrder: DEFAULT_REMOVED_PHONE_PROVIDER_ORDER,
-  removedRemovedTextPoolText: '',
-  removedRemovedTextPoolUsage: {},
-  removedSmsMainApiKey: '',
-  fiveSimApiKey: '',
-  fiveSimCountryOrder: DEFAULT_FIVE_SIM_COUNTRY_ORDER,
-  fiveSimOperator: DEFAULT_FIVE_SIM_OPERATOR,
-  fiveSimProduct: DEFAULT_FIVE_SIM_PRODUCT,
-  removedSmsVendorApiKey: '',
-  removedSmsVendorCountryOrder: DEFAULT_REMOVED_SMS_VENDOR_COUNTRY_ORDER,
-  removedSmsVendorServiceCode: DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE,
-  removedSmsVendorBApiKey: '',
-  removedSmsVendorBCountryOrder: DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER,
-  removedSmsVendorBServiceCode: DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE,
-  smsVerificationNumberApiKey: '',
-  smsVerificationNumberBaseUrl: DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL,
-  smsVerificationNumberServiceCode: DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE,
-  grizzlySmsApiKey: '',
-  grizzlySmsServiceCode: DEFAULT_GRIZZLY_SMS_SERVICE_CODE,
-  removedTextPoolApiKey: '',
-  removedTextPoolServiceCode: DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE,
-  removedPhoneReuseEnabled: DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED,
-  removedSmsMainReuseEnabled: DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED,
-  freePhoneReuseEnabled: false,
-  freePhoneReuseAutoEnabled: false,
-  phoneAutoReleaseOnStopEnabled: true,
-  whatsappAuthVerificationRestartEnabled: true,
-  whatsappAuthVerificationRestartMaxAttempts: DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS,
-  removedSmsMainAcquirePriority: DEFAULT_REMOVED_SMS_MAIN_ACQUIRE_PRIORITY,
-  removedSmsMainMinPrice: '',
-  removedSmsMainMaxPrice: '',
-  removedSmsMainPreferredPrice: '',
-  removedSmsVendorBMinPrice: '',
-  removedSmsVendorBMaxPrice: '',
-  removedSmsVendorBPreferredPrice: '',
-  smsVerificationNumberMinPrice: '',
-  smsVerificationNumberMaxPrice: '',
-  smsVerificationNumberPreferredPrice: '',
-  grizzlySmsMinPrice: '',
-  grizzlySmsMaxPrice: '',
-  grizzlySmsPreferredPrice: '',
-  removedTextPoolMinPrice: '',
-  removedTextPoolMaxPrice: '',
-  removedTextPoolPreferredPrice: '',
-  phonePreferredActivation: null,
-  authVerificationReplacementLimit: DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT,
-  phoneCodeWaitSeconds: DEFAULT_PHONE_CODE_WAIT_SECONDS,
-  phoneCodeTimeoutWindows: DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS,
-  phoneCodePollIntervalSeconds: DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS,
-  phoneCodePollMaxRounds: DEFAULT_PHONE_CODE_POLL_ROUNDS,
-  removedSmsMainActivationRetryRounds: DEFAULT_PHONE_ACTIVATION_RETRY_ROUNDS,
-  removedSmsMainCountryId: REMOVED_SMS_MAIN_COUNTRY_ID,
-  removedSmsMainCountryLabel: REMOVED_SMS_MAIN_COUNTRY_LABEL,
-  removedSmsMainCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
-  fiveSimCountryId: FIVE_SIM_COUNTRY_ID,
-  fiveSimCountryLabel: FIVE_SIM_COUNTRY_LABEL,
-  fiveSimCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
-  fiveSimMaxPrice: '',
-  fiveSimMinPrice: '',
-  removedSmsVendorBCountryId: DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER[0],
-  removedSmsVendorBCountryLabel: '',
-  removedSmsVendorBCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
-  smsVerificationNumberCountryId: REMOVED_SMS_MAIN_COUNTRY_ID,
-  smsVerificationNumberCountryLabel: REMOVED_SMS_MAIN_COUNTRY_LABEL,
-  smsVerificationNumberCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
-  grizzlySmsCountryId: REMOVED_SMS_MAIN_COUNTRY_ID,
-  grizzlySmsCountryLabel: REMOVED_SMS_MAIN_COUNTRY_LABEL,
-  grizzlySmsCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
-  removedTextPoolCountryId: DEFAULT_REMOVED_TEXT_POOL_COUNTRY_ID,
-  removedTextPoolCountryLabel: DEFAULT_REMOVED_TEXT_POOL_COUNTRY_LABEL,
-  removedTextPoolCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK,
   removedPaymentWorkerEnabled: true,
   removedPaymentWorkerBrowserBackend: 'local',
   removedPaymentWorkerAdsPowerApiBase: 'http://127.0.0.1:50325',
@@ -1231,7 +1033,6 @@ const DEFAULT_STATE = {
   accountIdentifier: '',
   registrationEmailState: { ...DEFAULT_REGISTRATION_EMAIL_STATE },
   email: null, // 运行时邮箱，由程序自动获取并写入，不能手动预填。
-  boundEmail: '', // 手机号注册后绑定的邮箱，绑定后重登优先使用。
   password: null, // 运行时实际密码，由 customPassword 或程序自动生成后写入。
   passwordAccountIdentifierType: null, // 当前 password 所属账号类型，避免跨账号复用自动密码。
   passwordAccountIdentifier: '', // 当前 password 所属账号标识。
@@ -1511,111 +1312,6 @@ function normalizeVerificationResendCount(value, fallback) {
   return requireSettingsNormalizers().normalizeVerificationResendCount(value, fallback);
 }
 
-function normalizePhoneVerificationReplacementLimit(value, fallback = DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      PHONE_REPLACEMENT_LIMIT_MAX,
-      Math.max(PHONE_REPLACEMENT_LIMIT_MIN, Math.floor(Number(fallback) || DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT))
-    );
-  }
-  return Math.min(
-    PHONE_REPLACEMENT_LIMIT_MAX,
-    Math.max(PHONE_REPLACEMENT_LIMIT_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizeWhatsAppPhoneVerificationRestartMaxAttempts(
-  value,
-  fallback = DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS
-) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MAX,
-      Math.max(
-        WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MIN,
-        Math.floor(Number(fallback) || DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS)
-      )
-    );
-  }
-  return Math.min(
-    WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MAX,
-    Math.max(WHATSAPP_PHONE_VERIFICATION_RESTART_LIMIT_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizePhoneCodeWaitSeconds(value, fallback = DEFAULT_PHONE_CODE_WAIT_SECONDS) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      PHONE_CODE_WAIT_SECONDS_MAX,
-      Math.max(PHONE_CODE_WAIT_SECONDS_MIN, Math.floor(Number(fallback) || DEFAULT_PHONE_CODE_WAIT_SECONDS))
-    );
-  }
-  return Math.min(
-    PHONE_CODE_WAIT_SECONDS_MAX,
-    Math.max(PHONE_CODE_WAIT_SECONDS_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizePhoneCodeTimeoutWindows(value, fallback = DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      PHONE_CODE_TIMEOUT_WINDOWS_MAX,
-      Math.max(PHONE_CODE_TIMEOUT_WINDOWS_MIN, Math.floor(Number(fallback) || DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS))
-    );
-  }
-  return Math.min(
-    PHONE_CODE_TIMEOUT_WINDOWS_MAX,
-    Math.max(PHONE_CODE_TIMEOUT_WINDOWS_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizePhoneCodePollIntervalSeconds(value, fallback = DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      PHONE_CODE_POLL_INTERVAL_SECONDS_MAX,
-      Math.max(PHONE_CODE_POLL_INTERVAL_SECONDS_MIN, Math.floor(Number(fallback) || DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS))
-    );
-  }
-  return Math.min(
-    PHONE_CODE_POLL_INTERVAL_SECONDS_MAX,
-    Math.max(PHONE_CODE_POLL_INTERVAL_SECONDS_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizePhoneCodePollMaxRounds(value, fallback = DEFAULT_PHONE_CODE_POLL_ROUNDS) {
-  const rawValue = String(value ?? '').trim();
-  const numeric = Number(rawValue);
-  if (!rawValue || !Number.isFinite(numeric)) {
-    return Math.min(
-      PHONE_CODE_POLL_ROUNDS_MAX,
-      Math.max(PHONE_CODE_POLL_ROUNDS_MIN, Math.floor(Number(fallback) || DEFAULT_PHONE_CODE_POLL_ROUNDS))
-    );
-  }
-  return Math.min(
-    PHONE_CODE_POLL_ROUNDS_MAX,
-    Math.max(PHONE_CODE_POLL_ROUNDS_MIN, Math.floor(numeric))
-  );
-}
-
-function normalizePhoneActivationRetryRounds(value, fallback = DEFAULT_PHONE_ACTIVATION_RETRY_ROUNDS) {
-  return normalizeBoundedIntegerSetting(
-    value,
-    fallback,
-    PHONE_ACTIVATION_RETRY_ROUNDS_MIN,
-    PHONE_ACTIVATION_RETRY_ROUNDS_MAX
-  );
-}
-
 function normalizeBoundedIntegerSetting(value, fallback, min, max) {
   return requireSettingsNormalizers().normalizeBoundedIntegerSetting(value, fallback, min, max);
 }
@@ -1628,153 +1324,6 @@ function normalizeUrl(value = '', fallback = '') {
   return requireSettingsNormalizers().normalizeUrl(value, fallback);
 }
 
-function normalizeRemovedSmsMainMaxPrice(value = '') {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return '';
-  }
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return '';
-  }
-  return String(Math.round(numeric * 10000) / 10000);
-}
-
-function normalizeRemovedSmsMainAcquirePriority(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE) {
-    return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE;
-  }
-  if (normalized === REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH) {
-    return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH;
-  }
-  return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY;
-}
-
-function normalizeRemovedSmsMainCountryFallback(value = []) {
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '')
-      .split(/[\r\n,，;；]+/)
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean);
-  const seenIds = new Set();
-  const normalized = [];
-
-  for (const entry of source) {
-    let countryId = 0;
-    let countryLabel = '';
-
-    if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-      countryId = Math.floor(Number(entry.countryId ?? entry.id) || 0);
-      countryLabel = String((entry.countryLabel ?? entry.label) || '').trim();
-    } else {
-      const text = String(entry || '').trim();
-      const structuredMatch = text.match(/^(\d+)\s*(?:[:|/-]\s*(.+))?$/);
-      if (structuredMatch) {
-        countryId = Math.floor(Number(structuredMatch[1]) || 0);
-        countryLabel = String(structuredMatch[2] || '').trim();
-      } else {
-        countryId = Math.floor(Number(text) || 0);
-      }
-    }
-
-    if (!Number.isFinite(countryId) || countryId <= 0 || seenIds.has(countryId)) {
-      continue;
-    }
-    seenIds.add(countryId);
-    normalized.push({
-      id: countryId,
-      label: countryLabel || `Country #${countryId}`,
-    });
-    if (normalized.length >= 20) {
-      break;
-    }
-  }
-
-  return normalized;
-}
-
-
-function normalizeRemovedPhoneProvider(value = '') {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneProviderRegistry?.normalizeProviderId) {
-    return rootScope.RemovedPhoneProviderRegistry.normalizeProviderId(value);
-  }
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === REMOVED_PHONE_PROVIDER_FIVE_SIM) {
-    return REMOVED_PHONE_PROVIDER_FIVE_SIM;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR) {
-    return REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B) {
-    return REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS) {
-    return REMOVED_PHONE_PROVIDER_REMOVED_SMS;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER) {
-    return REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_GRIZZLYSMS) {
-    return REMOVED_PHONE_PROVIDER_GRIZZLYSMS;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL) {
-    return REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
-  }
-  if (normalized === REMOVED_PHONE_PROVIDER_CHATGPT_API) {
-    return REMOVED_PHONE_PROVIDER_CHATGPT_API;
-  }
-  return REMOVED_PHONE_PROVIDER_REMOVED_SMS_MAIN;
-}
-function normalizeRemovedPhoneProviderOrder(value = [], fallbackOrder = []) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneProviderRegistry?.normalizeProviderOrder) {
-    return rootScope.RemovedPhoneProviderRegistry.normalizeProviderOrder(value, fallbackOrder);
-  }
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '')
-      .split(/[\r\n,]+/)
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean);
-  const normalized = [];
-  const seen = new Set();
-
-  source.forEach((entry) => {
-    const provider = normalizeRemovedPhoneProvider(
-      entry && typeof entry === 'object' && !Array.isArray(entry)
-        ? (entry.provider || entry.id || entry.value || '')
-        : entry
-    );
-    if (!provider || seen.has(provider)) {
-      return;
-    }
-    seen.add(provider);
-    normalized.push(provider);
-  });
-
-  if (normalized.length) {
-    return normalized.slice(0, DEFAULT_REMOVED_PHONE_PROVIDER_ORDER.length);
-  }
-
-  const fallback = Array.isArray(fallbackOrder) ? fallbackOrder : [];
-  fallback.forEach((entry) => {
-    const provider = normalizeRemovedPhoneProvider(
-      entry && typeof entry === 'object' && !Array.isArray(entry)
-        ? (entry.provider || entry.id || entry.value || '')
-        : entry
-    );
-    if (!provider || seen.has(provider)) {
-      return;
-    }
-    seen.add(provider);
-    normalized.push(provider);
-  });
-
-  return normalized.slice(0, DEFAULT_REMOVED_PHONE_PROVIDER_ORDER.length);
-}
 function normalizeSignupMethod(value = '') {
   return requireSettingsNormalizers().normalizeSignupMethod(value);
 }
@@ -1834,28 +1383,8 @@ function validateModeSwitchState(state = {}, options = {}) {
   });
 }
 
-function canUsePhoneSignup(state = {}) {
-  return false;
-}
-
 function resolveSignupMethod(state = {}) {
   return SIGNUP_METHOD_EMAIL;
-}
-
-function shouldDeferHotmailUsedMarkForPhoneSignup(state = {}) {
-  return false;
-}
-
-function hasSignupPhoneActivationState(state = {}) {
-  return Boolean(
-    state?.signupPhoneActivation
-    || state?.signupPhoneCompletedActivation
-    || String(state?.signupPhoneNumber || '').trim()
-  );
-}
-
-function isPhoneSignupIdentityStateForReuse(state = {}) {
-  return false;
 }
 
 async function ensureResolvedSignupMethodForRun(options = {}) {
@@ -1870,281 +1399,6 @@ function normalizePlusPaymentMethod(value = '') {
     return PLUS_PAYMENT_METHOD_UPI;
   }
   return PLUS_PAYMENT_METHOD_UPI;
-}
-
-function normalizeFiveSimCountryId(value, fallback = FIVE_SIM_COUNTRY_ID) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  const rawNormalized = rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryId
-    ? rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryId(value, '')
-    : String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
-  const normalized = String(rawNormalized || '').trim().toLowerCase();
-  if (normalized) {
-    return normalized;
-  }
-  const fallbackSource = fallback === undefined || fallback === null ? FIVE_SIM_COUNTRY_ID : fallback;
-  const normalizedFallback = String(fallbackSource).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
-  if (!normalizedFallback) {
-    return '';
-  }
-  return normalizedFallback || FIVE_SIM_COUNTRY_ID;
-}
-
-function normalizeFiveSimCountryCode(value = '', fallback = 'thailand') {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '');
-  return normalized || fallback;
-}
-
-function normalizeFiveSimCountryOrder(value = []) {
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '')
-      .split(/[\r\n,，;；]+/)
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean);
-  const normalized = [];
-  const seen = new Set();
-
-  source.forEach((entry) => {
-    const code = normalizeFiveSimCountryCode(
-      entry && typeof entry === 'object' && !Array.isArray(entry)
-        ? (entry.code || entry.country || entry.id || '')
-        : entry,
-      ''
-    );
-    if (!code || seen.has(code)) {
-      return;
-    }
-    seen.add(code);
-    normalized.push(code);
-  });
-
-  return normalized.slice(0, 12);
-}
-
-function normalizeRemovedSmsVendorCountryId(value, fallback = 0) {
-  const parsed = Math.floor(Number(value));
-  if (Number.isFinite(parsed) && parsed >= 0) {
-    return parsed;
-  }
-  const fallbackParsed = Math.floor(Number(fallback));
-  if (Number.isFinite(fallbackParsed) && fallbackParsed >= 0) {
-    return fallbackParsed;
-  }
-  return 0;
-}
-
-function normalizeRemovedSmsVendorCountryOrder(value = []) {
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '')
-      .split(/[\r\n,，;；]+/)
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean);
-  const normalized = [];
-  const seen = new Set();
-  source.forEach((entry) => {
-    const id = normalizeRemovedSmsVendorCountryId(
-      entry && typeof entry === 'object' && !Array.isArray(entry)
-        ? (entry.id || entry.countryId || entry.country || '')
-        : entry,
-      -1
-    );
-    if (id < 0 || seen.has(id)) {
-      return;
-    }
-    seen.add(id);
-    normalized.push(id);
-  });
-  return normalized.slice(0, 12);
-}
-
-function normalizeRemovedSmsVendorServiceCode(value = '', fallback = DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE) {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '');
-  if (normalized && normalized !== 'ot' && normalized !== 'any') {
-    return normalized;
-  }
-  const fallbackNormalized = String(fallback || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '');
-  return fallbackNormalized && fallbackNormalized !== 'ot' && fallbackNormalized !== 'any'
-    ? fallbackNormalized
-    : DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE;
-}
-
-function normalizeRemovedSmsVendorBCountryId(value, fallback = 52) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBCountryId) {
-    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBCountryId(value, fallback);
-  }
-  const parsed = Math.floor(Number(value));
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-  const fallbackParsed = Math.floor(Number(fallback));
-  return Number.isFinite(fallbackParsed) && fallbackParsed > 0 ? fallbackParsed : 52;
-}
-
-function normalizeRemovedSmsVendorBCountryOrder(value) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBCountryOrder) {
-    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBCountryOrder(value);
-  }
-  const hasExplicitValue = value !== undefined && value !== null;
-  const source = hasExplicitValue
-    ? (Array.isArray(value)
-      ? value
-      : String(value || '')
-        .split(/[\r\n,，;；]+/)
-        .map((entry) => String(entry || '').trim())
-        .filter(Boolean))
-    : DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER;
-  const normalized = [];
-  const seen = new Set();
-  source.forEach((entry) => {
-    const id = normalizeRemovedSmsVendorBCountryId(
-      entry && typeof entry === 'object' && !Array.isArray(entry)
-        ? (entry.id || entry.countryId || entry.country || '')
-        : entry,
-      0
-    );
-    if (!id || seen.has(id)) {
-      return;
-    }
-    seen.add(id);
-    normalized.push(id);
-  });
-  return hasExplicitValue || normalized.length
-    ? normalized.slice(0, 12)
-    : [...DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER];
-}
-
-function normalizeRemovedSmsVendorBServiceCode(value = '', fallback = DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBServiceCode) {
-    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBServiceCode(value, fallback);
-  }
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '');
-  if (normalized && normalized !== 'ot' && normalized !== 'any') {
-    return normalized;
-  }
-  const fallbackNormalized = String(fallback || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '');
-  return fallbackNormalized && fallbackNormalized !== 'ot' && fallbackNormalized !== 'any'
-    ? fallbackNormalized
-    : DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE;
-}
-
-function normalizePhonePreferredActivation(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  const activationId = String(value.activationId ?? value.id ?? value.activation ?? '').trim();
-  const phoneNumber = String(value.phoneNumber ?? value.number ?? value.phone ?? '').trim();
-  if (!activationId || !phoneNumber) {
-    return null;
-  }
-  const provider = normalizeRemovedPhoneProvider(value.provider || value.smsProvider || DEFAULT_REMOVED_PHONE_PROVIDER);
-  return {
-    ...value,
-    provider,
-    activationId,
-    phoneNumber,
-    countryId: value.countryId ?? value.country ?? value.countryCode ?? null,
-    countryLabel: String(value.countryLabel || value.label || '').trim(),
-    successfulUses: Math.max(0, Math.floor(Number(value.successfulUses) || 0)),
-    maxUses: Math.max(1, Math.floor(Number(value.maxUses) || 1)),
-  };
-}
-
-function normalizeFiveSimCountryLabel(value = '', fallback = FIVE_SIM_COUNTRY_LABEL) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryLabel) {
-    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryLabel(value, fallback);
-  }
-  if (rootScope.RemovedPhoneFiveSimProvider?.formatFiveSimCountryLabel) {
-    return rootScope.RemovedPhoneFiveSimProvider.formatFiveSimCountryLabel('', value, fallback);
-  }
-  return String(value || '').trim() || fallback;
-}
-
-function normalizeFiveSimOperator(value = '', fallback = FIVE_SIM_OPERATOR) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimOperator) {
-    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimOperator(value || fallback);
-  }
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '') || fallback;
-}
-
-function normalizeFiveSimMaxPrice(value = '') {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimMaxPrice) {
-    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimMaxPrice(value);
-  }
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return '';
-  }
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return '';
-  }
-  return String(Math.round(numeric * 10000) / 10000);
-}
-
-function normalizeFiveSimCountryFallback(value = []) {
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryFallback) {
-    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryFallback(value);
-  }
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '')
-      .split(/[\r\n,，;；]+/)
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean);
-  const seenIds = new Set();
-  const normalized = [];
-
-  for (const entry of source) {
-    let countryId = '';
-    let countryLabel = '';
-
-    if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-      countryId = normalizeFiveSimCountryId(entry.countryId ?? entry.id ?? entry.slug, '');
-      countryLabel = String((entry.countryLabel ?? entry.label ?? entry.name ?? entry.text_en) || '').trim();
-    } else {
-      const text = String(entry || '').trim();
-      const structuredMatch = text.match(/^([a-z0-9_-]+)\s*(?:[:|/-]\s*(.+))?$/i);
-      countryId = normalizeFiveSimCountryId(structuredMatch?.[1] || text, '');
-      countryLabel = String(structuredMatch?.[2] || '').trim();
-    }
-
-    if (!countryId || seenIds.has(countryId)) {
-      continue;
-    }
-    seenIds.add(countryId);
-    normalized.push({
-      id: countryId,
-      label: countryLabel || normalizeFiveSimCountryLabel('', countryId),
-    });
-    if (normalized.length >= 20) {
-      break;
-    }
-  }
-
-  return normalized;
 }
 
 function resolveLegacyAutoStepDelaySeconds(input = {}) {
@@ -2849,14 +2103,13 @@ async function clearCurrentRegistrationEmailRuntimeState(state = {}, options = {
     || ''
   ).trim();
   const normalizedCurrentEmail = currentEmail.toLowerCase();
-  const preserveAccountIdentity = Boolean(getPreservedPhoneIdentity(latestState));
   const updates = buildClearedRegistrationEmailStateUpdates(latestState, {
     preservePrevious: true,
-    preserveAccountIdentity,
+    preserveAccountIdentity: false,
     source: `invalidated:${String(options?.reason || '').trim() || 'identity_conflict'}`,
   });
 
-  if (!preserveAccountIdentity && String(latestState?.accountIdentifierType || '').trim().toLowerCase() === 'email') {
+  if (String(latestState?.accountIdentifierType || '').trim().toLowerCase() === 'email') {
     updates.accountIdentifierType = null;
     updates.accountIdentifier = '';
   }
@@ -2868,12 +2121,6 @@ async function clearCurrentRegistrationEmailRuntimeState(state = {}, options = {
   updates.loginVerificationRequestedAt = null;
   updates.step8VerificationTargetEmail = '';
   if (latestState.bindEmailSubmitted || String(latestState.step8VerificationTargetEmail || '').trim()) {
-    updates.bindEmailSubmitted = false;
-  }
-
-  const normalizedBoundEmail = String(latestState?.boundEmail || '').trim().toLowerCase();
-  if (normalizedCurrentEmail && normalizedBoundEmail === normalizedCurrentEmail) {
-    updates.boundEmail = '';
     updates.bindEmailSubmitted = false;
   }
 
@@ -4269,8 +3516,7 @@ async function importSettingsBundle(configBundle) {
     Object.assign(importedSettings, importModeValidation.normalizedUpdates);
   }
   if (
-    Object.prototype.hasOwnProperty.call(importedSettings, 'phoneVerificationEnabled')
-    || Object.prototype.hasOwnProperty.call(importedSettings, 'plusModeEnabled')
+    Object.prototype.hasOwnProperty.call(importedSettings, 'plusModeEnabled')
     || Object.prototype.hasOwnProperty.call(importedSettings, 'signupMethod')
     || Object.prototype.hasOwnProperty.call(importedSettings, 'panelMode')
     || Object.prototype.hasOwnProperty.call(importedSettings, 'activeFlowId')
@@ -4336,36 +3582,6 @@ function broadcastIcloudAliasesChanged(payload = {}) {
   }).catch(() => { });
 }
 
-function normalizePhoneIdentityDigits(value = '') {
-  return String(value || '').replace(/\D+/g, '');
-}
-
-function getPhoneActivationPhoneNumber(activation = null) {
-  if (!activation || typeof activation !== 'object' || Array.isArray(activation)) {
-    return '';
-  }
-  return String(
-    activation.phoneNumber
-    ?? activation.number
-    ?? activation.phone
-    ?? ''
-  ).trim();
-}
-
-function isPhoneActivationForNumber(activation, phoneNumber) {
-  const activationPhone = getPhoneActivationPhoneNumber(activation);
-  const targetPhone = String(phoneNumber || '').trim();
-  if (!activationPhone || !targetPhone) {
-    return false;
-  }
-  if (activationPhone === targetPhone) {
-    return true;
-  }
-  const activationDigits = normalizePhoneIdentityDigits(activationPhone);
-  const targetDigits = normalizePhoneIdentityDigits(targetPhone);
-  return Boolean(activationDigits && targetDigits && activationDigits === targetDigits);
-}
-
 async function setEmailStateSilently(email, options = {}) {
   const currentState = await getState();
   const preserveAccountIdentity = Boolean(options?.preserveAccountIdentity);
@@ -4405,12 +3621,6 @@ async function setEmailStateSilently(email, options = {}) {
   if (!preserveAccountIdentity && normalizedEmail) {
     updates.accountIdentifierType = 'email';
     updates.accountIdentifier = normalizedEmail;
-    updates.phoneNumber = '';
-    updates.signupPhoneNumber = '';
-    updates.signupPhoneActivation = null;
-    updates.signupPhoneCompletedActivation = null;
-    updates.signupPhoneVerificationRequestedAt = null;
-    updates.signupPhoneVerificationPurpose = '';
   } else if (!preserveAccountIdentity && String(currentState?.accountIdentifierType || '').trim().toLowerCase() === 'email') {
     updates.accountIdentifierType = null;
     updates.accountIdentifier = '';
@@ -4446,15 +3656,7 @@ async function persistRegistrationEmailState(state = null, email, options = {}) 
   }
 
   const updates = normalizedEmail === currentEmail
-    ? (() => {
-        const preservedPhoneIdentity = getPreservedPhoneIdentity(currentState);
-        return preservedPhoneIdentity
-          ? {
-              phoneNumber: '',
-              ...preservedPhoneIdentity,
-            }
-          : {};
-      })()
+    ? {}
     : buildFlowRegistrationEmailStateUpdates(currentState, {
         currentEmail: normalizedEmail,
         preservePrevious: Boolean(options?.preservePrevious),
@@ -4469,48 +3671,6 @@ async function persistRegistrationEmailState(state = null, email, options = {}) 
   broadcastDataUpdate(updates);
 }
 
-async function setSignupPhoneStateSilently(phoneNumber) {
-  const normalizedPhoneNumber = String(phoneNumber || '').trim();
-  const currentState = await getState();
-  const updates = {
-    signupPhoneNumber: normalizedPhoneNumber,
-  };
-
-  if (normalizedPhoneNumber) {
-    updates.accountIdentifierType = 'phone';
-    updates.accountIdentifier = normalizedPhoneNumber;
-    updates.phoneNumber = '';
-    if (!isPhoneActivationForNumber(currentState?.signupPhoneActivation, normalizedPhoneNumber)) {
-      updates.signupPhoneActivation = null;
-      updates.signupPhoneVerificationRequestedAt = null;
-      updates.signupPhoneVerificationPurpose = '';
-    }
-    if (!isPhoneActivationForNumber(currentState?.signupPhoneCompletedActivation, normalizedPhoneNumber)) {
-      updates.signupPhoneCompletedActivation = null;
-    }
-  } else if (String(currentState?.accountIdentifierType || '').trim().toLowerCase() === 'phone') {
-    updates.accountIdentifierType = null;
-    updates.accountIdentifier = '';
-    updates.signupPhoneActivation = null;
-    updates.signupPhoneCompletedActivation = null;
-    updates.signupPhoneVerificationRequestedAt = null;
-    updates.signupPhoneVerificationPurpose = '';
-  }
-
-  await setState(updates);
-  broadcastDataUpdate(updates);
-}
-
-async function setSignupPhoneState(phoneNumber) {
-  await setSignupPhoneStateSilently(phoneNumber);
-  if (String(phoneNumber || '').trim()) {
-    const latestState = await getState();
-    const recordStatus = shouldMarkAccountRunRecordRunning(latestState) ? 'running' : 'node:submit-signup-email:stopped';
-    const recordReason = recordStatus === 'running' ? '正在运行' : '节点 submit-signup-email 已使用手机号，流程尚未完成。';
-    await appendManualAccountRunRecordIfNeeded(recordStatus, latestState, recordReason);
-  }
-}
-
 function shouldMarkAccountRunRecordRunning(state = {}) {
   const phase = String(state.autoRunPhase || '').trim().toLowerCase();
   return Boolean(state.autoRunning)
@@ -4518,7 +3678,7 @@ function shouldMarkAccountRunRecordRunning(state = {}) {
 }
 
 function normalizePasswordAccountIdentifierType(value = '') {
-  return String(value || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email';
+  return 'email';
 }
 
 function normalizePasswordAccountIdentifierValue(type, value = '') {
@@ -4976,9 +4136,6 @@ async function resetState() {
       'tabRegistry',
       'sourceLastUrls',
       'logs',
-      'reusablePhoneActivation',
-      'freeReusablePhoneActivation',
-      'phoneReusableActivationPool',
       'luckmailApiKey',
       'luckmailBaseUrl',
       'luckmailEmailType',
@@ -4997,43 +4154,6 @@ async function resetState() {
   const persistedCredentialMembershipCheckResults = credentialMembershipCheckState?.[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]
     || DEFAULT_STATE.upiCredentialMembershipCheckResults;
   const contributionModeState = buildContributionModeState(Boolean(prev.contributionMode), persistedSettings, prev);
-  const reusablePhoneActivation = (
-    prev.reusablePhoneActivation
-    && typeof prev.reusablePhoneActivation === 'object'
-    && !Array.isArray(prev.reusablePhoneActivation)
-    && String(
-      prev.reusablePhoneActivation.activationId
-      ?? prev.reusablePhoneActivation.id
-      ?? prev.reusablePhoneActivation.activation
-      ?? ''
-    ).trim()
-    && String(
-      prev.reusablePhoneActivation.phoneNumber
-      ?? prev.reusablePhoneActivation.number
-      ?? prev.reusablePhoneActivation.phone
-      ?? ''
-    ).trim()
-  )
-    ? prev.reusablePhoneActivation
-    : null;
-  const phoneReusableActivationPool = Array.isArray(prev.phoneReusableActivationPool)
-    ? prev.phoneReusableActivationPool
-      .map((entry) => normalizePhonePreferredActivation(entry))
-      .filter(Boolean)
-    : [];
-  const freeReusablePhoneActivation = (
-    prev.freeReusablePhoneActivation
-    && typeof prev.freeReusablePhoneActivation === 'object'
-    && !Array.isArray(prev.freeReusablePhoneActivation)
-    && String(
-      prev.freeReusablePhoneActivation.phoneNumber
-      ?? prev.freeReusablePhoneActivation.number
-      ?? prev.freeReusablePhoneActivation.phone
-      ?? ''
-    ).trim()
-  )
-    ? prev.freeReusablePhoneActivation
-    : null;
   const preservedLogs = Array.isArray(prev.logs)
     ? prev.logs.slice(-499)
     : [];
@@ -5066,11 +4186,6 @@ async function resetState() {
     luckmailPreserveTagName: String(prev.luckmailPreserveTagName || '').trim() || DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME,
     currentLuckmailPurchase: null,
     currentLuckmailMailCursor: null,
-    // Keep reusable phone activation across round resets so the same number can be reactivated up to maxUses.
-    reusablePhoneActivation,
-    // Keep free reuse phone activation until the user clears or the flow retires it.
-    freeReusablePhoneActivation,
-    phoneReusableActivationPool,
     preferredIcloudHost: prev.preferredIcloudHost || '',
     upiCredentialMembershipCheckResults: persistedCredentialMembershipCheckResults,
     automationWindowId: Number.isInteger(Number(prev.automationWindowId))
@@ -9379,301 +8494,6 @@ async function finalizeIcloudAliasAfterSuccessfulFlow(state) {
   }
 }
 
-async function finalizePhoneActivationAfterSuccessfulFlow(state) {
-  if (typeof phoneVerificationHelpers?.finalizePendingPhoneActivationConfirmation !== 'function') {
-    return null;
-  }
-  return phoneVerificationHelpers.finalizePendingPhoneActivationConfirmation(state);
-}
-
-async function clearFreeReusablePhoneActivation() {
-  const state = await getState();
-  if (isPhoneSignupIdentityStateForReuse(state)) {
-    throw new Error('\u624b\u673a\u53f7\u6ce8\u518c\u6a21\u5f0f\u4e0b\u4e0d\u80fd\u4fee\u6539\u767d\u5ad6\u590d\u7528\u624b\u673a\u53f7\uff0c\u8bf7\u5207\u6362\u90ae\u7bb1\u6ce8\u518c\u540e\u518d\u4f7f\u7528\u3002');
-  }
-  await setState({ freeReusablePhoneActivation: null });
-  broadcastDataUpdate({ freeReusablePhoneActivation: null });
-  await addLog('已清除白嫖复用手机号记录。', 'ok');
-  return { ok: true, freeReusablePhoneActivation: null };
-}
-
-function inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber = '') {
-  const digits = String(phoneNumber || '').replace(/\D+/g, '');
-  if (!digits) {
-    return null;
-  }
-  const match = REMOVED_SMS_MAIN_COUNTRY_BY_PHONE_PREFIX.find((entry) => digits.startsWith(entry.prefix));
-  if (!match) {
-    return null;
-  }
-  return {
-    id: Math.max(1, Math.floor(Number(match.id) || 0)),
-    label: String(match.label || '').trim() || `Country #${match.id}`,
-  };
-}
-
-function inferFiveSimCountryFromPhoneNumber(phoneNumber = '') {
-  const heroCountry = inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber);
-  if (!heroCountry) {
-    return null;
-  }
-  const labelText = String(heroCountry.label || '').trim().toLowerCase();
-  const countryId = (
-    labelText.includes('indonesia') || labelText.includes('印度尼西亚') || labelText.includes('印尼')
-  ) ? 'indonesia'
-    : (
-      labelText.includes('thailand') || labelText.includes('泰国')
-    ) ? 'thailand'
-      : (
-        labelText.includes('united kingdom') || labelText.includes('england') || labelText.includes('uk') || labelText.includes('英国')
-      ) ? 'england'
-        : (
-          labelText.includes('united states') || labelText.includes('usa') || labelText.includes('america') || labelText.includes('美国')
-        ) ? 'usa'
-          : (
-            labelText.includes('japan') || labelText.includes('日本')
-          ) ? 'japan'
-            : (
-              labelText.includes('germany') || labelText.includes('德国')
-            ) ? 'germany'
-              : (
-                labelText.includes('vietnam') || labelText.includes('越南')
-              ) ? 'vietnam'
-                : '';
-  const normalizedCountryId = normalizeFiveSimCountryId(countryId, '');
-  if (!normalizedCountryId) {
-    return null;
-  }
-  return {
-    id: normalizedCountryId,
-    label: normalizeFiveSimCountryLabel(normalizedCountryId, normalizedCountryId),
-  };
-}
-
-function supportsPhoneActivationReuseProvider(providerId = '') {
-  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneProviderRegistry?.supportsActivationReuse) {
-    return Boolean(rootScope.RemovedPhoneProviderRegistry.supportsActivationReuse(normalizedProvider));
-  }
-  return normalizedProvider === REMOVED_PHONE_PROVIDER_HERO
-    || normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM
-    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
-}
-
-function supportsFreePhoneReuseProvider(providerId = '') {
-  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
-  const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.RemovedPhoneProviderRegistry?.supportsFreePhoneReuse) {
-    return Boolean(rootScope.RemovedPhoneProviderRegistry.supportsFreePhoneReuse(normalizedProvider));
-  }
-  return normalizedProvider === REMOVED_PHONE_PROVIDER_HERO
-    || normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM
-    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B
-    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
-}
-
-function getPhoneDefaultServiceCodeByProvider(providerId = '') {
-  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
-  if (normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM) {
-    return DEFAULT_FIVE_SIM_PRODUCT;
-  }
-  if (normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL) {
-    return DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE;
-  }
-  return REMOVED_SMS_MAIN_SERVICE_CODE;
-}
-
-function getFreeReuseEligibilityForStoredActivation(activation) {
-  if (!activation || typeof activation !== 'object' || Array.isArray(activation)) {
-    return { ok: false, reason: 'activation_missing', message: '接码订单无效。' };
-  }
-  const provider = normalizeRemovedPhoneProvider(activation.provider || REMOVED_PHONE_PROVIDER_HERO);
-  if (!supportsFreePhoneReuseProvider(provider)) {
-    return {
-      ok: false,
-      reason: 'provider_not_supported',
-      message: '当前接码服务商不支持白嫖复用。',
-    };
-  }
-  if (provider === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B && activation.canGetAnotherSms === false) {
-    return {
-      ok: false,
-      reason: 'removed-sms-vendor-b_no_additional_sms',
-      message: `RemovedSMSVendorB 号码 ${activation.phoneNumber || ''} 不支持白嫖复用：接口返回 canGetAnotherSms=false，平台不允许继续请求下一条短信。`,
-    };
-  }
-  return { ok: true, reason: '', message: '' };
-}
-
-function normalizePhoneDigits(value = '') {
-  return String(value || '').replace(/\D+/g, '');
-}
-
-function phoneNumbersMatch(left = '', right = '') {
-  const leftDigits = normalizePhoneDigits(left);
-  const rightDigits = normalizePhoneDigits(right);
-  return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
-}
-
-function normalizeLocalReusablePhoneActivation(record) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) {
-    return null;
-  }
-  const activationId = String(record.activationId ?? record.id ?? record.activation ?? '').trim();
-  const phoneNumber = String(record.phoneNumber ?? record.number ?? record.phone ?? '').trim();
-  if (!activationId || !phoneNumber) {
-    return null;
-  }
-  const rawProvider = String(record.provider ?? record.smsProvider ?? '').trim();
-  const provider = rawProvider ? normalizeRemovedPhoneProvider(rawProvider) : REMOVED_PHONE_PROVIDER_HERO;
-  if (!supportsFreePhoneReuseProvider(provider)) {
-    return null;
-  }
-  const countryId = provider === REMOVED_PHONE_PROVIDER_5SIM
-    ? normalizeFiveSimCountryId(record.countryCode ?? record.countryId ?? record.country, '')
-    : Math.max(0, Math.floor(Number(record.countryId ?? record.country ?? record.countryCode) || 0));
-  const countryLabel = String(record.countryLabel || record.label || '').trim();
-  const serviceCode = String(record.serviceCode || record.service || getPhoneDefaultServiceCodeByProvider(provider)).trim()
-    || getPhoneDefaultServiceCodeByProvider(provider);
-  return {
-    ...record,
-    provider,
-    activationId,
-    phoneNumber,
-    serviceCode,
-    ...(countryId > 0 ? { countryId } : {}),
-    ...(provider === REMOVED_PHONE_PROVIDER_5SIM && countryId ? { countryCode: countryId } : {}),
-    ...(countryLabel ? { countryLabel } : {}),
-  };
-}
-
-function findLocalReusablePhoneActivationForPhone(state = {}, phoneNumber = '', providerId = '') {
-  const normalizedProvider = providerId ? normalizeRemovedPhoneProvider(providerId) : '';
-  const candidates = [
-    state.currentPhoneActivation,
-    state.reusablePhoneActivation,
-    state.pendingPhoneActivationConfirmation,
-    state.signupPhoneActivation,
-    state.signupPhoneCompletedActivation,
-    state.phonePreferredActivation,
-    state.freeReusablePhoneActivation,
-  ];
-  if (Array.isArray(state.phoneReusableActivationPool)) {
-    candidates.push(...state.phoneReusableActivationPool);
-  }
-  for (const candidate of candidates) {
-    const normalized = normalizeLocalReusablePhoneActivation(candidate);
-    if (
-      normalized
-      && phoneNumbersMatch(normalized.phoneNumber, phoneNumber)
-      && (!normalizedProvider || normalized.provider === normalizedProvider)
-    ) {
-      return normalized;
-    }
-  }
-  return null;
-}
-
-async function setFreeReusablePhoneActivation(record = {}) {
-  const phoneNumber = String(record.phoneNumber || record.number || record.phone || '').trim();
-  if (!phoneNumber) {
-    throw new Error('请先填写白嫖复用手机号。');
-  }
-  const state = await getState();
-  if (isPhoneSignupIdentityStateForReuse(state)) {
-    throw new Error('\u624b\u673a\u53f7\u6ce8\u518c\u6a21\u5f0f\u4e0b\u4e0d\u80fd\u8bb0\u5f55\u767d\u5ad6\u590d\u7528\u624b\u673a\u53f7\uff0c\u8bf7\u5207\u6362\u90ae\u7bb1\u6ce8\u518c\u540e\u518d\u4f7f\u7528\u3002');
-  }
-  const requestedProvider = normalizeRemovedPhoneProvider(
-    record.provider || record.smsProvider || state.removedPhoneProvider || REMOVED_PHONE_PROVIDER_HERO
-  );
-  if (!supportsFreePhoneReuseProvider(requestedProvider)) {
-    throw new Error('当前接码服务商不支持白嫖复用。');
-  }
-  const localActivation = findLocalReusablePhoneActivationForPhone(state, phoneNumber, requestedProvider)
-    || findLocalReusablePhoneActivationForPhone(state, phoneNumber);
-  const provider = normalizeRemovedPhoneProvider(localActivation?.provider || requestedProvider);
-  const explicitCanGetAnotherSms = record.canGetAnotherSms !== undefined
-    ? Boolean(record.canGetAnotherSms)
-    : undefined;
-  const activationId = String(
-    record.activationId
-    || record.id
-    || record.activation
-    || localActivation?.activationId
-    || ''
-  ).trim();
-  const inferredCountry = provider === REMOVED_PHONE_PROVIDER_5SIM
-    ? inferFiveSimCountryFromPhoneNumber(phoneNumber)
-    : inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber);
-  const hasExplicitCountry = provider === REMOVED_PHONE_PROVIDER_5SIM
-    ? Boolean(String(record.countryCode || record.countryId || '').trim())
-    : Number.isFinite(Number(record.countryId)) && Number(record.countryId) > 0;
-  const countryId = provider === REMOVED_PHONE_PROVIDER_5SIM
-    ? normalizeFiveSimCountryId(
-      record.countryCode || record.countryId || localActivation?.countryId || inferredCountry?.id || state.fiveSimCountryId || FIVE_SIM_COUNTRY_ID,
-      state.fiveSimCountryId || FIVE_SIM_COUNTRY_ID
-    )
-    : Math.max(
-      1,
-      Math.floor(
-        Number(record.countryId)
-        || Number(localActivation?.countryId)
-        || Number(inferredCountry?.id)
-        || Number(state.removedTextPoolCountryId && provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? state.removedTextPoolCountryId : 0)
-        || Number(state.removedSmsMainCountryId)
-        || REMOVED_SMS_MAIN_COUNTRY_ID
-      )
-    );
-  const stateCountryLabel = provider === REMOVED_PHONE_PROVIDER_5SIM
-    ? (String(state.fiveSimCountryId || '').trim() === String(countryId || '').trim()
-      ? String(state.fiveSimCountryLabel || '').trim()
-      : '')
-    : (Math.floor(Number(state.removedTextPoolCountryId && provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? state.removedTextPoolCountryId : state.removedSmsMainCountryId) || 0) === Number(countryId)
-      ? String(provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? (state.removedTextPoolCountryLabel || state.removedSmsMainCountryLabel || '') : (state.removedSmsMainCountryLabel || '')).trim()
-      : '');
-  const countryLabel = String(
-    record.countryLabel
-    || (String(localActivation?.countryId || '') === String(countryId || '') ? localActivation?.countryLabel : '')
-    || (!hasExplicitCountry && String(inferredCountry?.id || '') === String(countryId || '') ? inferredCountry.label : '')
-    || stateCountryLabel
-    || (provider === REMOVED_PHONE_PROVIDER_5SIM
-      ? normalizeFiveSimCountryLabel(countryId, countryId || FIVE_SIM_COUNTRY_LABEL)
-      : (countryId === REMOVED_SMS_MAIN_COUNTRY_ID ? REMOVED_SMS_MAIN_COUNTRY_LABEL : `Country #${countryId}`))
-  ).trim();
-  const activation = {
-    ...(activationId ? { activationId } : {}),
-    phoneNumber,
-    provider,
-    serviceCode: String(record.serviceCode || localActivation?.serviceCode || getPhoneDefaultServiceCodeByProvider(provider)).trim()
-      || getPhoneDefaultServiceCodeByProvider(provider),
-    countryId,
-    ...(provider === REMOVED_PHONE_PROVIDER_5SIM ? { countryCode: countryId } : {}),
-    ...(countryLabel ? { countryLabel } : {}),
-    successfulUses: Math.max(0, Math.floor(Number(record.successfulUses) || 0)),
-    maxUses: Math.max(1, Math.floor(Number(record.maxUses) || 3)),
-    source: 'free-manual-reuse',
-    recordedAt: Date.now(),
-    manualOnly: !activationId,
-    ...(explicitCanGetAnotherSms !== undefined
-      ? { canGetAnotherSms: explicitCanGetAnotherSms }
-      : (localActivation?.canGetAnotherSms !== undefined ? { canGetAnotherSms: Boolean(localActivation.canGetAnotherSms) } : {})),
-  };
-  const eligibility = getFreeReuseEligibilityForStoredActivation(activation);
-  if (!eligibility.ok) {
-    throw new Error(eligibility.message || '当前号码不支持白嫖复用。');
-  }
-  await setState({ freeReusablePhoneActivation: activation });
-  broadcastDataUpdate({ freeReusablePhoneActivation: activation });
-  await addLog(
-    activationId
-      ? `已手动记录白嫖复用手机号 ${phoneNumber}（#${activationId}）。`
-      : `已手动记录白嫖复用手机号 ${phoneNumber}。未填写接码激活 ID，仅支持手动填号复用。`,
-    'ok'
-  );
-  return { ok: true, freeReusablePhoneActivation: activation };
-}
-
 // ============================================================
 // Tab Registry
 // ============================================================
@@ -10632,14 +9452,14 @@ function getLoginAuthStateLabel(state) {
   }
   switch (state) {
     case 'verification_page': return '登录验证码页';
-    case 'phone_verification_page': return '手机验证码页';
+    case 'phone_verification_page': return '附加认证验证码页';
     case 'password_page': return '密码页';
     case 'email_page': return '邮箱输入页';
-    case 'phone_entry_page': return '手机号输入页';
+    case 'phone_entry_page': return '附加认证输入页';
     case 'login_timeout_error_page': return '登录超时报错页';
     case 'auth_http_error_page': return '认证服务 HTTP 500 错误页';
     case 'oauth_consent_page': return 'OAuth 授权页';
-    case 'add_phone_page': return '手机号页';
+    case 'add_phone_page': return '附加认证页';
     case 'add_email_page': return '添加邮箱页';
     default: return '未知页面';
   }
@@ -10650,12 +9470,7 @@ function isRestartCurrentAttemptError(error) {
     return loggingStatus.isRestartCurrentAttemptError(error);
   }
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
-}
-
-function isSignupPhonePasswordMismatchFailure(error) {
-  const message = getErrorMessage(error);
-  return /SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
+  return /当前邮箱已存在，需要重新开始新一轮/i.test(message);
 }
 
 function isAssurivoNoValidCodeFailure(error) {
@@ -10680,246 +9495,6 @@ async function waitBeforeAssurivoNoValidCodeRestart(error, options = {}) {
   await sleepWithStop(cooldownMs);
 }
 
-function getSignupPhonePasswordMismatchRestartPayload(preservedState = {}) {
-  const preservedEmail = String(preservedState.email || '').trim();
-  const preservedPassword = String(preservedState.password || '').trim();
-  const accountIdentifierType = String(preservedState.accountIdentifierType || '').trim().toLowerCase();
-  const activeSignupPhoneNumber = String(
-    preservedState.signupPhoneNumber
-    || preservedState.signupPhoneActivation?.phoneNumber
-    || preservedState.signupPhoneCompletedActivation?.phoneNumber
-    || (accountIdentifierType === 'phone' ? preservedState.accountIdentifier : '')
-    || ''
-  ).trim();
-  const shouldClearSignupPhoneRuntime = Boolean(
-    activeSignupPhoneNumber
-    || preservedState.signupPhoneActivation
-    || preservedState.signupPhoneCompletedActivation
-    || preservedState.signupPhoneVerificationRequestedAt
-    || preservedState.signupPhoneVerificationPurpose
-    || accountIdentifierType === 'phone'
-  );
-  const restorePayload = {};
-  if (preservedEmail) restorePayload.email = preservedEmail;
-  if (preservedPassword) restorePayload.password = preservedPassword;
-  if (shouldClearSignupPhoneRuntime) {
-    restorePayload.signupPhoneNumber = '';
-    restorePayload.signupPhoneActivation = null;
-    restorePayload.signupPhoneCompletedActivation = null;
-    restorePayload.signupPhoneVerificationRequestedAt = null;
-    restorePayload.signupPhoneVerificationPurpose = '';
-    if (accountIdentifierType === 'phone') {
-      restorePayload.accountIdentifierType = null;
-      restorePayload.accountIdentifier = '';
-    }
-  }
-  return {
-    activeSignupPhoneNumber,
-    preservedEmail,
-    restorePayload,
-    shouldClearSignupPhoneRuntime,
-  };
-}
-
-async function releaseSignupPhoneActivationBeforeRestart(state = {}, nodeId = '') {
-  const activation = state?.signupPhoneActivation;
-  if (!activation || typeof activation !== 'object' || Array.isArray(activation)) {
-    return;
-  }
-  const phoneNumber = String(activation.phoneNumber || state.signupPhoneNumber || '').trim();
-  const activationId = String(activation.activationId || activation.id || activation.activation || '').trim();
-  const identifier = phoneNumber || activationId || '当前接码订单';
-  if (typeof phoneVerificationHelpers?.cancelSignupPhoneActivation !== 'function') {
-    await addLog(`节点 ${nodeId || 'unknown'}：未找到接码订单释放接口，${identifier} 仅清空本地状态。`, 'warn');
-    return;
-  }
-  try {
-    await addLog(`节点 ${nodeId || 'unknown'}：正在释放异常注册手机号的接码订单 ${identifier}。`, 'warn');
-    await phoneVerificationHelpers.cancelSignupPhoneActivation(state, activation);
-    await addLog(`节点 ${nodeId || 'unknown'}：已释放异常注册手机号的接码订单 ${identifier}。`, 'warn');
-  } catch (releaseError) {
-    await addLog(
-      `节点 ${nodeId || 'unknown'}：释放异常注册手机号的接码订单 ${identifier} 失败，继续清空本地状态并重开。${getErrorMessage(releaseError)}`,
-      'warn'
-    );
-  }
-}
-
-async function restartSignupPhonePasswordMismatchAttemptFromNode(nodeId, restartCount, error) {
-  const preservedState = await getState();
-  const {
-    activeSignupPhoneNumber,
-    preservedEmail,
-    restorePayload,
-    shouldClearSignupPhoneRuntime,
-  } = getSignupPhonePasswordMismatchRestartPayload(preservedState);
-  const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
-  const phoneSuffix = activeSignupPhoneNumber ? `当前手机号：${activeSignupPhoneNumber}；` : '';
-  const errorMessage = getErrorMessage(error);
-  const reasonLabel = /PHONE_RESEND_BANNED_NUMBER::|无法向(?:此|该|这个)?(?:电话号码|手机号|手机号码|号码)发送(?:短信|验证码)|无法发送(?:短信|验证码)到(?:此|该|这个)?(?:电话号码|手机号|手机号码|号码)|unable\s+to\s+send\s+(?:an?\s+)?(?:sms|text(?:\s+message)?|verification\s+code|code)\s+to\s+(?:this|that)\s+(?:phone\s+)?number/i
-    .test(errorMessage)
-    ? '当前注册手机号无法接收短信'
-    : (/与此(?:电话|手机)号码相关联的帐户已存在|account\s+associated\s+with\s+this\s+phone\s+number\s+already\s+exists/i
-      .test(errorMessage)
-      ? '注册手机号异常'
-      : '手机号/密码不匹配');
-  const normalizedNodeId = String(nodeId || '').trim() || 'fetch-signup-code';
-  await addLog(
-    `节点 ${normalizedNodeId}：检测到${reasonLabel}，准备丢弃当前注册手机号并回到节点 open-chatgpt 重新开始（第 ${restartCount} 次重开）。${phoneSuffix}${emailSuffix}原因：${errorMessage}`,
-    'warn'
-  );
-  await releaseSignupPhoneActivationBeforeRestart(preservedState, normalizedNodeId);
-  if (typeof invalidateDownstreamAfterNodeRestart === 'function') {
-    await invalidateDownstreamAfterNodeRestart('open-chatgpt', {
-      logLabel: `节点 ${normalizedNodeId} 检测到${reasonLabel}后准备回到 open-chatgpt 重新获取手机号重试（第 ${restartCount} 次重开）`,
-    });
-  } else {
-    await invalidateDownstreamAfterStepRestart(1, {
-      logLabel: `节点 ${normalizedNodeId} 检测到${reasonLabel}后准备回到 open-chatgpt 重新获取手机号重试（第 ${restartCount} 次重开）`,
-    });
-  }
-  if (shouldClearSignupPhoneRuntime) {
-    await addLog(`节点 ${normalizedNodeId}：已清空本轮注册手机号与接码订单，下一次重开将重新获取号码。`, 'warn');
-  }
-  if (Object.keys(restorePayload).length) {
-    await setState(restorePayload);
-  }
-}
-
-function isStep9WhatsAppPageRestartError(error) {
-  return String(error?.message || error || '').startsWith(STEP9_WHATSAPP_PAGE_RESTART_ERROR_PREFIX);
-}
-
-function normalizeSignupExcludedNumbers(values = []) {
-  const input = Array.isArray(values) ? values : [values];
-  const unique = [];
-  input.forEach((entry) => {
-    const phoneNumber = String(entry || '').trim();
-    if (!phoneNumber) {
-      return;
-    }
-    if (unique.some((saved) => phoneNumbersMatch(saved, phoneNumber))) {
-      return;
-    }
-    unique.push(phoneNumber);
-  });
-  return unique;
-}
-
-function collectStep9WhatsAppRestartNumbers(state = {}, error = null) {
-  return normalizeSignupExcludedNumbers([
-    error?.whatsappPhoneNumber,
-    error?.authState?.displayedPhone,
-    state?.currentPhoneActivation?.phoneNumber,
-    state?.signupPhoneActivation?.phoneNumber,
-    state?.signupPhoneCompletedActivation?.phoneNumber,
-    state?.signupPhoneNumber,
-    state?.phoneNumber,
-  ]);
-}
-
-async function releaseCurrentPhoneActivationBeforeRestart(state = {}, nodeId = '') {
-  const activation = state?.currentPhoneActivation;
-  if (!activation || typeof activation !== 'object' || Array.isArray(activation)) {
-    return;
-  }
-  const phoneNumber = String(activation.phoneNumber || '').trim();
-  const activationId = String(activation.activationId || activation.id || activation.activation || '').trim();
-  const identifier = phoneNumber || activationId || '当前接码订单';
-  if (typeof phoneVerificationHelpers?.cancelCurrentPhoneActivation !== 'function') {
-    await addLog(`节点 ${nodeId || 'unknown'}：未找到当前手机号订单释放接口，${identifier} 仅清空本地状态。`, 'warn');
-    return;
-  }
-  try {
-    await addLog(`节点 ${nodeId || 'unknown'}：正在释放当前手机号接码订单 ${identifier}。`, 'warn');
-    await phoneVerificationHelpers.cancelCurrentPhoneActivation(state, activation);
-    await addLog(`节点 ${nodeId || 'unknown'}：已释放当前手机号接码订单 ${identifier}。`, 'warn');
-  } catch (releaseError) {
-    await addLog(
-      `节点 ${nodeId || 'unknown'}：释放当前手机号接码订单 ${identifier} 失败，继续清空本地状态并重开。${getErrorMessage(releaseError)}`,
-      'warn'
-    );
-  }
-}
-
-async function restartStep9WhatsAppAttemptFromNode(nodeId, restartCount, error) {
-  const preservedState = await getState();
-  const maxAttempts = normalizeWhatsAppPhoneVerificationRestartMaxAttempts(
-    preservedState.whatsappPhoneVerificationRestartMaxAttempts,
-    DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS
-  );
-  if (restartCount > maxAttempts) {
-    await addLog(
-      `节点 ${String(nodeId || '').trim() || 'post-login-phone-verification'}：手机验证码页连续 ${maxAttempts} 次命中 WhatsApp，停止当前自动尝试。原因：${getErrorMessage(error)}`,
-      'error'
-    );
-    throw error;
-  }
-  const {
-    preservedEmail,
-    restorePayload,
-    shouldClearSignupPhoneRuntime,
-  } = getSignupPhonePasswordMismatchRestartPayload(preservedState);
-  const normalizedNodeId = String(nodeId || '').trim() || 'post-login-phone-verification';
-  const excludedNumbers = collectStep9WhatsAppRestartNumbers(preservedState, error);
-  const mergedExcludedNumbers = normalizeSignupExcludedNumbers([
-    ...(preservedState.signupPhoneExcludedNumbersThisAttempt || []),
-    ...excludedNumbers,
-  ]);
-  const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
-  const phoneSuffix = excludedNumbers.length ? `本轮禁用号码：${excludedNumbers.join(' / ')}；` : '';
-  await addLog(
-    `节点 ${normalizedNodeId}：手机验证码页命中 WhatsApp，准备释放当前号码并回到节点 open-chatgpt 重开 OAuth（第 ${restartCount}/${maxAttempts} 次）。${phoneSuffix}${emailSuffix}原因：${getErrorMessage(error)}`,
-    'warn'
-  );
-  await releaseCurrentPhoneActivationBeforeRestart(preservedState, normalizedNodeId);
-  const currentActivationId = String(
-    preservedState?.currentPhoneActivation?.activationId
-    || preservedState?.currentPhoneActivation?.id
-    || preservedState?.currentPhoneActivation?.activation
-    || ''
-  ).trim();
-  const signupActivationId = String(
-    preservedState?.signupPhoneActivation?.activationId
-    || preservedState?.signupPhoneActivation?.id
-    || preservedState?.signupPhoneActivation?.activation
-    || ''
-  ).trim();
-  const sameActivation = Boolean(
-    (currentActivationId && signupActivationId && currentActivationId === signupActivationId)
-    || phoneNumbersMatch(
-      preservedState?.currentPhoneActivation?.phoneNumber,
-      preservedState?.signupPhoneActivation?.phoneNumber
-    )
-  );
-  if (!sameActivation) {
-    await releaseSignupPhoneActivationBeforeRestart(preservedState, normalizedNodeId);
-  }
-  if (typeof invalidateDownstreamAfterNodeRestart === 'function') {
-    await invalidateDownstreamAfterNodeRestart('open-chatgpt', {
-      logLabel: `节点 ${normalizedNodeId} 检测到 WhatsApp 手机验证码页后准备回到 open-chatgpt 重试（第 ${restartCount}/${maxAttempts} 次）`,
-    });
-  } else {
-    await invalidateDownstreamAfterStepRestart(1, {
-      logLabel: `节点 ${normalizedNodeId} 检测到 WhatsApp 手机验证码页后准备回到 open-chatgpt 重试（第 ${restartCount}/${maxAttempts} 次）`,
-    });
-  }
-  if (shouldClearSignupPhoneRuntime || preservedState?.currentPhoneActivation) {
-    await addLog(`节点 ${normalizedNodeId}：已清空本轮手机号运行态，下一次重开将重新获取号码。`, 'warn');
-  }
-  await setState({
-    ...restorePayload,
-    currentPhoneActivation: null,
-    phoneNumber: '',
-    currentPhoneVerificationCode: '',
-    currentPhoneVerificationCountdownEndsAt: 0,
-    currentPhoneVerificationCountdownWindowIndex: 0,
-    currentPhoneVerificationCountdownWindowTotal: 0,
-    signupPhoneExcludedNumbersThisAttempt: mergedExcludedNumbers,
-    whatsappPhoneVerificationRestartCount: restartCount,
-  });
-}
-
 function isSignupUserAlreadyExistsFailure(error) {
   if (typeof loggingStatus !== 'undefined' && loggingStatus?.isSignupUserAlreadyExistsFailure) {
     return loggingStatus.isSignupUserAlreadyExistsFailure(error);
@@ -10940,11 +9515,6 @@ function isRegistrationIdentityConflictFailure(error) {
 function isStep4Route405RecoveryLimitFailure(error) {
   const message = getErrorMessage(error);
   return /STEP4_405_RECOVERY_LIMIT::|步骤\s*4：检测到\s*405\s*错误页面，已连续点击“重试”恢复/i.test(message);
-}
-
-function isRemovedPhonePlatformRateLimitFailure(error) {
-  const message = getErrorMessage(error);
-  return /FIVE_SIM_RATE_LIMIT::|5sim[\s\S]*(?:限流|rate\s*limit)/i.test(message);
 }
 
 function isChatgptSessionReaderNonFreeTrialFailure(error) {
@@ -11166,14 +9736,9 @@ function getDownstreamStateResets(step, state = {}) {
       loginVerificationRequestedAt: null,
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
-      pendingPhoneActivationConfirmation: null,
       lastSignupCode: null,
       lastLoginCode: null,
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (step === 2) {
@@ -11189,14 +9754,9 @@ function getDownstreamStateResets(step, state = {}) {
       loginVerificationRequestedAt: null,
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
-      pendingPhoneActivationConfirmation: null,
       lastSignupCode: null,
       lastLoginCode: null,
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (step === 3 || step === 4) {
@@ -11209,14 +9769,9 @@ function getDownstreamStateResets(step, state = {}) {
       loginVerificationRequestedAt: null,
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
-      pendingPhoneActivationConfirmation: null,
       lastSignupCode: null,
       lastLoginCode: null,
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (step === 5 || step === 6 || step === 7 || step === 8) {
@@ -11250,23 +9805,13 @@ function getDownstreamStateResets(step, state = {}) {
       loginVerificationRequestedAt: null,
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
-      pendingPhoneActivationConfirmation: null,
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (step === 9) {
     return {
-      pendingPhoneActivationConfirmation: null,
       plusReturnUrl: '',
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (
@@ -11280,17 +9825,11 @@ function getDownstreamStateResets(step, state = {}) {
       loginVerificationRequestedAt: null,
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
-      pendingPhoneActivationConfirmation: null,
       localhostUrl: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
     };
   }
   if (stepKey === 'confirm-oauth') {
     return {
-      pendingPhoneActivationConfirmation: null,
       localhostUrl: null,
     };
   }
@@ -11995,7 +10534,6 @@ async function skipNode(nodeId) {
   if (
     normalizedNodeId === 'fill-profile'
     && typeof markCurrentRegistrationAccountUsed === 'function'
-    && !shouldDeferHotmailUsedMarkForPhoneSignup(await getState())
   ) {
     const latestState = await getState();
     await markCurrentRegistrationAccountUsed(latestState, {
@@ -12149,29 +10687,8 @@ async function handleStepData(step, payload) {
     return messageRouter.handleStepData(step, payload);
   }
 
-  function shouldPreservePhoneIdentityForStepEmailPayload(state = {}, stepPayload = {}) {
-    if (String(stepPayload.accountIdentifierType || '').trim().toLowerCase() === 'email') {
-      return false;
-    }
-    return Boolean(
-      String(state.signupPhoneNumber || '').trim()
-      || (String(state.accountIdentifierType || '').trim().toLowerCase() === 'phone'
-        && String(state.accountIdentifier || '').trim())
-      || state.signupPhoneActivation
-      || state.signupPhoneCompletedActivation
-    );
-  }
-
   async function persistStepEmailPayload(email, stepPayload = {}, source = 'step_identity') {
     if (!email) {
-      return;
-    }
-    const currentState = await getState();
-    if (shouldPreservePhoneIdentityForStepEmailPayload(currentState, stepPayload)) {
-      await persistRegistrationEmailState(currentState, email, {
-        source,
-        preserveAccountIdentity: true,
-      });
       return;
     }
     await setEmailState(email);
@@ -12208,22 +10725,13 @@ async function handleStepData(step, payload) {
     }
     case 2:
       await persistStepEmailPayload(payload.email, payload, 'step2_identity');
-      if (!payload.email && (payload.accountIdentifierType || payload.accountIdentifier || payload.signupPhoneNumber || payload.signupPhoneActivation)) {
-        await setState({
-          accountIdentifierType: payload.accountIdentifierType || null,
-          accountIdentifier: String(payload.accountIdentifier || '').trim(),
-          signupPhoneNumber: String(payload.signupPhoneNumber || '').trim(),
-          signupPhoneActivation: payload.signupPhoneActivation || null,
-        });
-      }
       if (payload.skippedPasswordStep) {
         const latestState = await getState();
         const step3NodeId = getNodeIdByStepForState(3, latestState);
         const step3Status = step3NodeId ? latestState.nodeStatuses?.[step3NodeId] : '';
         if (step3NodeId && step3Status !== 'running' && step3Status !== 'completed' && step3Status !== 'manual_completed') {
           await setNodeStatus(step3NodeId, 'skipped');
-          const identityLabel = payload.accountIdentifierType === 'phone' ? '手机号' : '邮箱';
-          await addLog(`步骤 2：提交${identityLabel}后页面直接进入验证码页，已自动跳过步骤 3。`, 'warn');
+          await addLog('步骤 2：提交邮箱后页面直接进入验证码页，已自动跳过步骤 3。', 'warn');
         }
       }
       break;
@@ -12238,10 +10746,7 @@ async function handleStepData(step, payload) {
         const step5Status = step5NodeId ? latestState.nodeStatuses?.[step5NodeId] : '';
         if (step5NodeId && step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
           await setNodeStatus(step5NodeId, 'skipped');
-          if (
-            typeof markCurrentRegistrationAccountUsed === 'function'
-            && !shouldDeferHotmailUsedMarkForPhoneSignup(latestState)
-          ) {
+          if (typeof markCurrentRegistrationAccountUsed === 'function') {
             await markCurrentRegistrationAccountUsed(latestState, {
               logPrefix: '步骤 3 跳过步骤 5',
               level: 'ok',
@@ -12255,13 +10760,10 @@ async function handleStepData(step, payload) {
       }
       break;
     case 7:
-      if (payload.accountIdentifierType || payload.accountIdentifier || payload.signupPhoneNumber || payload.signupPhoneActivation || payload.signupPhoneCompletedActivation) {
+      if (payload.accountIdentifierType || payload.accountIdentifier) {
         await setState({
           accountIdentifierType: payload.accountIdentifierType || null,
           accountIdentifier: String(payload.accountIdentifier || '').trim(),
-          signupPhoneNumber: String(payload.signupPhoneNumber || '').trim(),
-          signupPhoneActivation: payload.signupPhoneActivation || null,
-          signupPhoneCompletedActivation: payload.signupPhoneCompletedActivation || null,
         });
       }
       if (payload.loginVerificationRequestedAt) {
@@ -12270,25 +10772,13 @@ async function handleStepData(step, payload) {
       break;
     case 4:
       await setState({
-    ...(payload.phoneVerification ? {
-          currentPhoneVerificationCode: '',
-          signupPhoneVerificationRequestedAt: null,
-          signupPhoneVerificationPurpose: '',
-        } : {
-          lastEmailTimestamp: payload.emailTimestamp || null,
-        }),
+        lastEmailTimestamp: payload.emailTimestamp || null,
         signupVerificationRequestedAt: null,
       });
       break;
     case 8:
       await setState({
-        ...(payload.phoneVerification || payload.loginPhoneVerification ? {
-          currentPhoneVerificationCode: '',
-          signupPhoneVerificationRequestedAt: null,
-          signupPhoneVerificationPurpose: '',
-        } : {
-          lastEmailTimestamp: payload.emailTimestamp || null,
-        }),
+        lastEmailTimestamp: payload.emailTimestamp || null,
         loginVerificationRequestedAt: null,
       });
       break;
@@ -13051,13 +11541,6 @@ async function requestStop(options = {}) {
   const runningNodes = getRunningNodeIds(state.nodeStatuses, state);
   const inferredStopNode = inferStoppedRecordNode(state);
   const timerPlan = getPendingAutoRunTimerPlan(state);
-  const shouldClearCurrentPhoneAssignmentOnStop = (
-    Boolean(state?.currentPhoneActivation)
-    || Boolean(String(state?.currentPhoneVerificationCode || '').trim())
-    || Number(state?.currentPhoneVerificationCountdownEndsAt) > 0
-    || Number(state?.currentPhoneVerificationCountdownWindowIndex) > 0
-    || Number(state?.currentPhoneVerificationCountdownWindowTotal) > 0
-  );
 
   if (timerPlan?.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START && !autoRunActive) {
     await cancelScheduledAutoRun({
@@ -13107,59 +11590,6 @@ async function requestStop(options = {}) {
 
   await addLog(logMessage, 'warn');
   await broadcastStopToContentScripts();
-  if (state?.phoneAutoReleaseOnStopEnabled !== false) {
-    const normalizeStopPhone = (value) => String(value || '').replace(/\D+/g, '');
-    const currentActivationId = String(
-      state?.currentPhoneActivation?.activationId
-      || state?.currentPhoneActivation?.id
-      || state?.currentPhoneActivation?.activation
-      || ''
-    ).trim();
-    const signupActivationId = String(
-      state?.signupPhoneActivation?.activationId
-      || state?.signupPhoneActivation?.id
-      || state?.signupPhoneActivation?.activation
-      || ''
-    ).trim();
-    const samePhoneActivation = Boolean(
-      (currentActivationId && signupActivationId && currentActivationId === signupActivationId)
-      || (
-        normalizeStopPhone(state?.currentPhoneActivation?.phoneNumber)
-        && normalizeStopPhone(state?.currentPhoneActivation?.phoneNumber) === normalizeStopPhone(state?.signupPhoneActivation?.phoneNumber)
-      )
-    );
-    if (state?.currentPhoneActivation && typeof phoneVerificationHelpers?.cancelCurrentPhoneActivation === 'function') {
-      try {
-        await addLog('停止流程：正在自动释放当前接码手机号订单。', 'warn');
-        await phoneVerificationHelpers.cancelCurrentPhoneActivation(state, state.currentPhoneActivation);
-      } catch (releaseError) {
-        await addLog(`停止流程：自动释放当前接码手机号订单失败。${releaseError?.message || releaseError || '未知错误'}`, 'warn');
-      }
-    }
-    if (
-      state?.signupPhoneActivation
-      && !samePhoneActivation
-      && typeof phoneVerificationHelpers?.cancelSignupPhoneActivation === 'function'
-    ) {
-      try {
-        await addLog('停止流程：正在自动释放注册手机号接码订单。', 'warn');
-        await phoneVerificationHelpers.cancelSignupPhoneActivation(state, state.signupPhoneActivation);
-      } catch (releaseError) {
-        await addLog(`停止流程：自动释放注册手机号接码订单失败。${releaseError?.message || releaseError || '未知错误'}`, 'warn');
-      }
-    }
-  }
-  if (shouldClearCurrentPhoneAssignmentOnStop) {
-    const phoneStopStateUpdates = {
-      currentPhoneActivation: null,
-      currentPhoneVerificationCode: '',
-      currentPhoneVerificationCountdownEndsAt: 0,
-      currentPhoneVerificationCountdownWindowIndex: 0,
-      currentPhoneVerificationCountdownWindowTotal: 0,
-    };
-    await setState(phoneStopStateUpdates);
-    broadcastDataUpdate(phoneStopStateUpdates);
-  }
 
   if (!runningNodes.length && inferredStopNode) {
     await appendAndBroadcastAccountRunRecord('stopped', state, STOP_ERROR_MESSAGE);
@@ -14341,10 +12771,6 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   let currentStartNodeId = String(startNodeId || '').trim();
   let continueCurrentAttempt = continued;
   await ensureResolvedSignupMethodForRun();
-  await setState({
-    signupPhoneExcludedNumbersThisAttempt: [],
-    whatsappPhoneVerificationRestartCount: 0,
-  });
   const getNodeStatusForNode = (state, nodeId) => (
     String(state?.nodeStatuses?.[nodeId] || 'pending').trim() || 'pending'
   );
@@ -14532,14 +12958,6 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         if (await restartCurrentNodeAfterIdle('fill-password', err)) {
           continue;
         }
-        if (isSignupPhonePasswordMismatchFailure(err)) {
-          step4RestartCount += 1;
-          await stopIfStep4RestartLimitExceeded('fill-password', step4RestartCount, err, latestState);
-          await restartSignupPhonePasswordMismatchAttemptFromNode('fill-password', step4RestartCount, err);
-          setRestartNode('open-chatgpt');
-          restartFromStep1WithCurrentEmail = true;
-          continue;
-        }
         throw err;
       }
     }
@@ -14617,32 +13035,25 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         }
         step4RestartCount += 1;
         await stopIfStep4RestartLimitExceeded('fetch-signup-code', step4RestartCount, err, latestState);
-        const isPhoneResendBanned = typeof phoneVerificationHelpers !== 'undefined'
-          && typeof phoneVerificationHelpers?.isPhoneResendBannedNumberError === 'function'
-          && phoneVerificationHelpers.isPhoneResendBannedNumberError(err);
-        if (isSignupPhonePasswordMismatchFailure(err) || isPhoneResendBanned) {
-          await restartSignupPhonePasswordMismatchAttemptFromNode('fetch-signup-code', step4RestartCount, err);
-        } else {
-          const preservedState = await getState();
-          const preservedEmail = String(preservedState.email || '').trim();
-          const preservedPassword = String(preservedState.password || '').trim();
-          const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
-          if (isAssurivoNoValidCodeFailure(err)) {
-            await waitBeforeAssurivoNoValidCodeRestart(err);
-          }
-          await addLog(
-            `节点 fetch-signup-code：执行失败，准备沿用当前邮箱回到节点 open-chatgpt 重新开始（第 ${step4RestartCount} 次重开）。${emailSuffix}原因：${getErrorMessage(err)}`,
-            'warn'
-          );
-          await invalidateDownstreamAfterAutoRunNodeRestart('open-chatgpt', {
-            logLabel: `节点 fetch-signup-code 报错后准备回到 open-chatgpt 沿用当前邮箱重试（第 ${step4RestartCount} 次重开）`,
-          });
-          const restorePayload = {};
-          if (preservedEmail) restorePayload.email = preservedEmail;
-          if (preservedPassword) restorePayload.password = preservedPassword;
-          if (Object.keys(restorePayload).length) {
-            await setState(restorePayload);
-          }
+        const preservedState = await getState();
+        const preservedEmail = String(preservedState.email || '').trim();
+        const preservedPassword = String(preservedState.password || '').trim();
+        const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
+        if (isAssurivoNoValidCodeFailure(err)) {
+          await waitBeforeAssurivoNoValidCodeRestart(err);
+        }
+        await addLog(
+          `节点 fetch-signup-code：执行失败，准备沿用当前邮箱回到节点 open-chatgpt 重新开始（第 ${step4RestartCount} 次重开）。${emailSuffix}原因：${getErrorMessage(err)}`,
+          'warn'
+        );
+        await invalidateDownstreamAfterAutoRunNodeRestart('open-chatgpt', {
+          logLabel: `节点 fetch-signup-code 报错后准备回到 open-chatgpt 沿用当前邮箱重试（第 ${step4RestartCount} 次重开）`,
+        });
+        const restorePayload = {};
+        if (preservedEmail) restorePayload.email = preservedEmail;
+        if (preservedPassword) restorePayload.password = preservedPassword;
+        if (Object.keys(restorePayload).length) {
+          await setState(restorePayload);
         }
         setRestartNode('open-chatgpt');
         restartFromStep1WithCurrentEmail = true;
@@ -14803,7 +13214,7 @@ async function resumeAutoRun() {
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
 const SIGNUP_AUTH_ENTRY_URL = 'https://chatgpt.com/auth/login';
-const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/signup-dom-utils.js', 'content/signup-entry-page.js', 'content/signup-phone-page.js', 'content/signup-verification-page.js', 'content/signup-page.js'];
+const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/signup-dom-utils.js', 'content/signup-entry-page.js', 'content/signup-verification-page.js', 'content/signup-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -14834,10 +13245,6 @@ const signupFlowHelpers = self.MultiPageSignupFlowHelpers?.createSignupFlowHelpe
   isGeneratedAliasProvider,
   isReusableGeneratedAliasEmail,
   isSignupEmailVerificationPageUrl,
-  isSignupPhoneVerificationPageUrl: (rawUrl) => {
-    const parsed = parseUrlSafely(rawUrl);
-    return Boolean(parsed && isSignupPageHost(parsed.hostname) && /\/phone-verification(?:[/?#]|$)/i.test(parsed.pathname || ''));
-  },
   isSignupProfilePageUrl: (rawUrl) => {
     const parsed = parseUrlSafely(rawUrl);
     return Boolean(parsed && isSignupPageHost(parsed.hostname) && /\/(?:create-account\/profile|u\/signup\/profile|signup\/profile|about-you)(?:[/?#]|$)/i.test(parsed.pathname || ''));
@@ -14917,76 +13324,6 @@ const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.create
   throwIfStopped,
   VERIFICATION_POLL_MAX_ROUNDS,
 });
-const phoneVerificationHelpers = self.MultiPageBackgroundPhoneVerification?.createPhoneVerificationHelpers({
-  addLog,
-  broadcastDataUpdate,
-  DEFAULT_FIVE_SIM_BASE_URL,
-  DEFAULT_FIVE_SIM_COUNTRY_ORDER,
-  DEFAULT_FIVE_SIM_OPERATOR,
-  DEFAULT_FIVE_SIM_PRODUCT,
-  DEFAULT_REMOVED_SMS_VENDOR_BASE_URL,
-  DEFAULT_REMOVED_SMS_VENDOR_COUNTRY_ORDER,
-  DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE,
-  DEFAULT_REMOVED_SMS_VENDOR_B_BASE_URL,
-  DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE,
-  DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER,
-  DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE,
-  DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL,
-  DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE,
-  DEFAULT_REMOVED_TEXT_POOL_BASE_URL,
-  DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE,
-  DEFAULT_REMOVED_SMS_MAIN_BASE_URL,
-  DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED,
-  DEFAULT_PHONE_CODE_WAIT_SECONDS,
-  DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS,
-  DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS,
-  DEFAULT_PHONE_CODE_POLL_ROUNDS,
-  readAuthTabSnapshot,
-  ensureStep8SignupPageReady,
-  navigateAuthTabToAddPhone: async (tabId, options = {}) => {
-    const visibleStep = Math.floor(Number(options.visibleStep || options.step) || 0) || 9;
-    const requestedTimeoutMs = Number(options.timeoutMs);
-    const timeoutMs = Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
-      ? requestedTimeoutMs
-      : await getOAuthFlowStepTimeoutMs(30000, {
-        step: visibleStep,
-        actionLabel: 'direct add-phone navigation',
-      });
-    await chrome.tabs.update(tabId, { url: 'https://auth.openai.com/add-phone', active: true });
-    await ensureStep8SignupPageReady(tabId, {
-      timeoutMs,
-      visibleStep,
-      logStepKey: options.logStepKey || 'phone-verification',
-      logMessage: options.logMessage || '步骤 9：认证页已失联，直接打开添加手机号页面后等待脚本恢复。',
-    });
-    return {
-      addPhonePage: true,
-      phoneVerificationPage: false,
-      url: 'https://auth.openai.com/add-phone',
-    };
-  },
-  generateRandomBirthday,
-  generateRandomName,
-  getOAuthFlowRemainingMs,
-  getOAuthFlowStepTimeoutMs,
-  getState,
-  REMOVED_SMS_MAIN_COUNTRY_ID,
-  REMOVED_SMS_MAIN_COUNTRY_LABEL,
-  REMOVED_SMS_MAIN_SERVICE_CODE,
-  REMOVED_SMS_MAIN_SERVICE_LABEL,
-  sendToContentScript,
-  sendToContentScriptResilient,
-  setState,
-  sleepWithStop,
-  throwIfStopped,
-  createFiveSimProvider: self.RemovedPhoneFiveSimProvider?.createProvider,
-  createRemovedSmsVendorBProvider: self.RemovedPhoneBowerProvider?.createProvider,
-  createRemovedSmsProvider: self.RemovedPhoneRemovedSmsProvider?.createProvider,
-  createRemovedSmsVendorProvider: self.RemovedPhoneRemovedSmsVendorProvider?.createProvider,
-  createSmsVerificationNumberProvider: self.RemovedPhoneVerificationNumberProvider?.createProvider,
-  createGrizzlySmsProvider: self.RemovedPhoneGrizzlySmsProvider?.createProvider,
-  createRemovedTextPoolProvider: self.RemovedPhonePoolProvider?.createProvider,
-});
 const step1Executor = self.MultiPageBackgroundStep1?.createStep1Executor({
   addLog,
   completeNodeFromBackground,
@@ -15003,8 +13340,6 @@ const step2Executor = self.MultiPageBackgroundStep2?.createStep2Executor({
   ensureSignupPostIdentityPageReadyInTab: signupFlowHelpers.ensureSignupPostIdentityPageReadyInTab,
   getTabId,
   isTabAlive,
-  phoneVerificationHelpers,
-  resolveSignupMethod,
   resolveSignupEmailForFlow,
   sendToContentScriptResilient,
   SIGNUP_PAGE_INJECT_FILES,
@@ -15018,7 +13353,6 @@ const step3Executor = self.MultiPageBackgroundStep3?.createStep3Executor({
   generatePassword,
   getTabId,
   isTabAlive,
-  resolveSignupMethod,
   sendToContentScript,
   setPasswordState,
   setState,
@@ -15067,8 +13401,6 @@ const step4Executor = self.MultiPageBackgroundStep4?.createStep4Executor({
   STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS,
   throwIfStopped,
   waitForTabStableComplete,
-  phoneVerificationHelpers,
-  resolveSignupMethod,
 });
 const step5Executor = self.MultiPageBackgroundStep5?.createStep5Executor({
   addLog,
@@ -15103,7 +13435,6 @@ const step7Executor = self.MultiPageBackgroundStep7?.createStep7Executor({
   isAddPhoneAuthFailure,
   isStep6RecoverableResult,
   isStep6SuccessResult,
-  phoneVerificationHelpers,
   refreshOAuthUrlBeforeStep6,
   reuseOrCreateTab,
   sendToContentScriptResilient,
@@ -15139,9 +13470,7 @@ const step8Executor = self.MultiPageBackgroundStep8?.createStep8Executor({
   resolveVerificationStep: verificationFlowHelpers.resolveVerificationStep,
   resolveSignupEmailForFlow,
   persistRegistrationEmailState,
-  phoneVerificationHelpers,
   rerunStep7ForStep8Recovery: (...args) => rerunStep7ForStep8Recovery(...args),
-  resolveSignupMethod,
   reuseOrCreateTab,
   sendToContentScriptResilient,
   setState,
@@ -15446,7 +13775,6 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   clearAccountRunHistory: (...args) => clearAndBroadcastAccountRunHistory(...args),
   deleteAccountRunHistoryRecords: (...args) => deleteAndBroadcastAccountRunHistoryRecords(...args),
   clearAutoRunTimerAlarm,
-  clearFreeReusablePhoneActivation,
   clearLuckmailRuntimeState,
   clearStopRequest,
   closeLocalhostCallbackTabs,
@@ -15494,7 +13822,6 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   retryUpiRedeemCdkeyJobs: (...args) => upiRedeemExecutor.retryUpiRedeemCdkeyJobs(...args),
   checkUpiRedeemSubscriptionStatuses: (...args) => upiRedeemExecutor.checkUpiRedeemSubscriptionStatuses(...args),
   refreshOAuthTimeoutWindowAfterCheckoutSuccess: null,
-  finalizePhoneActivationAfterSuccessfulFlow: null,
   finalizeStep3Completion: async () => {
     const currentState = await getState();
     const signupTabId = await getTabId('signup-page');
@@ -15518,7 +13845,6 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   getStepIdsForState,
   getLastStepIdForState,
   normalizeSignupMethod,
-  canUsePhoneSignup,
   resolveSignupMethod,
   validateAutoRunStart: validateAutoRunStartState,
   getTabId,
@@ -15564,9 +13890,6 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   setEmailState,
   setEmailStateSilently,
   persistRegistrationEmailState,
-  setFreeReusablePhoneActivation: null,
-  setSignupPhoneState: null,
-  setSignupPhoneStateSilently: null,
   setIcloudAliasPreservedState,
   setIcloudAliasUsedState,
   setLuckmailPurchaseDisabledState,
@@ -16100,13 +14423,6 @@ async function getPostStep6AutoRestartDecision(step, error) {
     const hasTransientTokenExchangeSignal = /token_exchange_user_error|invalid request\.?\s*please try again later/i.test(normalizedMessage);
     return mentionsTokenExchange && (hasTransientNetworkSignal || hasTransientTokenExchangeSignal);
   };
-  const isPhoneVerificationLocalFailure = (errorMessage = '') => {
-    const normalizedMessage = String(errorMessage || '');
-    if (isRemovedPhonePlatformRateLimitFailure(normalizedMessage)) {
-      return false;
-    }
-    return /HeroSMS|phone verification did not succeed|number replacements|sms_timeout_after(?:_[a-z0-9_]+)?|phone number is already linked|add-phone keeps rejecting current number|手机验证码|短信验证码|接码|步骤\s*9[：:][\s\S]*(?:手机号验证|手机验证码|接码|没有可用手机号|无可用手机号)|(?:手机号验证|手机号码验证|手机号接码|手机号码接码)[\s\S]*(?:失败|超时|未成功|不可用|拒绝)|(?:手机号|手机号码)[\s\S]*(?:已绑定|被占用|不可用|拒绝|失败|超时|没有可用|无可用)|Step\s*9.*phone verification/i.test(normalizedMessage);
-  };
 
   const normalizedStep = Number(step);
   const errorMessage = getErrorMessage(error);
@@ -16151,17 +14467,6 @@ async function getPostStep6AutoRestartDecision(step, error) {
     return {
       shouldRestart: false,
       blockedByAddPhone: false,
-      forcedByPhoneVerificationTimeout: false,
-      restartStep: authChainStartStep,
-      errorMessage,
-      authState: null,
-    };
-  }
-
-  if (isPhoneVerificationLocalFailure(errorMessage)) {
-    return {
-      shouldRestart: false,
-      blockedByAddPhone: true,
       forcedByPhoneVerificationTimeout: false,
       restartStep: authChainStartStep,
       errorMessage,

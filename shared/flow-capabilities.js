@@ -5,16 +5,11 @@
   const DEFAULT_PANEL_MODE = 'local-cpa-json';
   const LOCAL_CPA_JSON_NO_RT_PANEL_MODE = 'local-cpa-json-no-rt';
   const SIGNUP_METHOD_EMAIL = 'email';
-  const SIGNUP_METHOD_PHONE = 'phone';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
-  const PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH = 'sms_oauth';
-  const PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH = 'phone_bind_oauth';
   const VALID_PANEL_MODES = Object.freeze(['local-cpa-json', LOCAL_CPA_JSON_NO_RT_PANEL_MODE, 'codex2api']);
 
   const DEFAULT_FLOW_CAPABILITIES = Object.freeze({
     supportsEmailSignup: true,
-    supportsPhoneSignup: false,
-    supportsPhoneVerificationSettings: false,
     supportsPlusMode: false,
     supportsContributionMode: false,
     supportsPlatformBinding: [],
@@ -27,8 +22,6 @@
   const FLOW_CAPABILITIES = Object.freeze({
     openai: Object.freeze({
       ...DEFAULT_FLOW_CAPABILITIES,
-      supportsPhoneSignup: false,
-      supportsPhoneVerificationSettings: false,
       supportsPlusMode: true,
       supportsContributionMode: true,
       supportsPlatformBinding: ['local-cpa-json', LOCAL_CPA_JSON_NO_RT_PANEL_MODE, 'codex2api'],
@@ -39,14 +32,12 @@
   });
 
   const DEFAULT_PANEL_CAPABILITIES = Object.freeze({
-    supportsPhoneSignup: false,
     supportedPlusAccountAccessStrategies: Object.freeze([PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH]),
   });
   const MODE_SWITCH_RELEVANT_KEYS = Object.freeze([
     'activeFlowId',
     'contributionMode',
     'panelMode',
-    'phoneVerificationEnabled',
     'plusAccountAccessStrategy',
     'plusModeEnabled',
     'signupMethod',
@@ -54,20 +45,16 @@
 
   const PANEL_CAPABILITIES = Object.freeze({
     'local-cpa-json': Object.freeze({
-      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
       ]),
     }),
     [LOCAL_CPA_JSON_NO_RT_PANEL_MODE]: Object.freeze({
-      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
       ]),
     }),
-    codex2api: Object.freeze({
-      supportsPhoneSignup: false,
-    }),
+    codex2api: Object.freeze({}),
   });
 
   function normalizeFlowId(value = '', fallback = DEFAULT_FLOW_ID) {
@@ -89,19 +76,10 @@
   }
 
   function normalizeSignupMethod(value = '') {
-    return String(value || '').trim().toLowerCase() === SIGNUP_METHOD_PHONE
-      ? SIGNUP_METHOD_PHONE
-      : SIGNUP_METHOD_EMAIL;
+    return SIGNUP_METHOD_EMAIL;
   }
 
   function normalizePlusAccountAccessStrategy(value = '') {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH) {
-      return PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH;
-    }
-    if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH) {
-      return PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH;
-    }
     return PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
   }
 
@@ -110,18 +88,7 @@
   }
 
   function normalizePlusAccountAccessStrategyForPanel(value = '', panelMode = '') {
-    const normalized = normalizePlusAccountAccessStrategy(value);
-    if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH) {
-      return ['local-cpa-json', LOCAL_CPA_JSON_NO_RT_PANEL_MODE].includes(normalizePanelMode(panelMode))
-        ? PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH
-        : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
-    }
-    if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH) {
-      return ['local-cpa-json', LOCAL_CPA_JSON_NO_RT_PANEL_MODE].includes(normalizePanelMode(panelMode))
-        ? PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH
-        : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
-    }
-    return normalized;
+    return normalizePlusAccountAccessStrategy(value);
   }
 
   function normalizePanelModeList(values = []) {
@@ -219,7 +186,6 @@
       const runtimeLocks = {
         autoRunLocked: Boolean(options?.autoRunLocked ?? state?.autoRunLocked),
         contributionMode: flowState.supportsContributionMode && Boolean(state?.contributionMode),
-        phoneVerificationEnabled: flowState.supportsPhoneVerificationSettings && Boolean(state?.phoneVerificationEnabled),
         plusModeEnabled: flowState.supportsPlusMode && Boolean(state?.plusModeEnabled),
         settingsMenuLocked: Boolean(options?.settingsMenuLocked ?? state?.settingsMenuLocked),
       };
@@ -233,42 +199,11 @@
         : [PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH])
         .map(normalizePlusAccountAccessStrategy)
         .filter((strategy, index, strategies) => strategy && strategies.indexOf(strategy) === index);
-      const canUseSmsOauthPhoneSignup = activeFlowId === 'openai'
-        && Boolean(runtimeLocks.plusModeEnabled)
-        && requestedPlusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH
-        && panelPlusAccountAccessStrategies.includes(PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH);
-      const canUsePhoneBindOauth = activeFlowId === 'openai'
-        && Boolean(runtimeLocks.plusModeEnabled)
-        && requestedPlusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH
-        && panelPlusAccountAccessStrategies.includes(PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH);
-      const effectiveSignupMethods = [];
-      if (flowState.supportsEmailSignup !== false) {
-        effectiveSignupMethods.push(SIGNUP_METHOD_EMAIL);
-      }
-      const canSelectPhoneSignup = Boolean(flowState.supportsPhoneSignup)
-        && Boolean(panelState.supportsPhoneSignup)
-        && runtimeLocks.phoneVerificationEnabled
-        && !runtimeLocks.contributionMode;
-      const phoneSignupSelectable = canSelectPhoneSignup
-        && (!runtimeLocks.plusModeEnabled || canUseSmsOauthPhoneSignup);
-      if (phoneSignupSelectable) {
-        effectiveSignupMethods.push(SIGNUP_METHOD_PHONE);
-      }
-      if (!effectiveSignupMethods.length) {
-        effectiveSignupMethods.push(SIGNUP_METHOD_EMAIL);
-      }
+      const effectiveSignupMethods = [SIGNUP_METHOD_EMAIL];
       const requestedSignupMethod = normalizeSignupMethod(
         options?.signupMethod ?? state?.signupMethod
       );
-      const effectiveSignupMethod = canUsePhoneBindOauth
-        ? SIGNUP_METHOD_EMAIL
-        : (canUseSmsOauthPhoneSignup
-        ? SIGNUP_METHOD_PHONE
-        : (requestedSignupMethod === SIGNUP_METHOD_PHONE && phoneSignupSelectable
-        ? SIGNUP_METHOD_PHONE
-        : (effectiveSignupMethods.includes(SIGNUP_METHOD_EMAIL)
-          ? SIGNUP_METHOD_EMAIL
-          : effectiveSignupMethods[0])));
+      const effectiveSignupMethod = SIGNUP_METHOD_EMAIL;
       const availablePlusAccountAccessStrategies = activeFlowId === 'openai'
         && Boolean(flowState.supportsPlusMode)
         && Boolean(runtimeLocks.plusModeEnabled)
@@ -286,11 +221,9 @@
         activeFlowId,
         canShowContributionMode: Boolean(flowState.supportsContributionMode),
         canShowLuckmail: Boolean(flowState.supportsLuckmail),
-        canShowPhoneSettings: Boolean(flowState.supportsPhoneVerificationSettings),
         canShowPlusSettings: Boolean(flowState.supportsPlusMode),
         canSwitchFlow: Boolean(flowState.canSwitchFlow),
         canEditPlusAccountAccessStrategy,
-        canUsePhoneSignup: phoneSignupSelectable,
         canUseSelectedPanelMode: panelModeSupported,
         effectivePlusAccountAccessStrategy,
         effectivePanelMode,
@@ -312,47 +245,6 @@
         },
         availablePlusAccountAccessStrategies,
         supportedPanelModes,
-      };
-    }
-
-    function buildPhoneSignupValidationError(capabilityState = {}) {
-      const flowState = capabilityState.flowCapabilities || {};
-      const panelState = capabilityState.panelCapabilities || {};
-      const runtimeLocks = capabilityState.runtimeLocks || {};
-
-      if (!flowState.supportsPhoneSignup) {
-        return {
-          code: 'phone_signup_flow_unsupported',
-          message: '当前 flow 不支持手机号注册。',
-        };
-      }
-      if (!panelState.supportsPhoneSignup) {
-        return {
-          code: 'phone_signup_panel_unsupported',
-          message: `当前面板模式 ${getPanelModeLabel(capabilityState.requestedPanelMode)} 不支持手机号注册。`,
-        };
-      }
-      if (!runtimeLocks.phoneVerificationEnabled) {
-        return {
-          code: 'phone_signup_phone_verification_disabled',
-          message: '请先开启接码功能后再使用手机号注册。',
-        };
-      }
-      if (runtimeLocks.plusModeEnabled) {
-        return {
-          code: 'phone_signup_plus_mode_locked',
-          message: 'Plus 模式开启时不能使用手机号注册。',
-        };
-      }
-      if (runtimeLocks.contributionMode) {
-        return {
-          code: 'phone_signup_contribution_mode_locked',
-          message: '贡献模式开启时不能使用手机号注册。',
-        };
-      }
-      return {
-        code: 'phone_signup_unavailable',
-        message: '当前设置暂不支持手机号注册。',
       };
     }
 
@@ -386,14 +278,6 @@
         });
       }
 
-      if (
-        capabilityState.requestedSignupMethod === SIGNUP_METHOD_PHONE
-        && capabilityState.effectiveSignupMethod !== SIGNUP_METHOD_PHONE
-        && capabilityState.effectivePlusAccountAccessStrategy !== PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH
-      ) {
-        errors.push(buildPhoneSignupValidationError(capabilityState));
-      }
-
       return {
         ok: errors.length === 0,
         errors,
@@ -413,8 +297,6 @@
       const errors = [];
       const normalizedUpdates = {};
       const flowState = capabilityState.flowCapabilities || {};
-      const requestedPhoneSignup = capabilityState.requestedSignupMethod === SIGNUP_METHOD_PHONE;
-      const shouldReconcileSignupMethod = MODE_SWITCH_RELEVANT_KEYS.some((key) => changedKeySet.has(key));
 
       if (
         changedKeySet.has('panelMode')
@@ -445,27 +327,8 @@
         });
       }
 
-      if (
-        changedKeySet.has('phoneVerificationEnabled')
-        && Boolean(state?.phoneVerificationEnabled)
-        && !flowState.supportsPhoneVerificationSettings
-      ) {
-        normalizedUpdates.phoneVerificationEnabled = false;
-        errors.push({
-          code: 'phone_verification_unsupported',
-          message: '当前 flow 不支持接码配置。',
-        });
-      }
-
-      if (
-        shouldReconcileSignupMethod
-        && requestedPhoneSignup
-        && capabilityState.effectiveSignupMethod !== SIGNUP_METHOD_PHONE
-      ) {
-        normalizedUpdates.signupMethod = capabilityState.effectiveSignupMethod;
-        if (capabilityState.effectivePlusAccountAccessStrategy !== PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH) {
-          errors.push(buildPhoneSignupValidationError(capabilityState));
-        }
+      if (changedKeySet.has('signupMethod') && String(state?.signupMethod || '').trim() !== SIGNUP_METHOD_EMAIL) {
+        normalizedUpdates.signupMethod = SIGNUP_METHOD_EMAIL;
       }
 
       if (
@@ -484,10 +347,6 @@
       };
     }
 
-    function canUsePhoneSignup(state = {}) {
-      return resolveSidepanelCapabilities({ state }).canUsePhoneSignup;
-    }
-
     function resolveSignupMethod(state = {}, signupMethod = undefined) {
       return resolveSidepanelCapabilities({
         signupMethod,
@@ -496,7 +355,6 @@
     }
 
     return {
-      canUsePhoneSignup,
       getFlowCapabilities,
       getPanelCapabilities,
       normalizeFlowId,
@@ -518,10 +376,7 @@
     FLOW_CAPABILITIES,
     PANEL_CAPABILITIES,
     PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-    PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-    PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH,
     SIGNUP_METHOD_EMAIL,
-    SIGNUP_METHOD_PHONE,
     normalizeFlowId,
     normalizePanelMode,
     normalizePlusAccountAccessStrategy,

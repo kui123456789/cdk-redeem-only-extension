@@ -1,8 +1,6 @@
 (function attachBackgroundAutoRunController(root, factory) {
   root.MultiPageBackgroundAutoRunController = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundAutoRunControllerModule() {
-  const AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND = 10;
-  const KEEP_SAME_EMAIL_RETRY_LIMIT_EXCEEDED_ERROR_PREFIX = 'KEEP_SAME_EMAIL_RETRY_LIMIT_EXCEEDED::';
   const AUTO_RUN_ROUND_LOG_SNAPSHOT_STORAGE_KEY = 'autoRunRoundLogSnapshots';
   const AUTO_RUN_ROUND_LOG_SNAPSHOT_MAX_ITEMS = 50;
   const AUTO_RUN_ROUND_LOG_SNAPSHOT_MAX_LOGS = 300;
@@ -32,12 +30,10 @@
       getRunningNodeIds,
       getState,
       hasSavedNodeProgress,
-      isAddPhoneAuthFailure,
       isCloudCheckoutAlreadyPaidFailure,
       isCardHelperTaskEndedFailure,
       isHostedCheckoutGenericErrorFailure,
       isHostedCheckoutVerificationResendLimitFailure,
-      isRemovedPhonePlatformRateLimitFailure,
       isChatgptSessionReaderNonFreeTrialFailure,
       isUpiRedeemBackendFailure,
       isUpiRedeemNetworkFailure,
@@ -464,42 +460,10 @@
       return replayAutoRunRoundLogSnapshot(previousSnapshot);
     }
 
-    function isPhoneNumberSupplyExhaustedFailure(errorLike) {
-      const message = String(
-        typeof errorLike === 'string'
-          ? errorLike
-          : (errorLike?.message || errorLike || '')
-      ).trim();
-      if (!message) {
-        return false;
-      }
-      const hasGlobalNoSupplySignal = /Step\s*9:\s*all\s+provider\s+candidates\s+failed\s+to\s+acquire\s+number|(?:HeroSMS|5sim|RemovedSMSVendor)\s+no\s+numbers\s+available\s+across|no\s+numbers\s+within\s+maxPrice|no\s+free\s+phones|numbers?\s+not\s+found/i.test(message);
-      if (!hasGlobalNoSupplySignal) {
-        return false;
-      }
-      const hasRecoverableStep9RotationSignal = /phone\s+verification\s+did\s+not\s+succeed\s+after\s+\d+\s+number\s+replacements|sms_timeout_after_|route_405_retry_loop|resend_throttled|activation_not_found|order\s+not\s+found/i.test(message);
-      if (hasRecoverableStep9RotationSignal) {
-        return false;
-      }
-      return true;
-    }
-
     function shouldKeepCustomMailProviderPoolEmail(state = {}) {
       return String(state?.mailProvider || '').trim().toLowerCase() === 'custom'
         && Array.isArray(state?.customMailProviderPool)
         && state.customMailProviderPool.length > 0;
-    }
-
-    function isPhoneNumberSupplyExhaustedFailure(error) {
-      const text = String(
-        typeof getErrorMessage === 'function'
-          ? getErrorMessage(error)
-          : (error?.message || error || '')
-      ).trim();
-      if (!text) {
-        return false;
-      }
-      return /no\s+numbers\s+available\s+across|all provider candidates failed to acquire number|no\s+free\s+phones|numbers?\s+not\s+found|no\s+numbers\s+within\s+maxprice|countries\s+are\s+empty|均无可用号码|暂无可用号码|无可用号码|接码号池暂无|\bNO_NUMBERS\b/i.test(text);
     }
 
     function isUpiAccountIneligibleFailure(error) {
@@ -773,11 +737,8 @@
         const resumingCurrentRound = continueCurrentOnFirstAttempt && targetRun === resumeCurrentRun;
         let attemptRun = resumingCurrentRound ? resumeAttemptRun : 1;
         let reuseExistingProgress = resumingCurrentRound;
-        const currentRoundState = await getState();
-        const keepSameEmailUntilAddPhone = autoRunSkipFailures && shouldKeepCustomMailProviderPoolEmail(currentRoundState);
-        const maxKeepSameEmailAttemptsForRound = AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND + 1;
         const maxAttemptsForRound = autoRunSkipFailures || autoRunRetryNonFreeTrial || autoRunRetryLegacyWalletCallback
-          ? (keepSameEmailUntilAddPhone ? maxKeepSameEmailAttemptsForRound : AUTO_RUN_MAX_RETRIES_PER_ROUND + 1)
+          ? AUTO_RUN_MAX_RETRIES_PER_ROUND + 1
           : Math.max(AUTO_RUN_MAX_RETRIES_PER_ROUND + 1, attemptRun);
 
         const saveRoundLogSnapshotIfNeeded = async (flags = {}) => {
@@ -900,7 +861,6 @@
               inbucketMailbox: prevState.inbucketMailbox,
               cloudflareDomain: prevState.cloudflareDomain,
               cloudflareDomains: prevState.cloudflareDomains,
-              reusablePhoneActivation: prevState.reusablePhoneActivation,
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               autoRunSessionId: sessionId,
               tabRegistry: {},
@@ -997,14 +957,6 @@
 
             const reason = getErrorMessage(err);
             roundSummary.failureReasons.push(reason);
-            const blockedByRemovedPhoneRateLimit = typeof isRemovedPhonePlatformRateLimitFailure === 'function'
-              && isRemovedPhonePlatformRateLimitFailure(err);
-            const blockedByPhoneNoSupply = !blockedByRemovedPhoneRateLimit
-              && isPhoneNumberSupplyExhaustedFailure(err);
-            const blockedByAddPhone = !blockedByRemovedPhoneRateLimit
-              && !blockedByPhoneNoSupply
-              && typeof isAddPhoneAuthFailure === 'function'
-              && isAddPhoneAuthFailure(err);
             const blockedByUpiAccountIneligible = isUpiAccountIneligibleFailure(err);
             const blockedByPlusNonFreeTrial = !blockedByUpiAccountIneligible
               && typeof isChatgptSessionReaderNonFreeTrialFailure === 'function'
@@ -1029,7 +981,6 @@
               ? isCloudCheckoutAlreadyPaidFailure(err)
               : /\buser\s+is\s+already\s+paid\b|already\s+(?:paid|subscribed)/i.test(err?.message || String(err || ''));
             const blockedBySignupUserAlreadyExists = typeof isSignupUserAlreadyExistsFailure === 'function'
-              && !keepSameEmailUntilAddPhone
               && isSignupUserAlreadyExistsFailure(err);
             const blockedByStep4Route405 = typeof isStep4Route405RecoveryLimitFailure === 'function'
               && isStep4Route405RecoveryLimitFailure(err);
@@ -1046,9 +997,7 @@
               && attemptRun < maxPlusNonFreeTrialAttempts;
             const retryableHostedCheckoutCardFallback = blockedByHostedCheckoutCardFallback
               && attemptRun < maxPlusNonFreeTrialAttempts;
-            const canRetry = !blockedByAddPhone
-              && !blockedByPhoneNoSupply
-              && !blockedByUpiAccountIneligible
+            const canRetry = !blockedByUpiAccountIneligible
               && !blockedByPlusNonFreeTrial
               && !blockedByUpiRedeemBackendFailure
               && !blockedByUpiRedeemNetworkFailure
@@ -1060,23 +1009,6 @@
               && !blockedBySignupUserAlreadyExists
               && autoRunSkipFailures
               && attemptRun < maxAttemptsForRound;
-            const reachedKeepSameEmailRetryLimit = keepSameEmailUntilAddPhone
-              && !blockedByAddPhone
-              && !blockedByPhoneNoSupply
-              && !blockedByUpiAccountIneligible
-              && !blockedByPlusNonFreeTrial
-              && !blockedByUpiRedeemBackendFailure
-              && !blockedByUpiRedeemNetworkFailure
-              && !blockedByCardHelperTaskEnded
-              && !blockedByHostedCheckoutGenericError
-              && !blockedByHostedCheckoutCardFallback
-              && !blockedByHostedCheckoutVerificationResendLimit
-              && !blockedByCloudCheckoutAlreadyPaid
-              && !blockedBySignupUserAlreadyExists
-              && !blockedByStep4Route405
-              && autoRunSkipFailures
-              && attemptRun >= maxAttemptsForRound;
-
             await setState({
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
             });
@@ -1399,66 +1331,6 @@
               attemptRun += 1;
               reuseExistingProgress = false;
               continue;
-            }
-
-            if (blockedByAddPhone) {
-              roundSummary.status = 'failed';
-              roundSummary.finalFailureReason = reason;
-              await setState({
-                autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
-              });
-              await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因认证流程进入 add-phone 已终止。');
-              await broadcastStopToContentScripts();
-              if (!autoRunSkipFailures) {
-                await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮触发 add-phone/手机号页，自动重试未开启，当前自动运行将停止。`,
-                  'warn'
-                );
-                stoppedEarly = true;
-                await broadcastAutoRunStatus('stopped', {
-                  currentRun: targetRun,
-                  totalRuns,
-                  attemptRun,
-                  sessionId: 0,
-                });
-                break;
-              }
-
-              await addLog(`第 ${targetRun}/${totalRuns} 轮触发 add-phone/手机号页，本轮将直接失败并跳过剩余重试。`, 'warn');
-              await addLog(
-                targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 add-phone/手机号页提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 add-phone/手机号页提前结束，已无后续轮次，本次自动运行结束。`,
-                'warn'
-              );
-              forceFreshTabsNextRun = true;
-              break;
-            }
-
-            if (blockedByPhoneNoSupply) {
-              roundSummary.status = 'failed';
-              roundSummary.finalFailureReason = reason;
-              await setState({
-                autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
-              });
-              await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因接码号池暂无可用号码已终止。');
-              await broadcastStopToContentScripts();
-              await addLog(
-                autoRunSkipFailures
-                  ? `第 ${targetRun}/${totalRuns} 轮接码号池暂无可用号码。该状态属于全局资源耗尽，已忽略“自动重试/跳过失败继续下一轮”并停止自动运行。`
-                  : `第 ${targetRun}/${totalRuns} 轮接码号池暂无可用号码，当前自动运行将停止。`,
-                'warn'
-              );
-              stoppedEarly = true;
-              await broadcastAutoRunStatus('stopped', {
-                currentRun: targetRun,
-                totalRuns,
-                attemptRun,
-                sessionId: 0,
-              });
-              break;
             }
 
             if (blockedByUpiAccountIneligible) {
@@ -1813,9 +1685,7 @@
               });
               forceFreshTabsNextRun = true;
               await addLog(
-                keepSameEmailUntilAddPhone
-                  ? `自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后继续使用当前邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试。`
-                  : `自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
+                `自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
                 'warn'
               );
               try {
@@ -1864,46 +1734,6 @@
               attemptRun += 1;
               reuseExistingProgress = false;
               continue;
-            }
-
-            if (reachedKeepSameEmailRetryLimit) {
-              const limitReason = `${KEEP_SAME_EMAIL_RETRY_LIMIT_EXCEEDED_ERROR_PREFIX}第 ${targetRun}/${totalRuns} 轮继续使用当前邮箱已重试 ${AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND} 次，停止当前轮次。最后原因：${reason}`;
-              roundSummary.status = 'failed';
-              roundSummary.finalFailureReason = limitReason;
-              roundSummary.failureReasons.push(limitReason);
-              await setState({
-                autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
-              });
-              await appendRoundRecordIfNeeded('failed', limitReason, err);
-              cancelPendingCommands('当前轮继续使用同一邮箱重试已达到上限。');
-              await broadcastStopToContentScripts();
-              if (!autoRunSkipFailures) {
-                await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮继续使用当前邮箱重试已达到 ${AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND} 次上限，当前自动运行将停止。`,
-                  'warn'
-                );
-                stoppedEarly = true;
-                await broadcastAutoRunStatus('stopped', {
-                  currentRun: targetRun,
-                  totalRuns,
-                  attemptRun,
-                  sessionId: 0,
-                });
-                break;
-              }
-
-              await addLog(
-                `第 ${targetRun}/${totalRuns} 轮继续使用当前邮箱重试已达到 ${AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND} 次上限，本轮将直接失败并跳过剩余重试。`,
-                'warn'
-              );
-              await addLog(
-                targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因同邮箱重试达到上限提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因同邮箱重试达到上限提前结束，已无后续轮次，本次自动运行结束。`,
-                'warn'
-              );
-              forceFreshTabsNextRun = true;
-              break;
             }
 
             roundSummary.status = 'failed';
@@ -2039,10 +1869,6 @@
       startAutoRunLoop,
       waitBetweenAutoRunRounds,
       waitBeforeAutoRunRetry,
-      __test: {
-        AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND,
-        KEEP_SAME_EMAIL_RETRY_LIMIT_EXCEEDED_ERROR_PREFIX,
-      },
     };
   }
 
