@@ -624,64 +624,8 @@
   justify-content: flex-end;
 }
 
-.removed-text-pool-box {
-  width: 100%;
-}
-
-.removed-text-pool-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.removed-text-pool-shell[hidden] {
-  display: none;
-}
-
-.removed-text-pool-toolbar {
-  justify-content: flex-end;
-}
-
-.removed-text-pool-import-actions {
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.removed-text-pool-auto-disable-toggle {
-  margin-left: auto;
-}
-
-.removed-text-pool-phone {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.removed-text-pool-phone-local {
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.removed-text-pool-current-label {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--blue-soft);
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .luckmail-item.is-disabled {
   opacity: 0.72;
-}
-
-.removed-text-pool-disabled-reason {
-  color: var(--red);
-  font-size: 11px;
 }
 
 .luckmail-tag {

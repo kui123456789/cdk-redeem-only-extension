@@ -152,7 +152,6 @@
         'fill-profile',
         'oauth-login',
         'submit-verification-code',
-        'post-login-phone-verification',
         'bind-email',
         'fetch-bind-email-code',
         'confirm-oauth',

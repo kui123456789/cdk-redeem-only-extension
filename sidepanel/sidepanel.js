@@ -154,9 +154,6 @@ const inputRemovedContactVerificationUrl = document.getElementById('input-remove
 const rowRemovedContactManualFetch = document.getElementById('row-removed-contact-manual-fetch');
 const btnRemovedContactManualFetch = document.getElementById('btn-removed-contact-manual-fetch');
 const displayRemovedContactManualCode = document.getElementById('display-removed-contact-manual-code');
-const rowRemovedContactPhone = document.getElementById('row-removed-contact-phone');
-const inputRemovedContactPhone = document.getElementById('input-removed-contact-phone');
-const rowRemovedContactRemovedTextPool = document.getElementById('row-removed-contact-sms-pool');
 const rowRemovedContactResendSettings = document.getElementById('row-removed-contact-resend-settings');
 const inputRemovedContactFirstDirectResendEnabled = document.getElementById('input-removed-contact-first-direct-resend-enabled');
 const inputRemovedContactCardDeclinedRetryEnabled = document.getElementById('input-removed-contact-card-declined-retry-enabled');
@@ -165,33 +162,6 @@ const inputRemovedContactSubsequentResendWaitSeconds = document.getElementById('
 const inputRemovedContactVerificationPollAttempts = document.getElementById('input-removed-contact-verification-poll-attempts');
 const inputRemovedContactVerificationPollIntervalSeconds = document.getElementById('input-removed-contact-verification-poll-interval-seconds');
 const inputRemovedContactVerificationResendMaxAttempts = document.getElementById('input-removed-contact-verification-resend-max-attempts');
-const btnToggleRemovedRemovedTextPool = document.getElementById('btn-toggle-removed-text-pool');
-const removedRemovedTextPoolShell = document.getElementById('removed-text-pool-shell');
-const inputRemovedContactRemovedTextPool = document.getElementById('input-removed-contact-sms-pool');
-const btnRemovedRemovedTextPoolRefresh = document.getElementById('btn-removed-text-pool-refresh');
-const btnRemovedRemovedTextPoolClearUsed = document.getElementById('btn-removed-text-pool-clear-used');
-const btnRemovedRemovedTextPoolDeleteAll = document.getElementById('btn-removed-text-pool-delete-all');
-const inputRemovedRemovedTextPoolImport = document.getElementById('input-removed-text-pool-import');
-const btnRemovedRemovedTextPoolImport = document.getElementById('btn-removed-text-pool-import');
-const inputRemovedContactRemovedTextPoolAutoDisableEnabled = document.getElementById('input-removed-contact-sms-pool-auto-disable-enabled');
-const removedRemovedTextPoolSummary = document.getElementById('removed-text-pool-summary');
-const inputRemovedRemovedTextPoolSearch = document.getElementById('input-removed-text-pool-search');
-const selectRemovedRemovedTextPoolFilter = document.getElementById('select-removed-text-pool-filter');
-const removedRemovedTextPoolList = document.getElementById('removed-text-pool-list');
-const rowChatGptApiRemovedTextPool = document.getElementById('row-chatgpt-api-sms-pool');
-const btnToggleChatGptApiRemovedTextPool = document.getElementById('btn-toggle-chatgpt-api-sms-pool');
-const chatGptApiRemovedTextPoolShell = document.getElementById('chatgpt-api-sms-pool-shell');
-const inputChatGptApiRemovedTextPool = document.getElementById('input-chatgpt-api-sms-pool');
-const btnChatGptApiRemovedTextPoolRefresh = document.getElementById('btn-chatgpt-api-sms-pool-refresh');
-const btnChatGptApiRemovedTextPoolClearUsed = document.getElementById('btn-chatgpt-api-sms-pool-clear-used');
-const btnChatGptApiRemovedTextPoolDeleteAll = document.getElementById('btn-chatgpt-api-sms-pool-delete-all');
-const inputChatGptApiRemovedTextPoolImport = document.getElementById('input-chatgpt-api-sms-pool-import');
-const btnChatGptApiRemovedTextPoolImport = document.getElementById('btn-chatgpt-api-sms-pool-import');
-const inputChatGptApiRemovedTextPoolAutoDisableEnabled = document.getElementById('input-chatgpt-api-sms-pool-auto-disable-enabled');
-const chatGptApiRemovedTextPoolSummary = document.getElementById('chatgpt-api-sms-pool-summary');
-const inputChatGptApiRemovedTextPoolSearch = document.getElementById('input-chatgpt-api-sms-pool-search');
-const selectChatGptApiRemovedTextPoolFilter = document.getElementById('select-chatgpt-api-sms-pool-filter');
-const chatGptApiRemovedTextPoolList = document.getElementById('chatgpt-api-sms-pool-list');
 const rowUpiInfoHelperApi = document.getElementById('row-upiInfo-helper-api');
 const inputUpiInfoHelperApi = document.getElementById('input-upiInfo-helper-api');
 const btnUpiInfoHelperConvertApiKey = document.getElementById('btn-upiInfo-helper-convert-api-key');
@@ -638,9 +608,6 @@ let currentPlusAccountAccessStrategy = PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
 let currentSignupMethod = DEFAULT_SIGNUP_METHOD;
 let currentUpiRedeemStopAfterRedeem = true;
 let currentTotpMfaAfterProfileEnabled = DEFAULT_TOTP_MFA_AFTER_PROFILE_ENABLED;
-let removedRemovedTextPoolExpanded = false;
-let authRemovedRemovedTextPoolExpanded = false;
-let chatGptApiRemovedTextPoolExpanded = false;
 let localCpaJsonAuthDirExpanded = false;
 let lastConfirmedOperationDelayEnabled = false;
 let stepDefinitions = getStepDefinitionsForMode(false, {
@@ -4780,81 +4747,6 @@ function normalizeRemovedContactVerificationUrlValue(value = '') {
   }
 }
 
-function normalizeRemovedContactPhoneValue(value = '') {
-  return String(value || '').trim();
-}
-
-function normalizeRemovedContactPoolUrlValue(value = '') {
-  const rawValue = String(value || '').trim();
-  if (!rawValue) {
-    return '';
-  }
-  try {
-    const parsed = new URL(rawValue);
-    parsed.searchParams.delete('t');
-    return parsed.toString();
-  } catch {
-    return rawValue
-      .replace(/([?&])t=\d+(?=(&|$))/i, '$1')
-      .replace(/[?&]$/g, '');
-  }
-}
-
-function isRemovedContactSamplePoolEntry(phone = '', verificationUrl = '') {
-  return normalizeRemovedContactPhoneValue(phone) === '1234567890'
-    && normalizeRemovedContactPoolUrlValue(verificationUrl) === 'https://mail.test.com/api/text-relay/eca_tr_xxxxxxxxx';
-}
-
-function parseRemovedContactRemovedTextPoolEntries(value = '') {
-  const separator = '----';
-  const lines = String(value || '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const seen = new Set();
-  const entries = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const separatorIndex = line.indexOf(separator);
-    const hasSeparator = separatorIndex > 0;
-    const phone = hasSeparator
-      ? normalizeRemovedContactPhoneValue(line.slice(0, separatorIndex))
-      : normalizeRemovedContactPhoneValue(line);
-    const verificationUrl = hasSeparator
-      ? normalizeRemovedContactPoolUrlValue(line.slice(separatorIndex + separator.length))
-      : normalizeRemovedContactPoolUrlValue(lines[index + 1] || '');
-    if (!hasSeparator && verificationUrl) {
-      index += 1;
-    }
-    const key = phone && verificationUrl ? `${phone}${separator}${verificationUrl}` : '';
-    if (!phone || !verificationUrl || !key || seen.has(key) || isRemovedContactSamplePoolEntry(phone, verificationUrl)) {
-      continue;
-    }
-    seen.add(key);
-    entries.push({
-      phone,
-      verificationUrl,
-    });
-  }
-  return entries;
-}
-
-function normalizeRemovedContactRemovedTextPoolTextValue(value = '') {
-  return parseRemovedContactRemovedTextPoolEntries(value)
-    .map((entry) => `${entry.phone}----${entry.verificationUrl}`)
-    .join('\n');
-}
-
-function normalizeRemovedRemovedTextPoolTextValue(value = '') {
-  return String(value || '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
 function normalizeOutlookAliasMaxPerAccount(value) {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
@@ -6609,8 +6501,6 @@ function updatePlusModeUI() {
     typeof rowChatgptSessionReaderConversionProxyTest !== 'undefined' ? rowChatgptSessionReaderConversionProxyTest : null,
     typeof rowRemovedContactVerificationUrl !== 'undefined' ? rowRemovedContactVerificationUrl : null,
     typeof rowRemovedContactManualFetch !== 'undefined' ? rowRemovedContactManualFetch : null,
-    typeof rowRemovedContactPhone !== 'undefined' ? rowRemovedContactPhone : null,
-    typeof rowRemovedContactRemovedTextPool !== 'undefined' ? rowRemovedContactRemovedTextPool : null,
     typeof rowRemovedContactResendSettings !== 'undefined' ? rowRemovedContactResendSettings : null,
   ].forEach((row) => {
     if (!row) {
@@ -6619,15 +6509,6 @@ function updatePlusModeUI() {
     row.style.display = enabled && selectedMethod === legacyWalletValue ? '' : 'none';
   });
   updateChatgptSessionReaderConversionModeUi();
-  if (typeof rowRemovedContactRemovedTextPool !== 'undefined' && rowRemovedContactRemovedTextPool) {
-    if (enabled && selectedMethod === legacyWalletValue) {
-      if (removedRemovedTextPoolExpanded && typeof queueRemovedRemovedTextPoolRefresh === 'function') {
-        queueRemovedRemovedTextPoolRefresh();
-      }
-    } else if (typeof resetRemovedRemovedTextPoolManager === 'function') {
-      resetRemovedRemovedTextPoolManager();
-    }
-  }
   [
     typeof rowUpiInfoHelperApi !== 'undefined' ? rowUpiInfoHelperApi : null,
     typeof rowUpiInfoHelperCardKey !== 'undefined' ? rowUpiInfoHelperCardKey : null,
@@ -8577,9 +8458,6 @@ function handleChatgptSessionReaderModeSelectionChange(nextMode) {
     ...buildChatgptSessionReaderLegacyPatchFromProfile(nextProfile),
   });
   applyChatgptSessionReaderProfileToInputs(latestState, { mode: normalizedMode });
-  if (removedRemovedTextPoolExpanded && typeof queueRemovedRemovedTextPoolRefresh === 'function') {
-    queueRemovedRemovedTextPoolRefresh();
-  }
   updatePlusModeUI();
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
@@ -8775,27 +8653,6 @@ btnRemovedContactManualFetch?.addEventListener('click', () => {
   handleRemovedContactManualFetch().catch((error) => {
     showToast(error?.message || String(error || '手动获取验证码失败'), 'error');
   });
-});
-
-inputRemovedContactPhone?.addEventListener('input', () => {
-  validateRemovedContactContactConfig();
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
-});
-inputRemovedContactPhone?.addEventListener('blur', () => {
-  inputRemovedContactPhone.value = normalizeRemovedContactPhoneValue(inputRemovedContactPhone.value);
-  validateRemovedContactContactConfig();
-  saveSettings({ silent: true }).catch(() => { });
-});
-
-inputRemovedContactRemovedTextPoolAutoDisableEnabled?.addEventListener('change', () => {
-  markSettingsDirty(true);
-  saveSettings({ silent: true }).catch(() => { });
-});
-
-inputChatGptApiRemovedTextPoolAutoDisableEnabled?.addEventListener('change', () => {
-  markSettingsDirty(true);
-  saveSettings({ silent: true }).catch(() => { });
 });
 
 inputRemovedContactFirstDirectResendEnabled?.addEventListener('change', () => {
@@ -9191,9 +9048,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         applyChatgptSessionReaderProfileToInputs(latestState, {
           mode: latestState?.chatgptSessionReaderMode,
         });
-        if (removedRemovedTextPoolExpanded) {
-          queueRemovedRemovedTextPoolRefresh();
-        }
       }
       if (message.payload.legacyPayHelperPhoneMode !== undefined && selectUpiInfoHelperPhoneMode) {
         selectUpiInfoHelperPhoneMode.value = normalizeUpiInfoHelperPhoneModeValue(message.payload.legacyPayHelperPhoneMode);
@@ -9637,8 +9491,6 @@ document.addEventListener('scroll', () => {
 
 initializeManualStepActions();
 bindPasswordVisibilityToggles();
-updateRemovedRemovedTextPoolCollapseUI(false);
-updateAuthRemovedRemovedTextPoolCollapseUI(false);
 initHotmailListExpandedState();
 initMail2925ListExpandedState();
 if (typeof initAuthVerificationSectionExpandedState === 'function') {
