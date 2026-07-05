@@ -1121,11 +1121,11 @@
         const rawLine = line.trim();
         if (!rawLine || rawLine.startsWith('#')) return null;
         const parts = rawLine.split(/---+/).map((part) => part.trim());
-        const { email, password, totpMfaSecret, gptPassword, verificationUrl, accessToken, accessTokenUpdatedAt, checkedAt, recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId } = parseCredentialBackupParts(parts);
+        const { email, password, totpMfaSecret, gptPassword, verificationUrl, accessToken, accessTokenUpdatedAt, checkedAt, recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId, passkeySignCount, passkeyAlg } = parseCredentialBackupParts(parts);
         if (!email) {
           return {
             email: '', password, totpMfaSecret, gptPassword, verificationUrl,
-            recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId,
+            recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId, passkeySignCount, passkeyAlg,
             status: 'failed',
             reason: `第 ${index + 1} 行缺少邮箱`,
           };
@@ -1134,7 +1134,7 @@
         seen.add(email);
         return {
           email, password, totpMfaSecret, gptPassword, verificationUrl,
-          accessToken, recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId,
+          accessToken, recordedAt, no2faFreeRoute, twoFactorEnabled, passkeyEnabled, passkeyCredentialId, passkeySignCount, passkeyAlg,
           accessTokenUpdatedAt,
           checkedAt: checkedAt || accessTokenUpdatedAt,
         };

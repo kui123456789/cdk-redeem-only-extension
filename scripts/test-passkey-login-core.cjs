@@ -8,12 +8,16 @@ const {
   getLoginFailureMessage,
 } = require('../background/passkey-login-core.js');
 require('../background/passkey-api-login-executor.js');
+require('../background/upi-credential-membership-checker.js');
 
 const {
   buildPasskeyExportMarker,
   getPasskeyCredentialIdFromExportMarker,
   parsePasskeyExportMarker,
 } = globalThis.MultiPagePasskeyApiLoginExecutor;
+const {
+  parseCredentialBackupText,
+} = globalThis.MultiPageBackgroundUpiCredentialMembershipChecker;
 
 test('builds passkey login request with allowed optional fields only', () => {
   const privateJwk = { kty: 'EC', crv: 'P-256', x: 'x', y: 'y', d: 'd' };
@@ -68,6 +72,20 @@ test('parses passkey text marker metadata with backward compatibility', () => {
     credentialId: 'credential-2',
     passkeySignCount: 12,
   });
+});
+
+test('preserves passkey metadata from background credential text import', () => {
+  const [metadataRow, legacyRow] = parseCredentialBackupText([
+    'user@example.com---pw---PASSKEY:credential-1;signCount=0;alg=-7---token---2026-07-06T00:00:00Z',
+    'legacy@example.com---pw---PASSKEY:credential-2---token---2026-07-06T00:00:00Z',
+  ].join('\n'));
+
+  assert.equal(metadataRow.passkeyCredentialId, 'credential-1');
+  assert.equal(metadataRow.passkeySignCount, 0);
+  assert.equal(metadataRow.passkeyAlg, -7);
+  assert.equal(legacyRow.passkeyCredentialId, 'credential-2');
+  assert.equal(legacyRow.passkeySignCount, undefined);
+  assert.equal(legacyRow.passkeyAlg, undefined);
 });
 
 test('normalizes object cookies and accessToken from login response', () => {
