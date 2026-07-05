@@ -4058,7 +4058,7 @@
         batchRunning = false;
         throw new Error(`${email} 缺少 GPT 密码，无法登录。`);
       }
-      if (!baseItem.totpMfaSecret) {
+      if (!baseItem.totpMfaSecret && !hasPasskeyCredential(baseItem)) {
         batchRunning = false;
         throw new Error(`${email} 缺少 2FA，无法登录。`);
       }
@@ -4101,6 +4101,7 @@
           onStage: async (stage) => {
             const reasonMap = {
               'open-chatgpt': '正在打开 ChatGPT 官网',
+              'passkey-login': '正在使用 Passkey API 登录',
               login: '正在登录邮箱密码',
               totp: '正在提交 2FA 验证',
               token: readAccessToken ? '正在读取 accessToken' : '正在确认登录',
@@ -4493,6 +4494,7 @@
       switch (normalizeFlowStage(stage)) {
         case 'import': return '正在准备账号';
         case 'open-chatgpt':
+        case 'passkey-login':
         case 'login':
         case 'totp':
         case 'token': return '正在获取/确认 AT';
