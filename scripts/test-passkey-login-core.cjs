@@ -205,31 +205,67 @@ test('strictly matches passkey session cookies written by browser', () => {
     cookieEntries: [{ name: 'not-a-real-session-token', value: sessionValue }],
   }, {
     writtenCookieNames: ['not-a-real-session-token'],
+    writtenCookies: [{ name: 'not-a-real-session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), false);
   assert.equal(hasWrittenPasskeySessionCookie({
     cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue }],
   }, {
     writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), true);
   assert.equal(hasWrittenPasskeySessionCookie({
     cookieEntries: [{ name: '__Secure-next-auth.session-token.0', value: sessionValue }],
   }, {
     writtenCookieNames: ['__Secure-next-auth.session-token.0'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token.0', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), true);
   assert.equal(hasWrittenPasskeySessionCookie({
     cookieEntries: [{ name: '__Secure-authjs.session-token', value: sessionValue }],
   }, {
     writtenCookieNames: ['__Secure-authjs.session-token'],
+    writtenCookies: [{ name: '__Secure-authjs.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), true);
   assert.equal(hasWrittenPasskeySessionCookie({
     cookieEntries: [{ name: 'foo.session-token', value: sessionValue }],
   }, {
     writtenCookieNames: ['foo.session-token'],
+    writtenCookies: [{ name: 'foo.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), false);
   assert.equal(hasWrittenPasskeySessionCookie({
     sessionToken: sessionValue,
   }, {
     writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue, domain: '.openai.com' }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', domain: '.openai.com', url: 'https://openai.com/' }],
+  }), false);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue, domain: '.chatgpt.com' }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue, hostOnly: true }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', url: 'https://chatgpt.com/' }],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue, hostOnly: true }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', url: 'https://auth.openai.com/' }],
+  }), false);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    sessionToken: sessionValue,
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+    writtenCookies: [{ name: '__Secure-next-auth.session-token', domain: '.chatgpt.com', url: 'https://chatgpt.com/' }],
   }), true);
 });
 

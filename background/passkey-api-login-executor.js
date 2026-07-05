@@ -264,11 +264,26 @@
     return /^(?:__secure-next-auth|next-auth|__secure-authjs|authjs)\.session-token(?:\.\d+)?$/.test(normalizedName);
   }
 
+  function isChatGptCookieTarget(cookie = {}) {
+    const domain = normalizeChatGptCookieDomain(cookie?.domain).replace(/^\.+/, '');
+    if (domain) {
+      return domain === 'chatgpt.com';
+    }
+    try {
+      const url = new URL(normalizeString(cookie?.url));
+      return url.protocol === 'https:' && url.hostname.toLowerCase() === 'chatgpt.com';
+    } catch {
+      return false;
+    }
+  }
+
   function hasWrittenPasskeySessionCookie(loginResult = {}, cookieApplyResult = {}) {
-    const writtenCookieNames = Array.isArray(cookieApplyResult?.writtenCookieNames)
-      ? cookieApplyResult.writtenCookieNames
+    const writtenCookies = Array.isArray(cookieApplyResult?.writtenCookies)
+      ? cookieApplyResult.writtenCookies
       : [];
-    const hasWrittenSessionCookie = writtenCookieNames.some(isPasskeySessionCookieName);
+    const hasWrittenSessionCookie = writtenCookies.some((cookie) => (
+      isPasskeySessionCookieName(cookie?.name) && isChatGptCookieTarget(cookie)
+    ));
     if (!hasWrittenSessionCookie) {
       return false;
     }
@@ -295,11 +310,12 @@
     async function setChatGptCookieEntries(cookieEntries = []) {
       const entries = Array.isArray(cookieEntries) ? cookieEntries : [];
       if (!chromeApi?.cookies?.set) {
-        return { setCount: 0, skipped: entries.length, skippedCount: entries.length, writtenCookieNames: [] };
+        return { setCount: 0, skipped: entries.length, skippedCount: entries.length, writtenCookieNames: [], writtenCookies: [] };
       }
       let setCount = 0;
       let skippedCount = 0;
       const writtenCookieNames = [];
+      const writtenCookies = [];
       for (const entry of entries) {
         const name = normalizeStringDep(entry?.name);
         if (!name || entry?.value === undefined || entry?.value === null) {
@@ -335,18 +351,23 @@
           await chromeApi.cookies.set(details);
           setCount += 1;
           writtenCookieNames.push(name);
+          writtenCookies.push({
+            name,
+            url: details.url,
+            ...(details.domain ? { domain: details.domain } : {}),
+          });
         } catch {
           skippedCount += 1;
         }
       }
-      return { setCount, skipped: skippedCount, skippedCount, writtenCookieNames };
+      return { setCount, skipped: skippedCount, skippedCount, writtenCookieNames, writtenCookies };
     }
 
     async function applyPasskeyLoginCookies(loginResult = {}, credential = {}, options = {}) {
       const cookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
       const sessionToken = normalizeStringDep(loginResult?.sessionToken);
       if (!cookieEntries.length && !sessionToken) {
-        return { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [] };
+        return { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [], writtenCookies: [] };
       }
       const throwIfStopRequested = resolveStopChecker(options, 'check');
       throwIfStopRequested();
@@ -363,7 +384,7 @@
         httpOnly: true,
         sameSite: 'lax',
       }];
-      const { setCount, skipped, writtenCookieNames } = await setChatGptCookieEntries(entries);
+      const { setCount, skipped, writtenCookieNames, writtenCookies } = await setChatGptCookieEntries(entries);
       throwIfStopRequested();
       await addLog(
         `UPI 备份核验：${credential.email} Passkey API 登录已写入 ${setCount} 个 ChatGPT cookie${skipped ? `，跳过 ${skipped} 个` : ''}。`,
@@ -372,7 +393,7 @@
       if (chromeApi?.tabs?.reload && Number.isInteger(tabId)) {
         await chromeApi.tabs.reload(tabId).catch(() => null);
       }
-      return { tabId, setCount, skipped, writtenCookieNames };
+      return { tabId, setCount, skipped, writtenCookieNames, writtenCookies };
     }
 
     async function tryPasskeyApiLoginAndReadAccessToken(credential = {}, state = {}, options = {}) {
@@ -435,7 +456,7 @@
         );
       }
       let tabId = 0;
-      let cookieApplyResult = { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [] };
+      let cookieApplyResult = { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [], writtenCookies: [] };
       if (options.applyCookies !== false) {
         const applied = await applyPasskeyLoginCookies(loginResult, credential, { throwIfStopRequested });
         cookieApplyResult = applied;
