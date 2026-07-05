@@ -1546,6 +1546,12 @@
           ? source.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose || ''),
+        passkeySignCount: Number.isFinite(Number(source.passkeySignCount ?? source.signCount))
+          ? Math.max(0, Math.floor(Number(source.passkeySignCount ?? source.signCount)))
+          : 0,
+        passkeyAlg: Number.isFinite(Number(source.passkeyAlg ?? source.alg))
+          ? Number(source.passkeyAlg ?? source.alg)
+          : 0,
         passkeyApiPersisted: source.passkeyApiPersisted === true || source.persisted === true,
         twoFactorEnabled: no2faFreeRoute
           ? false
@@ -1598,6 +1604,12 @@
             ? sourceCredential.passkeyPrivateJwk
             : null,
           passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(sourceCredential.passkeyPublicKeyCose || sourceCredential.publicKeyCose || sourceCredential.public_key_cose),
+          passkeySignCount: Number.isFinite(Number(sourceCredential.passkeySignCount ?? sourceCredential.signCount))
+            ? Math.max(0, Math.floor(Number(sourceCredential.passkeySignCount ?? sourceCredential.signCount)))
+            : 0,
+          passkeyAlg: Number.isFinite(Number(sourceCredential.passkeyAlg ?? sourceCredential.alg))
+            ? Number(sourceCredential.passkeyAlg ?? sourceCredential.alg)
+            : 0,
           passkeyApiPersisted: sourceCredential.passkeyApiPersisted === true || sourceCredential.persisted === true,
           twoFactorEnabled: true,
         }
@@ -3459,6 +3471,12 @@
           ? row.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(row.passkeyPublicKeyCose || row.publicKeyCose || row.public_key_cose),
+        passkeySignCount: Number.isFinite(Number(row.passkeySignCount ?? row.signCount))
+          ? Math.max(0, Math.floor(Number(row.passkeySignCount ?? row.signCount)))
+          : 0,
+        passkeyAlg: Number.isFinite(Number(row.passkeyAlg ?? row.alg))
+          ? Number(row.passkeyAlg ?? row.alg)
+          : 0,
         passkeyApiPersisted: row.passkeyApiPersisted === true || row.persisted === true,
         accessToken: normalizeUpiCredentialMembershipText(row.accessToken),
         accessTokenUpdatedAt: normalizeUpiCredentialMembershipText(row.accessTokenUpdatedAt || row.checkedAt),
@@ -3497,6 +3515,12 @@
           ? row.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(row.passkeyPublicKeyCose || row.publicKeyCose || row.public_key_cose),
+        passkeySignCount: Number.isFinite(Number(row.passkeySignCount ?? row.signCount))
+          ? Math.max(0, Math.floor(Number(row.passkeySignCount ?? row.signCount)))
+          : 0,
+        passkeyAlg: Number.isFinite(Number(row.passkeyAlg ?? row.alg))
+          ? Number(row.passkeyAlg ?? row.alg)
+          : 0,
         passkeyApiPersisted: row.passkeyApiPersisted === true || row.persisted === true,
         accessToken: normalizeUpiCredentialMembershipText(row.accessToken),
         accessTokenUpdatedAt: normalizeUpiCredentialMembershipText(row.accessTokenUpdatedAt || row.checkedAt),

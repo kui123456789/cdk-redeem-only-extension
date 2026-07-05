@@ -398,6 +398,12 @@
         target.passkeyPrivateJwk = source.passkeyPrivateJwk;
       }
       target.passkeyPublicKeyCose = normalizeString(target.passkeyPublicKeyCose || source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose);
+      target.passkeySignCount = Number.isFinite(Number(target.passkeySignCount ?? source.passkeySignCount ?? source.signCount))
+        ? Math.max(0, Math.floor(Number(target.passkeySignCount ?? source.passkeySignCount ?? source.signCount)))
+        : 0;
+      target.passkeyAlg = Number.isFinite(Number(target.passkeyAlg ?? source.passkeyAlg ?? source.alg))
+        ? Number(target.passkeyAlg ?? source.passkeyAlg ?? source.alg)
+        : 0;
       target.passkeyApiPersisted = target.passkeyApiPersisted === true || source.passkeyApiPersisted === true || source.persisted === true;
       target.twoFactorEnabled = true;
       target.no2faFreeRoute = false;
@@ -1349,6 +1355,12 @@
           ? record.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose || record.publicKeyCose || record.public_key_cose),
+        passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
+          ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
+          : 0,
+        passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
+          ? Number(record.passkeyAlg ?? record.alg)
+          : 0,
         passkeyApiPersisted: record.passkeyApiPersisted === true || record.persisted === true,
         updatedAt: normalizeString(record.updatedAt || ''),
       };
@@ -1379,6 +1391,12 @@
             ? record.passkeyPrivateJwk
             : null,
           passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose),
+          passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
+            ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
+            : 0,
+          passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
+            ? Number(record.passkeyAlg ?? record.alg)
+            : 0,
           passkeyApiPersisted: record.passkeyApiPersisted === true,
           accessToken: normalizeString(record.accessToken || record.token || record.access_token),
           accessTokenUpdatedAt: normalizeString(record.accessTokenUpdatedAt || record.updatedAt),
@@ -1427,6 +1445,12 @@
         ? item.passkeyPrivateJwk
         : null,
       passkeyPublicKeyCose: normalizeString(item.passkeyPublicKeyCose || item.publicKeyCose || item.public_key_cose),
+      passkeySignCount: Number.isFinite(Number(item.passkeySignCount ?? item.signCount))
+        ? Math.max(0, Math.floor(Number(item.passkeySignCount ?? item.signCount)))
+        : 0,
+      passkeyAlg: Number.isFinite(Number(item.passkeyAlg ?? item.alg))
+        ? Number(item.passkeyAlg ?? item.alg)
+        : 0,
       passkeyApiPersisted: item.passkeyApiPersisted === true || item.persisted === true,
       twoFactorEnabled: item.twoFactorEnabled === true
         || Boolean(normalizeTotpSecret(item.totpMfaSecret))
@@ -2082,6 +2106,12 @@
             ? record.passkeyPrivateJwk
             : null,
           passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose),
+          passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
+            ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
+            : 0,
+          passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
+            ? Number(record.passkeyAlg ?? record.alg)
+            : 0,
           passkeyApiPersisted: record.passkeyApiPersisted === true,
           updatedAt: normalizeString(record.updatedAt),
           source: 'local',
@@ -2407,6 +2437,12 @@
                 ? source.passkeyPrivateJwk
                 : null,
               passkeyPublicKeyCose: normalizeString(source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose),
+              passkeySignCount: Number.isFinite(Number(source.passkeySignCount ?? source.signCount))
+                ? Math.max(0, Math.floor(Number(source.passkeySignCount ?? source.signCount)))
+                : 0,
+              passkeyAlg: Number.isFinite(Number(source.passkeyAlg ?? source.alg))
+                ? Number(source.passkeyAlg ?? source.alg)
+                : 0,
               passkeyApiPersisted: source.passkeyApiPersisted === true || source.persisted === true,
               verificationUrl: normalizeString(source.verificationUrl || source.emailVerificationUrl || source.url),
               recordedAt,
@@ -2589,6 +2625,22 @@
               : (getRedeemField('upiRedeemCdkey') || getRedeemField('cdkey'))
           )
         : (shouldResetRedeemState ? '' : normalizeString(existingItem.upiRedeemCdkey));
+      const passkeySignCountSource = input.passkeySignCount
+        ?? input.signCount
+        ?? credential.passkeySignCount
+        ?? credential.signCount
+        ?? backupCredential.passkeySignCount
+        ?? backupCredential.signCount
+        ?? existingItem.passkeySignCount
+        ?? existingItem.signCount;
+      const passkeyAlgSource = input.passkeyAlg
+        ?? input.alg
+        ?? credential.passkeyAlg
+        ?? credential.alg
+        ?? backupCredential.passkeyAlg
+        ?? backupCredential.alg
+        ?? existingItem.passkeyAlg
+        ?? existingItem.alg;
       const nextItems = upsertResultItem(currentResults.items, {
         ...existingItem,
         ...backupCredential,
@@ -2597,22 +2649,28 @@
         password: nextPassword,
         gptPassword,
         totpMfaSecret: nextTotpMfaSecret,
-	        verificationUrl,
-	        recordedAt,
-	        no2faFreeRoute,
-	        twoFactorEnabled,
-	        passkeyEnabled,
-	        passkeyEnabledAt: normalizeString(input.passkeyEnabledAt || credential.passkeyEnabledAt || backupCredential.passkeyEnabledAt || existingItem.passkeyEnabledAt),
-	        passkeyCredentialId,
-	        passkeyFactorId: normalizeString(input.passkeyFactorId || credential.passkeyFactorId || backupCredential.passkeyFactorId || existingItem.passkeyFactorId),
-	        passkeyRpId: normalizeString(input.passkeyRpId || credential.passkeyRpId || backupCredential.passkeyRpId || existingItem.passkeyRpId),
-	        passkeyUserHandle: normalizeString(input.passkeyUserHandle || credential.passkeyUserHandle || backupCredential.passkeyUserHandle || existingItem.passkeyUserHandle),
-	        passkeyPrivateJwk: passkeyPrivateJwk && typeof passkeyPrivateJwk === 'object' && !Array.isArray(passkeyPrivateJwk)
-	          ? passkeyPrivateJwk
-	          : null,
-	        passkeyPublicKeyCose: normalizeString(input.passkeyPublicKeyCose || credential.passkeyPublicKeyCose || backupCredential.passkeyPublicKeyCose || existingItem.passkeyPublicKeyCose),
-	        passkeyApiPersisted: input.passkeyApiPersisted === true || credential.passkeyApiPersisted === true || backupCredential.passkeyApiPersisted === true || existingItem.passkeyApiPersisted === true,
-	        status: 'free',
+        verificationUrl,
+        recordedAt,
+        no2faFreeRoute,
+        twoFactorEnabled,
+        passkeyEnabled,
+        passkeyEnabledAt: normalizeString(input.passkeyEnabledAt || credential.passkeyEnabledAt || backupCredential.passkeyEnabledAt || existingItem.passkeyEnabledAt),
+        passkeyCredentialId,
+        passkeyFactorId: normalizeString(input.passkeyFactorId || credential.passkeyFactorId || backupCredential.passkeyFactorId || existingItem.passkeyFactorId),
+        passkeyRpId: normalizeString(input.passkeyRpId || credential.passkeyRpId || backupCredential.passkeyRpId || existingItem.passkeyRpId),
+        passkeyUserHandle: normalizeString(input.passkeyUserHandle || credential.passkeyUserHandle || backupCredential.passkeyUserHandle || existingItem.passkeyUserHandle),
+        passkeyPrivateJwk: passkeyPrivateJwk && typeof passkeyPrivateJwk === 'object' && !Array.isArray(passkeyPrivateJwk)
+          ? passkeyPrivateJwk
+          : null,
+        passkeyPublicKeyCose: normalizeString(input.passkeyPublicKeyCose || credential.passkeyPublicKeyCose || backupCredential.passkeyPublicKeyCose || existingItem.passkeyPublicKeyCose),
+        passkeySignCount: Number.isFinite(Number(passkeySignCountSource))
+          ? Math.max(0, Math.floor(Number(passkeySignCountSource)))
+          : 0,
+        passkeyAlg: Number.isFinite(Number(passkeyAlgSource))
+          ? Number(passkeyAlgSource)
+          : 0,
+        passkeyApiPersisted: input.passkeyApiPersisted === true || credential.passkeyApiPersisted === true || backupCredential.passkeyApiPersisted === true || existingItem.passkeyApiPersisted === true,
+        status: 'free',
         planType: 'free',
         checkedAt,
         reason,

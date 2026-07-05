@@ -3920,6 +3920,12 @@ function normalizeUpiAccountCredentialBackups(value = {}) {
       passkeyUserHandle: normalizeCredentialBackupText(record.passkeyUserHandle || record.userHandle || record.user_handle),
       passkeyPrivateJwk,
       passkeyPublicKeyCose: normalizeCredentialBackupText(record.passkeyPublicKeyCose || record.publicKeyCose || record.public_key_cose),
+      passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
+        ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
+        : 0,
+      passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
+        ? Number(record.passkeyAlg ?? record.alg)
+        : 0,
       passkeyApiPersisted: record.passkeyApiPersisted === true || record.persisted === true,
       updatedAt: normalizeCredentialBackupText(record.updatedAt),
     };
@@ -3980,6 +3986,12 @@ async function upsertUpiAccountCredentialBackup(input = {}) {
       ? passkeyPrivateJwk
       : null,
     passkeyPublicKeyCose: normalizeCredentialBackupText(input.passkeyPublicKeyCose ?? input.publicKeyCose ?? current.passkeyPublicKeyCose),
+    passkeySignCount: Number.isFinite(Number(input.passkeySignCount ?? input.signCount ?? current.passkeySignCount ?? current.signCount))
+      ? Math.max(0, Math.floor(Number(input.passkeySignCount ?? input.signCount ?? current.passkeySignCount ?? current.signCount)))
+      : 0,
+    passkeyAlg: Number.isFinite(Number(input.passkeyAlg ?? input.alg ?? current.passkeyAlg ?? current.alg))
+      ? Number(input.passkeyAlg ?? input.alg ?? current.passkeyAlg ?? current.alg)
+      : 0,
     passkeyApiPersisted: input.passkeyApiPersisted === true || current.passkeyApiPersisted === true,
     sourceStep: normalizeCredentialBackupText(input.sourceStep || current.sourceStep),
     updatedAt,
