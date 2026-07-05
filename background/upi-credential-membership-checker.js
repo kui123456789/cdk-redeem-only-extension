@@ -55,7 +55,7 @@
     return rootScope.MultiPagePasskeyApiLoginExecutor || {};
   }
 
-  const { buildPasskeyExportMarker, buildPasskeyNumericMetadataPatch, getPasskeyCredentialIdFromExportMarker, hasPasskeyCredential, isPasskeyExportMarker, isResultItemPasskeyExportableForStatus } = getPasskeyApiLoginHelper();
+  const { buildPasskeyExportMarker, buildPasskeyNumericMetadataPatch, getPasskeyCredentialIdFromExportMarker, hasPasskeyCredential, isPasskeyExportMarker, isResultItemPasskeyExportableForStatus, parsePasskeyExportMarker } = getPasskeyApiLoginHelper();
 
   function normalizeBoolean(value) {
     if (value === true) return true;
@@ -1041,6 +1041,10 @@
       };
     }
     if (parts.length >= 3 && isPasskeyExportMarker(parts[2])) {
+      const passkeyMarker = typeof parsePasskeyExportMarker === 'function'
+        ? parsePasskeyExportMarker(parts[2])
+        : { credentialId: getPasskeyCredentialIdFromExportMarker(parts[2]) };
+      const passkeyMetadataPatch = buildPasskeyNumericMetadataPatch(passkeyMarker);
       if (isLikelyVerificationUrl(parts[3])) {
         const timestamp = parts[5] || '';
         return {
@@ -1050,7 +1054,8 @@
           gptPassword: normalizeString(parts[1] || ''),
           verificationUrl: normalizeNo2faFreeVerificationUrlForExport(parts[3] || ''),
           passkeyEnabled: true,
-          passkeyCredentialId: getPasskeyCredentialIdFromExportMarker(parts[2]),
+          passkeyCredentialId: passkeyMarker.credentialId || '',
+          ...passkeyMetadataPatch,
           accessToken: normalizeString(parts[4] || ''),
           accessTokenUpdatedAt: normalizeString(timestamp),
           checkedAt: normalizeString(timestamp),
@@ -1069,7 +1074,8 @@
         totpMfaSecret: '',
         gptPassword: normalizeString(parts[1] || ''),
         passkeyEnabled: true,
-        passkeyCredentialId: getPasskeyCredentialIdFromExportMarker(parts[2]),
+        passkeyCredentialId: passkeyMarker.credentialId || '',
+        ...passkeyMetadataPatch,
         accessToken: fourthPartIsTimestamp ? '' : normalizeString(accessTokenOrTimestamp),
         accessTokenUpdatedAt: normalizeString(timestamp),
         checkedAt: normalizeString(timestamp),

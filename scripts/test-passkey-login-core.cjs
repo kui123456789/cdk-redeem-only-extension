@@ -7,6 +7,13 @@ const {
   normalizeCookieEntries,
   getLoginFailureMessage,
 } = require('../background/passkey-login-core.js');
+require('../background/passkey-api-login-executor.js');
+
+const {
+  buildPasskeyExportMarker,
+  getPasskeyCredentialIdFromExportMarker,
+  parsePasskeyExportMarker,
+} = globalThis.MultiPagePasskeyApiLoginExecutor;
 
 test('builds passkey login request with allowed optional fields only', () => {
   const privateJwk = { kty: 'EC', crv: 'P-256', x: 'x', y: 'y', d: 'd' };
@@ -28,6 +35,38 @@ test('builds passkey login request with allowed optional fields only', () => {
     userHandle: 'handle-1',
     signCount: 0,
     alg: -7,
+  });
+});
+
+test('builds passkey text marker with numeric metadata when present', () => {
+  assert.equal(
+    buildPasskeyExportMarker({
+      passkeyCredentialId: 'credential-1',
+      passkeySignCount: 0,
+      passkeyAlg: -7,
+    }),
+    'PASSKEY:credential-1;signCount=0;alg=-7'
+  );
+  assert.equal(
+    buildPasskeyExportMarker({
+      passkeyCredentialId: 'credential-2',
+      passkeySignCount: '',
+      passkeyAlg: undefined,
+    }),
+    'PASSKEY:credential-2'
+  );
+});
+
+test('parses passkey text marker metadata with backward compatibility', () => {
+  assert.equal(getPasskeyCredentialIdFromExportMarker('PASSKEY:old-credential'), 'old-credential');
+  assert.deepEqual(parsePasskeyExportMarker('PASSKEY:credential-1;signCount=0;alg=-7;ignored=1'), {
+    credentialId: 'credential-1',
+    passkeySignCount: 0,
+    passkeyAlg: -7,
+  });
+  assert.deepEqual(parsePasskeyExportMarker('PASSKEY:credential-2;sign_count=12'), {
+    credentialId: 'credential-2',
+    passkeySignCount: 12,
   });
 });
 

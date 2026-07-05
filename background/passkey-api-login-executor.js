@@ -52,15 +52,42 @@
   }
 
   function getPasskeyCredentialIdFromExportMarker(value = '') {
+    return parsePasskeyExportMarker(value).credentialId || '';
+  }
+
+  function parsePasskeyExportMarker(value = '') {
     const marker = normalizeString(value);
-    return isPasskeyExportMarker(marker)
-      ? marker.replace(/^PASSKEY:?/i, '').trim()
-      : '';
+    if (!isPasskeyExportMarker(marker)) {
+      return { credentialId: '' };
+    }
+    const [credentialIdPart, ...metadataParts] = marker.replace(/^PASSKEY:?/i, '').trim().split(';');
+    const metadata = {};
+    metadataParts.forEach((part) => {
+      const separatorIndex = part.indexOf('=');
+      if (separatorIndex <= 0) return;
+      const key = normalizeString(part.slice(0, separatorIndex)).toLowerCase();
+      const rawValue = normalizeString(part.slice(separatorIndex + 1));
+      if (!rawValue) return;
+      if (key === 'signcount' || key === 'sign_count') {
+        metadata.signCount = rawValue;
+      } else if (key === 'alg') {
+        metadata.alg = rawValue;
+      }
+    });
+    return {
+      credentialId: normalizeString(credentialIdPart),
+      ...buildPasskeyNumericMetadataPatch(metadata),
+    };
   }
 
   function buildPasskeyExportMarker(item = {}) {
     const credentialId = normalizeString(item.passkeyCredentialId || item.credentialId || item.credential_id);
-    return credentialId ? `PASSKEY:${credentialId}` : 'PASSKEY';
+    if (!credentialId) return 'PASSKEY';
+    const metadata = buildPasskeyNumericMetadataPatch(item);
+    const segments = [`PASSKEY:${credentialId}`];
+    if (metadata.passkeySignCount !== undefined) segments.push(`signCount=${metadata.passkeySignCount}`);
+    if (metadata.passkeyAlg !== undefined) segments.push(`alg=${metadata.passkeyAlg}`);
+    return segments.join(';');
   }
 
   function hasPasskeyCredential(item = {}) {
@@ -463,6 +490,7 @@
     hasPasskeyCredential,
     isPasskeyExportMarker,
     isResultItemPasskeyExportableForStatus,
+    parsePasskeyExportMarker,
     readPasskeyAlgMetadata,
     readPasskeySignCountMetadata,
   };

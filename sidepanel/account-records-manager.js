@@ -1431,10 +1431,32 @@
     }
 
     function getUpiCredentialMembershipPasskeyCredentialId(value = '') {
+      return parseUpiCredentialMembershipPasskeyMarker(value).credentialId || '';
+    }
+
+    function parseUpiCredentialMembershipPasskeyMarker(value = '') {
       const marker = normalizeUpiCredentialMembershipText(value);
-      return isUpiCredentialMembershipPasskeyMarker(marker)
-        ? marker.replace(/^PASSKEY:?/i, '').trim()
-        : '';
+      if (!isUpiCredentialMembershipPasskeyMarker(marker)) {
+        return { credentialId: '' };
+      }
+      const [credentialIdPart, ...metadataParts] = marker.replace(/^PASSKEY:?/i, '').trim().split(';');
+      const metadata = {};
+      metadataParts.forEach((part) => {
+        const separatorIndex = part.indexOf('=');
+        if (separatorIndex <= 0) return;
+        const key = normalizeUpiCredentialMembershipText(part.slice(0, separatorIndex)).toLowerCase();
+        const rawValue = normalizeUpiCredentialMembershipText(part.slice(separatorIndex + 1));
+        if (!rawValue) return;
+        if (key === 'signcount' || key === 'sign_count') {
+          metadata.signCount = rawValue;
+        } else if (key === 'alg') {
+          metadata.alg = rawValue;
+        }
+      });
+      return {
+        credentialId: normalizeUpiCredentialMembershipText(credentialIdPart),
+        ...buildUpiCredentialMembershipPasskeyNumericMetadataPatch(metadata),
+      };
     }
 
     function parseUpiCredentialMembershipParts(parts = []) {
@@ -1456,6 +1478,8 @@
         };
       }
       if (parts.length >= 3 && isUpiCredentialMembershipPasskeyMarker(parts[2])) {
+        const passkeyMarker = parseUpiCredentialMembershipPasskeyMarker(parts[2]);
+        const passkeyMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(passkeyMarker);
         if (isLikelyUpiCredentialMembershipVerificationUrl(parts[3])) {
           const timestamp = parts[5] || '';
           const recordedAt = Math.max(0, Math.floor(Number(timestamp) || Date.parse(normalizeUpiCredentialMembershipText(timestamp)) || Date.now()));
@@ -1466,7 +1490,8 @@
             totpMfaSecret: '',
             verificationUrl: parts[3] || '',
             passkeyEnabled: true,
-            passkeyCredentialId: getUpiCredentialMembershipPasskeyCredentialId(parts[2]),
+            passkeyCredentialId: passkeyMarker.credentialId || '',
+            ...passkeyMetadataPatch,
             accessToken: parts[4] || '',
             accessTokenUpdatedAt: timestamp,
             checkedAt: timestamp,
@@ -1487,7 +1512,8 @@
           gptPassword: parts[1] || '',
           totpMfaSecret: '',
           passkeyEnabled: true,
-          passkeyCredentialId: getUpiCredentialMembershipPasskeyCredentialId(parts[2]),
+          passkeyCredentialId: passkeyMarker.credentialId || '',
+          ...passkeyMetadataPatch,
           accessToken: fourthPartIsTimestamp ? '' : accessTokenOrTimestamp,
           accessTokenUpdatedAt: timestamp,
           checkedAt: timestamp,
