@@ -106,13 +106,13 @@
 
     if (!isHostCookie) {
       const domainValue = ownValue(cookie, 'domain');
-      if (hasProvidedValue(domainValue)) {
+      const isHostOnly = options.preserveHostOnly === true && ownValue(cookie, 'hostOnly') === true;
+      if (isHostOnly) {
+        defineOwn(entry, 'hostOnly', true);
+      } else if (hasProvidedValue(domainValue)) {
         defineOwn(entry, 'domain', String(domainValue));
       } else if (options.defaultDomain === true) {
         defineOwn(entry, 'domain', DEFAULT_COOKIE_DOMAIN);
-      }
-      if (options.preserveHostOnly === true && ownValue(cookie, 'hostOnly') === true) {
-        defineOwn(entry, 'hostOnly', true);
       }
     }
 
@@ -128,7 +128,7 @@
     if (!cookies) return [];
     if (Array.isArray(cookies)) {
       return cookies
-        .map((cookie) => normalizeCookieEntry(cookie, { defaultDomain: false, preserveHostOnly: true }))
+        .map((cookie) => normalizeCookieEntry(cookie, { defaultDomain: true, preserveHostOnly: true }))
         .filter(Boolean);
     }
     if (typeof cookies === 'object') {
@@ -165,7 +165,7 @@
 
   function normalizePasskeyLoginResponse(response = {}) {
     const data = response && typeof response === 'object' && !Array.isArray(response) ? response : {};
-    if (data.ok !== true) {
+    if (data.ok === false) {
       throw new Error(getLoginFailureMessage(data));
     }
     const cookieEntries = normalizeCookieEntries(data.cookies);

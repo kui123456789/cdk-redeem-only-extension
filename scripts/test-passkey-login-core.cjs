@@ -71,6 +71,36 @@ test('normalizes __Host cookies without domain', () => {
   });
 });
 
+test('defaults normal array cookies to chatgpt domain', () => {
+  const entries = normalizeCookieEntries([
+    { name: 'regular', value: 'v' },
+  ]);
+  assert.deepEqual(entries[0], {
+    name: 'regular',
+    value: 'v',
+    path: '/',
+    secure: true,
+    httpOnly: false,
+    sameSite: 'lax',
+    domain: '.chatgpt.com',
+  });
+});
+
+test('preserves host-only array cookies without adding domain', () => {
+  const entries = normalizeCookieEntries([
+    { name: 'regular', value: 'v', hostOnly: true },
+  ]);
+  assert.deepEqual(entries[0], {
+    name: 'regular',
+    value: 'v',
+    path: '/',
+    secure: true,
+    httpOnly: false,
+    sameSite: 'lax',
+    hostOnly: true,
+  });
+});
+
 test('falls back to sessionToken without cookies', () => {
   const sessionToken = `eyJ${'s'.repeat(120)}`;
   const result = normalizePasskeyLoginResponse({
@@ -91,6 +121,21 @@ test('allows accessToken-only response for AT supplement', () => {
   });
   assert.equal(result.accessToken, accessToken);
   assert.deepEqual(result.cookieEntries, []);
+});
+
+test('allows accessToken-only response without ok field', () => {
+  const accessToken = `eyJ${'a'.repeat(120)}`;
+  const result = normalizePasskeyLoginResponse({ accessToken });
+  assert.equal(result.accessToken, accessToken);
+  assert.deepEqual(result.cookieEntries, []);
+});
+
+test('rejects explicit backend failures even with accessToken', () => {
+  const accessToken = `eyJ${'a'.repeat(120)}`;
+  assert.throws(
+    () => normalizePasskeyLoginResponse({ ok: false, reason: 'missing-credential', accessToken }),
+    /没有找到该邮箱的 Passkey 凭据/
+  );
 });
 
 test('maps backend failure reasons', () => {
