@@ -22,6 +22,7 @@
     'import',
     'open-chatgpt',
     'login',
+    'passkey-login',
     'totp',
     'token',
     'subscription-check',
