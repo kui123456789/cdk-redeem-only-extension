@@ -1,5 +1,31 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.2
+
+本版本补入“免 2FA Free 路线”：当官网 2FA 开通不可用时，可以在第 5 步资料页完成后，直接读取邮箱、邮箱取码链接、AT 和时间戳，确认 UPI 试用资格后进入 Free 组。
+
+### 新增
+
+- 侧边栏 UPI 设置区新增 `主流程路线` 下拉框：
+  - `完整 2FA 路线`：继续走设置 GPT 密码、开通 2FA、检测资格。
+  - `免 2FA Free 路线`：第 5 步后跳过设置 GPT 密码和开通 2FA，检测有试用资格后进入 Free。
+- 免 2FA Free 记录使用文本格式：`邮箱---邮箱获取验证码链接---AT---时间戳`。
+- Free 导出/导入支持上述四段格式，导出文件名会使用 `upi-membership-free-email-url-at`。
+
+### 修复
+
+- 修复免 2FA 路线后台 registry 未包含 `persist-no-2fa-free`，导致流程节点不可执行的问题。
+- 修复导入免 2FA Free TXT 时，第二段 URL 被误读成密码、第三段 AT 被误读成 2FA 的问题。
+- 修复 Free 结果表 normalize/upsert 时丢失 `verificationUrl`、`recordedAt`、`no2faFreeRoute`、`twoFactorEnabled` 字段的问题。
+- 修复一键兑换候选数量可能包含缺 AT Free 账号的问题；缺 AT 不再计入可兑换。
+
+### 验证
+
+- 已通过 192 个 JS/MJS 文件语法检查。
+- 已通过 smoke 审计、无手机接码残留审计、无 Removed Network 残留审计。
+- 已验证 no-2FA Free TXT 解析和导出行为。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏加载 V1.0.2 新代码。
+
 ## CDK Redeem Only V1.0.1
 
 本版本在 V1.0 基础上补入侧边栏“自动”按钮的邮箱服务判断修复，建议已安装 V1.0 的用户升级。
