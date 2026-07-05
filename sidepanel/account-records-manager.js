@@ -2285,7 +2285,7 @@
         if (stage === 'open-chatgpt' || stage === 'import') {
           return 'open-chatgpt';
         }
-        if (stage === 'login' || stage === 'totp' || stage === 'token' || stage === 'subscription-check') {
+        if (stage === 'login' || stage === 'passkey-login' || stage === 'totp' || stage === 'token' || stage === 'subscription-check') {
           return 'login';
         }
         return getUpiCredentialMembershipFlowStepIndex(stage, results) >= 0 ? stage : '';
@@ -2293,7 +2293,7 @@
       if (stage === 'upi-redeem-plus' || stage === 'confirm-plus') {
         return 'subscription-check';
       }
-      if (stage === 'open-chatgpt' || stage === 'login' || stage === 'totp') {
+      if (stage === 'open-chatgpt' || stage === 'login' || stage === 'passkey-login' || stage === 'totp') {
         return 'token';
       }
       return getUpiCredentialMembershipFlowStepIndex(stage, results) >= 0 ? stage : '';

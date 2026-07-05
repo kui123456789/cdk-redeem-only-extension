@@ -3776,6 +3776,81 @@
         return existingSession;
       }
       throwIfStopRequested();
+      if (hasPasskeyCredential(credential)) {
+        try {
+          await reportStage('passkey-login');
+          const passkeySession = await tryPasskeyApiLoginAndReadAccessToken(credential, state, {
+            ...options,
+            applyCookies: true,
+          });
+          throwIfStopRequested();
+          const passkeyLoginResult = passkeySession?.passkeyLoginResult || {};
+          const cookieApplyResult = passkeySession?.cookieApplyResult || passkeyLoginResult.cookieApplyResult || {};
+          const cookieSetCount = Number(cookieApplyResult.setCount || 0);
+          const returnedCookieEntries = Array.isArray(passkeyLoginResult.cookieEntries)
+            ? passkeyLoginResult.cookieEntries
+            : [];
+          const returnedSessionToken = normalizeString(passkeyLoginResult.sessionToken);
+          const hasPasskeyBrowserSession = Boolean(
+            cookieSetCount > 0 && (returnedSessionToken || returnedCookieEntries.length)
+          );
+          if (shouldReadAccessToken && passkeySession?.accessToken) {
+            await reportStage('token');
+            return passkeySession;
+          }
+          if (shouldReadAccessToken && passkeySession && hasPasskeyBrowserSession) {
+            await reportStage('token');
+            const session = await readChatGptSession(passkeySession.tabId || 0, { throwIfStopRequested });
+            throwIfStopRequested();
+            const { sessionEmail, targetEmail, matches } = getCredentialSessionMatch(session, credential);
+            if (!matches) {
+              const mismatchMessage = `UPI 备份核验：${credential.email} Passkey API 登录后读取到的 ChatGPT session 属于 ${sessionEmail || '未知账号'}，不是当前目标 ${targetEmail || credential.email}`;
+              if (allowSessionMismatchRetry) {
+                await addLog(`${mismatchMessage}，将清理登录态后重新登录当前账号。`, 'warn');
+                throwIfStopRequested();
+                await clearOpenAiCookies();
+                throwIfStopRequested();
+                return loginAndReadAccessToken(credential, state, {
+                  ...options,
+                  sessionMismatchRetry: false,
+                });
+              }
+              throw createSessionAccountMismatchError(`${mismatchMessage}，已停止提交 CDK。`, {
+                sessionEmail,
+                targetEmail,
+              });
+            }
+            await addLog(
+              `UPI 备份核验：${credential.email} 获取/确认 AT：Passkey API 登录后已读取 ChatGPT session：session字段 ${getChatGptSessionFieldCount(session)}（账号已确认：${sessionEmail}）。`,
+              'ok'
+            );
+            return {
+              ...passkeySession,
+              tabId: passkeySession.tabId || 0,
+              accessToken: getChatGptSessionAccessToken(session),
+              session,
+            };
+          }
+          if (!shouldReadAccessToken && passkeySession && hasPasskeyBrowserSession) {
+            await addLog(`UPI 账号登录：${credential.email} 已通过 Passkey API 登录。`, 'ok');
+            return {
+              tabId: passkeySession.tabId || 0,
+              loggedIn: true,
+              passkeyLogin: true,
+            };
+          }
+          if (!shouldReadAccessToken && passkeySession && !hasPasskeyBrowserSession) {
+            await addLog(`UPI Passkey 登录：${credential.email} -> 后端只返回 AT 或 Cookie 未写入成功，行登录回落网页登录。`, 'warn');
+          }
+        } catch (passkeyError) {
+          if (isMembershipStopError(passkeyError)) throw passkeyError;
+          await addLog(
+            `UPI Passkey 登录：${credential.email} -> ${getErrorMessage(passkeyError) || passkeyError}，回落网页登录。`,
+            'warn'
+          );
+        }
+      }
+      throwIfStopRequested();
       await clearOpenAiCookies();
       throwIfStopRequested();
       const tabId = await openFreshLoginTab(credential.email);
@@ -5239,7 +5314,9 @@
             await addLog(`UPI Free 分组补充 AT：${email} -> 跳过：${reason}`, 'warn');
             continue;
           }
-          if (!normalizeTotpSecret(activeCredential.totpMfaSecret || activeCredential.totpSecret) && !hasPasskeyCredential(activeCredential)) {
+          if (hasPasskeyCredential(activeCredential)) {
+            await addLog(`UPI Free 分组补充 AT：${email} -> 检测到 Passkey，优先使用 Nerver Passkey 登录接口补 AT。`, 'info');
+          } else if (!normalizeTotpSecret(activeCredential.totpMfaSecret || activeCredential.totpSecret)) {
             await addLog(`UPI Free 分组补充 AT：${email} -> 未保存 2FA/Passkey，先按邮箱+密码登录；如页面要求验证码会按实际错误返回。`, 'info');
           }
 
