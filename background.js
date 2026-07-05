@@ -17,6 +17,7 @@ importScripts(
   'background/flow-definition-resolver.js',
   'background/redeem/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
+  'background/passkey-login-core.js',
   'background/generated-email-helpers.js',
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
