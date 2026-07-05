@@ -3575,13 +3575,35 @@
       return ['chatgpt.com', 'openai.com'].some((root) => domain === root || domain.endsWith(`.${root}`));
     }
 
+    function isPasskeySessionCookieName(name = '') {
+      const normalizedName = normalizeString(name).toLowerCase();
+      return normalizedName === '__secure-next-auth.session-token'
+        || normalizedName === 'next-auth.session-token'
+        || normalizedName.includes('authjs.session-token')
+        || normalizedName.includes('session-token');
+    }
+
+    function hasWrittenPasskeySessionCookie(loginResult = {}, cookieApplyResult = {}) {
+      const writtenCookieNames = Array.isArray(cookieApplyResult?.writtenCookieNames)
+        ? cookieApplyResult.writtenCookieNames
+        : [];
+      const hasWrittenSessionCookie = writtenCookieNames.some(isPasskeySessionCookieName);
+      if (!hasWrittenSessionCookie) {
+        return false;
+      }
+      const returnedCookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
+      const returnedSessionToken = normalizeString(loginResult?.sessionToken);
+      return Boolean(returnedSessionToken || returnedCookieEntries.some((entry) => isPasskeySessionCookieName(entry?.name)));
+    }
+
     async function setChatGptCookieEntries(cookieEntries = []) {
       const entries = Array.isArray(cookieEntries) ? cookieEntries : [];
       if (!chromeApi?.cookies?.set) {
-        return { setCount: 0, skipped: entries.length, skippedCount: entries.length };
+        return { setCount: 0, skipped: entries.length, skippedCount: entries.length, writtenCookieNames: [] };
       }
       let setCount = 0;
       let skippedCount = 0;
+      const writtenCookieNames = [];
       for (const entry of entries) {
         const name = normalizeString(entry?.name);
         if (!name || entry?.value === undefined || entry?.value === null) {
@@ -3616,18 +3638,19 @@
         try {
           await chromeApi.cookies.set(details);
           setCount += 1;
+          writtenCookieNames.push(name);
         } catch {
           skippedCount += 1;
         }
       }
-      return { setCount, skipped: skippedCount, skippedCount };
+      return { setCount, skipped: skippedCount, skippedCount, writtenCookieNames };
     }
 
     async function applyPasskeyLoginCookies(loginResult = {}, credential = {}, options = {}) {
       const cookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
       const sessionToken = normalizeString(loginResult?.sessionToken);
       if (!cookieEntries.length && !sessionToken) {
-        return { tabId: 0, setCount: 0, skipped: 0 };
+        return { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [] };
       }
       const throwIfStopRequested = resolveStopChecker(options, 'check');
       throwIfStopRequested();
@@ -3644,7 +3667,7 @@
         httpOnly: true,
         sameSite: 'lax',
       }];
-      const { setCount, skipped } = await setChatGptCookieEntries(entries);
+      const { setCount, skipped, writtenCookieNames } = await setChatGptCookieEntries(entries);
       throwIfStopRequested();
       await addLog(
         `UPI 备份核验：${credential.email} Passkey API 登录已写入 ${setCount} 个 ChatGPT cookie${skipped ? `，跳过 ${skipped} 个` : ''}。`,
@@ -3653,7 +3676,7 @@
       if (chromeApi?.tabs?.reload && Number.isInteger(tabId)) {
         await chromeApi.tabs.reload(tabId).catch(() => null);
       }
-      return { tabId, setCount, skipped };
+      return { tabId, setCount, skipped, writtenCookieNames };
     }
 
     async function tryPasskeyApiLoginAndReadAccessToken(credential = {}, state = {}, options = {}) {
@@ -3716,7 +3739,7 @@
         );
       }
       let tabId = 0;
-      let cookieApplyResult = { tabId: 0, setCount: 0, skipped: 0 };
+      let cookieApplyResult = { tabId: 0, setCount: 0, skipped: 0, writtenCookieNames: [] };
       if (options.applyCookies !== false) {
         const applied = await applyPasskeyLoginCookies(loginResult, credential, { throwIfStopRequested });
         cookieApplyResult = applied;
@@ -3725,8 +3748,8 @@
       loginResult.cookieApplyResult = cookieApplyResult;
       const returnedCookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
       const returnedSessionToken = normalizeString(loginResult?.sessionToken);
-      if (!loginResult.accessToken && (returnedCookieEntries.length || returnedSessionToken) && cookieApplyResult.setCount <= 0) {
-        const message = `UPI 备份核验：${credential.email} Passkey API 登录返回了 Cookie，但未能写入浏览器 Cookie，已停止继续读取页面 AT。`;
+      if (!loginResult.accessToken && (returnedCookieEntries.length || returnedSessionToken) && !hasWrittenPasskeySessionCookie(loginResult, cookieApplyResult)) {
+        const message = `UPI 备份核验：${credential.email} Passkey API 登录返回了 Cookie，但未能写入浏览器会话 Cookie，已停止继续读取页面 AT。`;
         await addLog(message, 'warn');
         throw new Error(message);
       }
@@ -3787,14 +3810,7 @@
           throwIfStopRequested();
           const passkeyLoginResult = passkeySession?.passkeyLoginResult || {};
           const cookieApplyResult = passkeySession?.cookieApplyResult || passkeyLoginResult.cookieApplyResult || {};
-          const cookieSetCount = Number(cookieApplyResult.setCount || 0);
-          const returnedCookieEntries = Array.isArray(passkeyLoginResult.cookieEntries)
-            ? passkeyLoginResult.cookieEntries
-            : [];
-          const returnedSessionToken = normalizeString(passkeyLoginResult.sessionToken);
-          const hasPasskeyBrowserSession = Boolean(
-            cookieSetCount > 0 && (returnedSessionToken || returnedCookieEntries.length)
-          );
+          const hasPasskeyBrowserSession = hasWrittenPasskeySessionCookie(passkeyLoginResult, cookieApplyResult);
           if (shouldReadAccessToken && passkeySession?.accessToken) {
             await reportStage('token');
             return passkeySession;
