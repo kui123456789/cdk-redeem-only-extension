@@ -53,6 +53,25 @@
     return String(value || '').trim().replace(/[\r\n]/g, '');
   }
 
+  function selectCleanToken(primary, fallback) {
+    const primaryToken = cleanToken(primary);
+    return primaryToken || cleanToken(fallback);
+  }
+
+  function normalizeCookieDomain(value) {
+    if (!hasProvidedValue(value)) return null;
+    const rawDomain = String(value).trim().toLowerCase();
+    const hasLeadingDot = rawDomain.startsWith('.');
+    const bareDomain = rawDomain.replace(/^\.+/, '').replace(/\.$/, '');
+    if (!bareDomain || bareDomain.includes('..')) return null;
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)*$/.test(bareDomain)) return null;
+
+    const allowedRoots = ['chatgpt.com', 'openai.com'];
+    const isAllowed = allowedRoots.some((root) => bareDomain === root || bareDomain.endsWith(`.${root}`));
+    if (!isAllowed) return null;
+    return hasLeadingDot ? `.${bareDomain}` : bareDomain;
+  }
+
   function isValidEmail(value = '') {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
   }
@@ -110,7 +129,9 @@
       if (isHostOnly) {
         defineOwn(entry, 'hostOnly', true);
       } else if (hasProvidedValue(domainValue)) {
-        defineOwn(entry, 'domain', String(domainValue));
+        const normalizedDomain = normalizeCookieDomain(domainValue);
+        if (!normalizedDomain) return null;
+        defineOwn(entry, 'domain', normalizedDomain);
       } else if (options.defaultDomain === true) {
         defineOwn(entry, 'domain', DEFAULT_COOKIE_DOMAIN);
       }
@@ -146,7 +167,7 @@
               sameSite: ownValue(value, 'sameSite'),
               expirationDate: ownValue(value, 'expirationDate'),
               hostOnly: ownValue(value, 'hostOnly'),
-            }, { defaultDomain: true });
+            }, { defaultDomain: true, preserveHostOnly: true });
           }
           return normalizeCookieEntry({ name, value }, { defaultDomain: true });
         })
@@ -169,13 +190,14 @@
       throw new Error(getLoginFailureMessage(data));
     }
     const cookieEntries = normalizeCookieEntries(data.cookies);
-    const sessionToken = cleanToken(data.sessionToken || data.session_token);
-    if (!cookieEntries.length && !sessionToken && !cleanToken(data.accessToken || data.access_token)) {
+    const accessToken = selectCleanToken(data.accessToken, data.access_token);
+    const sessionToken = selectCleanToken(data.sessionToken, data.session_token);
+    if (!cookieEntries.length && !sessionToken && !accessToken) {
       throw new Error('后端未返回可导入的 cookies、sessionToken 或 accessToken');
     }
     const result = {
       email: String(data.email || '').trim().toLowerCase(),
-      accessToken: cleanToken(data.accessToken || data.access_token),
+      accessToken,
       cookieEntries,
     };
     if (sessionToken) {

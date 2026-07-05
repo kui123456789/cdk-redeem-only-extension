@@ -101,6 +101,44 @@ test('preserves host-only array cookies without adding domain', () => {
   });
 });
 
+test('preserves host-only object-map cookies without adding domain', () => {
+  const entries = normalizeCookieEntries({
+    regular: { value: 'v', hostOnly: true },
+  });
+  assert.deepEqual(entries[0], {
+    name: 'regular',
+    value: 'v',
+    path: '/',
+    secure: true,
+    httpOnly: false,
+    sameSite: 'lax',
+    hostOnly: true,
+  });
+});
+
+test('omits cookies with foreign backend domains', () => {
+  const entries = normalizeCookieEntries([
+    { name: 'regular', value: 'v', domain: '.evil.example' },
+    { name: 'valid', value: 'ok', domain: '.chatgpt.com' },
+  ]);
+  assert.deepEqual(entries.map((entry) => entry.name), ['valid']);
+});
+
+test('accepts intended ChatGPT and OpenAI cookie domains', () => {
+  const entries = normalizeCookieEntries([
+    { name: 'root-chatgpt', value: 'v1', domain: 'chatgpt.com' },
+    { name: 'dot-chatgpt', value: 'v2', domain: '.chatgpt.com' },
+    { name: 'auth-openai', value: 'v3', domain: 'auth.openai.com' },
+    { name: 'dot-openai', value: 'v4', domain: '.openai.com' },
+  ]);
+  assert.deepEqual(entries.map((entry) => entry.domain), [
+    'chatgpt.com',
+    '.chatgpt.com',
+    'auth.openai.com',
+    '.openai.com',
+  ]);
+});
+
 test('falls back to sessionToken without cookies', () => {
   const sessionToken = `eyJ${'s'.repeat(120)}`;
   const result = normalizePasskeyLoginResponse({
@@ -121,6 +159,19 @@ test('allows accessToken-only response for AT supplement', () => {
   });
   assert.equal(result.accessToken, accessToken);
   assert.deepEqual(result.cookieEntries, []);
+});
+
+test('falls back from whitespace-only camelCase token aliases', () => {
+  const accessToken = `eyJ${'a'.repeat(120)}`;
+  const sessionToken = `eyJ${'s'.repeat(120)}`;
+  const result = normalizePasskeyLoginResponse({
+    accessToken: '   ',
+    access_token: accessToken,
+    sessionToken: '\t\n  ',
+    session_token: sessionToken,
+  });
+  assert.equal(result.accessToken, accessToken);
+  assert.equal(result.sessionToken, sessionToken);
 });
 
 test('allows accessToken-only response without ok field', () => {
