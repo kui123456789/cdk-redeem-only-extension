@@ -1420,6 +1420,26 @@
         };
       }
       if (parts.length >= 3 && isUpiCredentialMembershipPasskeyMarker(parts[2])) {
+        if (isLikelyUpiCredentialMembershipVerificationUrl(parts[3])) {
+          const timestamp = parts[5] || '';
+          const recordedAt = Math.max(0, Math.floor(Number(timestamp) || Date.parse(normalizeUpiCredentialMembershipText(timestamp)) || Date.now()));
+          return {
+            email: parts[0] || '',
+            password: parts[1] || '',
+            gptPassword: parts[1] || '',
+            totpMfaSecret: '',
+            verificationUrl: parts[3] || '',
+            passkeyEnabled: true,
+            passkeyCredentialId: getUpiCredentialMembershipPasskeyCredentialId(parts[2]),
+            accessToken: parts[4] || '',
+            accessTokenUpdatedAt: timestamp,
+            checkedAt: timestamp,
+            recordedAt,
+            no2faFreeRoute: false,
+            twoFactorEnabled: true,
+            source: 'txt',
+          };
+        }
         const accessTokenOrTimestamp = parts[3] || '';
         const explicitTimestamp = parts[4] || '';
         const fourthPartIsTimestamp = !explicitTimestamp && isLikelyUpiCredentialMembershipTimestamp(accessTokenOrTimestamp);
@@ -2025,6 +2045,7 @@
       return {
         email: normalizeUpiCredentialMembershipEmail(source.email),
         reason: String(source.reason || '').trim(),
+        trialEligibilityStatus: normalizeTrialEligibilityStatus(source.trialEligibilityStatus),
       };
     }
 
@@ -2035,24 +2056,36 @@
       const kept = Array.isArray(source.kept) ? source.kept.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
       const skipped = Array.isArray(source.skipped) ? source.skipped.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
       const failed = Array.isArray(source.failed) ? source.failed.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
+      const ineligibleEmails = Array.isArray(source.ineligibleEmails)
+        ? source.ineligibleEmails.map(normalizeUpiCredentialMembershipEmail).filter(Boolean)
+        : [];
       const deletedEmails = Array.isArray(source.deletedEmails)
         ? source.deletedEmails.map(normalizeUpiCredentialMembershipEmail).filter(Boolean)
         : [];
+      failed.forEach((item) => {
+        if (item.trialEligibilityStatus === 'ineligible' && item.email && !ineligibleEmails.includes(item.email)) {
+          ineligibleEmails.push(item.email);
+        }
+      });
       const rowCounts = (Array.isArray(rows) ? rows : []).reduce((counts, row) => {
         const trialStatus = normalizeTrialEligibilityStatus(row?.trialEligibilityStatus);
         if (trialStatus === 'eligible') counts.eligible += 1;
         if (trialStatus === 'skipped') counts.skipped += 1;
         if (trialStatus === 'failed') counts.failed += 1;
+        if (trialStatus === 'ineligible') counts.ineligible += 1;
         return counts;
-      }, { eligible: 0, skipped: 0, failed: 0 });
-      const hasStoredSummary = Boolean(source.checkedAt || kept.length || skipped.length || failed.length || deletedEmails.length);
+      }, { eligible: 0, skipped: 0, failed: 0, ineligible: 0 });
+      const hasStoredSummary = Boolean(source.checkedAt || kept.length || skipped.length || failed.length || deletedEmails.length || ineligibleEmails.length);
+      const storedIneligibleCount = Math.max(0, Math.floor(Number(source.ineligibleCount) || ineligibleEmails.length || 0));
       return {
         checkedAt: String(source.checkedAt || '').trim(),
         eligibleCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.eligibleCount) || kept.length || 0)) : rowCounts.eligible,
         skippedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.skippedCount) || skipped.length || 0)) : rowCounts.skipped,
-        failedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.failedCount) || failed.length || 0)) : rowCounts.failed,
+        failedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.failedCount) || failed.length || 0) - storedIneligibleCount) : rowCounts.failed,
+        ineligibleCount: hasStoredSummary ? storedIneligibleCount : rowCounts.ineligible,
         deletedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.deletedCount) || deletedEmails.length || 0)) : 0,
         deletedEmails,
+        ineligibleEmails,
       };
     }
 
@@ -2060,6 +2093,9 @@
       const redeemChannel = normalizeRedeemChannel(channel);
       const status = String(row.status || '').trim().toLowerCase();
       if (!row?.email || row.enabled === false || status !== 'free') {
+        return false;
+      }
+      if (normalizeTrialEligibilityStatus(row.trialEligibilityStatus) === 'ineligible') {
         return false;
       }
       if (!normalizeUpiCredentialMembershipText(row.accessToken)) {
@@ -4637,6 +4673,9 @@
         const deletedEmails = (Array.isArray(response?.deletedEmails) ? response.deletedEmails : [])
           .map(normalizeUpiCredentialMembershipEmail)
           .filter(Boolean);
+        const ineligibleEmails = (Array.isArray(response?.ineligibleEmails) ? response.ineligibleEmails : [])
+          .map(normalizeUpiCredentialMembershipEmail)
+          .filter(Boolean);
         if (deletedEmails.length) {
           const deletedSet = new Set(deletedEmails);
           setUpiCredentialMembershipPoolRows(
@@ -4651,7 +4690,7 @@
           });
         }
         helpers.showToast?.(
-          `试用资格检测完成：有资格 ${response?.kept?.length || 0}，自动删除无资格 ${deletedEmails.length}，失败 ${response?.failed?.length || 0}。`,
+          `试用资格检测完成：有资格 ${response?.kept?.length || 0}，无试用资格 ${ineligibleEmails.length}，失败 ${Math.max(0, (response?.failed?.length || 0) - ineligibleEmails.length)}。`,
           'success',
           2800
         );

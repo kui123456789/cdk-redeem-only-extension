@@ -1048,6 +1048,24 @@
       };
     }
     if (parts.length >= 3 && isPasskeyExportMarker(parts[2])) {
+      if (isLikelyVerificationUrl(parts[3])) {
+        const timestamp = parts[5] || '';
+        return {
+          email: normalizeEmail(parts[0] || ''),
+          password: normalizeString(parts[1] || ''),
+          totpMfaSecret: '',
+          gptPassword: normalizeString(parts[1] || ''),
+          verificationUrl: normalizeNo2faFreeVerificationUrlForExport(parts[3] || ''),
+          passkeyEnabled: true,
+          passkeyCredentialId: getPasskeyCredentialIdFromExportMarker(parts[2]),
+          accessToken: normalizeString(parts[4] || ''),
+          accessTokenUpdatedAt: normalizeString(timestamp),
+          checkedAt: normalizeString(timestamp),
+          recordedAt: normalizeNo2faFreeExportTimestamp(timestamp),
+          no2faFreeRoute: false,
+          twoFactorEnabled: true,
+        };
+      }
       const accessTokenOrTimestamp = parts[3] || '';
       const explicitTimestamp = parts[4] || '';
       const fourthPartIsTimestamp = !explicitTimestamp && isLikelyCredentialTimestamp(accessTokenOrTimestamp);
@@ -1199,6 +1217,7 @@
           email,
           password: normalizeString(record.password),
           totpMfaSecret: normalizeTotpSecret(record.totpMfaSecret),
+          verificationUrl: normalizeString(record.verificationUrl || record.emailVerificationUrl || record.url),
           passkeyEnabled: record.passkeyEnabled === true,
           passkeyEnabledAt: normalizeString(record.passkeyEnabledAt),
           passkeyCredentialId: normalizeString(record.passkeyCredentialId),
@@ -1479,7 +1498,15 @@
           }
           const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
           if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
+            if (item.verificationUrl) {
+              const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
+              return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+            }
             return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${item.accessToken || ''}---${timestamp}`;
+          }
+          if (item.verificationUrl) {
+            const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
+            return `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
           }
           return `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
         }
@@ -1581,6 +1608,7 @@
       fetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null,
       getState = async () => ({}),
       isTabAlive = async () => true,
+      markRegistrationEmailTrialIneligible = null,
       registerTab = async () => {},
       redeemUpiCredentialWithAccessToken = null,
       refreshPendingUpiCredentialMembershipRedeemStatuses = null,
@@ -1892,6 +1920,7 @@
           email: normalizeEmail(record.email),
           password: normalizeString(record.password),
           totpMfaSecret: normalizeTotpSecret(record.totpMfaSecret),
+          verificationUrl: normalizeString(record.verificationUrl || record.emailVerificationUrl || record.url),
           passkeyEnabled: record.passkeyEnabled === true,
           passkeyEnabledAt: normalizeString(record.passkeyEnabledAt),
           passkeyCredentialId: normalizeString(record.passkeyCredentialId),
@@ -2531,10 +2560,12 @@
       return nextItems;
     }
 
-	  function isRedeemTerminalResultItem(item = {}) {
-	    const redeemStatus = normalizeUpiRedeemRemoteStatus(item.redeemStatus);
-	    const status = normalizeString(item.status).toLowerCase();
-    return isRedeemAccountLocked(item)
+    function isRedeemTerminalResultItem(item = {}) {
+      const redeemStatus = normalizeUpiRedeemRemoteStatus(item.redeemStatus);
+      const status = normalizeString(item.status).toLowerCase();
+      const trialEligibilityStatus = normalizeString(item.trialEligibilityStatus).toLowerCase();
+      return trialEligibilityStatus === 'ineligible'
+        || isRedeemAccountLocked(item)
         || status === 'paid'
         || (status !== 'free' && ['success', 'skipped'].includes(redeemStatus))
         || ['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus);
@@ -2553,7 +2584,11 @@
         if (!email) {
           return false;
         }
-        return !isRedeemTerminalResultItem(lookup[email] || {});
+        const existingItem = lookup[email] || {};
+        if (normalizeString(existingItem.trialEligibilityStatus).toLowerCase() === 'ineligible') {
+          return false;
+        }
+        return !isRedeemTerminalResultItem(existingItem);
       });
     }
 
@@ -2563,6 +2598,7 @@
       const reason = normalizeString(item?.redeemReason || item?.reason);
       if (status !== 'free') return false;
       if (!normalizeString(item?.accessToken)) return false;
+      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') return false;
       if (isRedeemTerminalResultItem(item)) return false;
       if (isActiveUpiRedeemRemoteStatus(redeemStatus)) return false;
       if (['blocked', 'stopped', 'success', 'canceled'].includes(redeemStatus)) return false;
@@ -6409,16 +6445,15 @@
       const requestedCredentials = resolveInputCredentials(input)
         .filter((credential) => credential.email);
       const source = normalizeString(input.source || 'free-trial-eligibility');
-      const deleteBackups = input.deleteBackups !== false;
       batchRunning = true;
       batchStopRequested = false;
       const startedAt = new Date().toISOString();
       let currentResults = await getStoredResults();
       let items = mergeCredentialsIntoResultItems(currentResults.items, requestedCredentials);
-      const deletedEmails = [];
       const kept = [];
       const skipped = [];
       const failed = [];
+      const ineligibleEmails = [];
 
       const saveProgress = async (stage = 'token', email = '') => {
         currentResults = await saveResults({
@@ -6430,7 +6465,7 @@
           flowStageEmail: normalizeEmail(email),
           source: source || currentResults.source,
           total: requestedCredentials.length,
-          completed: kept.length + skipped.length + failed.length + deletedEmails.length,
+          completed: kept.length + skipped.length + failed.length,
         });
       };
 
@@ -6447,7 +6482,7 @@
           });
         }
 
-        await addLog(`UPI Free 分组试用资格检测：开始检测 ${requestedCredentials.length} 个账号，无资格会自动删除。`, 'info');
+        await addLog(`UPI Free 分组试用资格检测：开始检测 ${requestedCredentials.length} 个账号，无资格会标记到邮箱池并移出 Free，不会删除邮箱本身。`, 'info');
         const runtimeState = {
           ...(await getState()),
           ...(input.settings || {}),
@@ -6530,10 +6565,41 @@
           } catch (error) {
             const reason = getErrorMessage(error) || '试用资格检测失败';
             if (isUpiTrialIneligibleError(error)) {
-              deletedEmails.push(email);
-              items = items.filter((item) => normalizeEmail(item?.email) !== email);
+              ineligibleEmails.push(email);
+              failed.push({ email, reason, trialEligibilityStatus: 'ineligible' });
+              const markerResult = typeof markRegistrationEmailTrialIneligible === 'function'
+                ? await markRegistrationEmailTrialIneligible({
+                    ...runtimeState,
+                    ...activeCredential,
+                    email,
+                  }, {
+                    email,
+                    reason,
+                    checkedAt,
+                    logPrefix: 'UPI Free 分组试用资格检测',
+                    level: 'warn',
+                  })
+                : { updated: false };
+              items = markerResult?.updated
+                ? items.filter((item) => normalizeEmail(item?.email) !== email)
+                : upsertResultItem(items, {
+                    ...activeCredential,
+                    status: 'free',
+                    planType: 'free',
+                    reason,
+                    redeemStatus: 'blocked',
+                    redeemReason: `账号无试用资格：${reason}`,
+                    trialEligibilityStatus: 'ineligible',
+                    trialEligibilityReason: reason,
+                    trialEligibilityCheckedAt: checkedAt,
+                  });
               await saveProgress('subscription-check', email);
-              await addLog(`UPI Free 分组试用资格检测：${email} -> 无试用资格，已自动删除。原因：${reason}`, 'warn');
+              await addLog(
+                markerResult?.updated
+                  ? `UPI Free 分组试用资格检测：${email} -> 无试用资格，已在邮箱池标记并移出 Free，不再参与兑换。原因：${reason}`
+                  : `UPI Free 分组试用资格检测：${email} -> 无试用资格，但没有找到源邮箱池条目，已在 Free 中标记为不可兑换。原因：${reason}`,
+                'warn'
+              );
               continue;
             }
             failed.push({ email, reason });
@@ -6549,15 +6615,6 @@
             await saveProgress('subscription-check', email);
             await addLog(`UPI Free 分组试用资格检测：${email} -> 检测失败，保留账号：${reason}`, 'warn');
           }
-        }
-
-        if (deleteBackups && deletedEmails.length) {
-          const stored = await chromeApi.storage.local.get([BACKUP_STORAGE_KEY]).catch(() => ({}));
-          const backups = normalizeCredentialBackupMap(stored?.[BACKUP_STORAGE_KEY] || {});
-          deletedEmails.forEach((email) => {
-            delete backups[email];
-          });
-          await chromeApi.storage.local.set({ [BACKUP_STORAGE_KEY]: backups });
         }
 
         const finishedAt = new Date().toISOString();
@@ -6577,24 +6634,26 @@
             kept,
             skipped,
             failed,
-            deletedEmails,
+            deletedEmails: [],
+            ineligibleEmails,
             eligibleCount: kept.length,
             skippedCount: skipped.length,
             failedCount: failed.length,
-            deletedCount: deletedEmails.length,
+            deletedCount: 0,
+            ineligibleCount: ineligibleEmails.length,
           },
         });
         await addLog(
-          `UPI Free 分组试用资格检测：完成，有资格 ${kept.length}，自动删除无资格 ${deletedEmails.length}，跳过 ${skipped.length}，失败 ${failed.length}。`,
+          `UPI Free 分组试用资格检测：完成，有资格 ${kept.length}，无试用资格 ${ineligibleEmails.length}，跳过 ${skipped.length}，失败 ${Math.max(0, failed.length - ineligibleEmails.length)}。`,
           'ok'
         );
         return {
           results: finalResults,
-          deletedEmails,
+          deletedEmails: [],
+          ineligibleEmails,
           kept,
           skipped,
           failed,
-          deleteBackups,
         };
       } catch (error) {
         const stoppedAt = new Date().toISOString();

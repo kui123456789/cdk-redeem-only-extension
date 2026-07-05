@@ -76,6 +76,28 @@
       return `custom-pool-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
 
+    function normalizeTrialEligibilityStatus(value = '') {
+      const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+      if (['ineligible', 'not_eligible', 'no_trial', 'trial_ineligible', 'rejected'].includes(normalized)) {
+        return 'ineligible';
+      }
+      if (['eligible', 'trial_eligible', 'ok', 'passed'].includes(normalized)) {
+        return 'eligible';
+      }
+      if (['failed', 'error', 'unknown'].includes(normalized)) {
+        return 'failed';
+      }
+      return '';
+    }
+
+    function isTrialIneligibleEntry(entry = {}) {
+      return normalizeTrialEligibilityStatus(entry.trialEligibilityStatus) === 'ineligible';
+    }
+
+    function isAvailableEntry(entry = {}) {
+      return Boolean(entry.enabled) && !entry.used && !isTrialIneligibleEntry(entry);
+    }
+
     function normalizeEntry(rawEntry = {}) {
       const parsedEntry = parseEntryValue(rawEntry?.credential || rawEntry?.email || '');
       const email = normalizeEmail(parsedEntry.email || rawEntry?.email || '');
@@ -95,6 +117,9 @@
         used: Boolean(rawEntry?.used),
         note: String(rawEntry?.note || '').trim(),
         lastUsedAt: Number.isFinite(Number(rawEntry?.lastUsedAt)) ? Number(rawEntry.lastUsedAt) : 0,
+        trialEligibilityStatus: normalizeTrialEligibilityStatus(rawEntry?.trialEligibilityStatus),
+        trialEligibilityReason: String(rawEntry?.trialEligibilityReason || '').trim(),
+        trialEligibilityCheckedAt: String(rawEntry?.trialEligibilityCheckedAt || '').trim(),
       };
     }
 
@@ -135,7 +160,8 @@
             case 'enabled': return Boolean(entry.enabled);
             case 'disabled': return !entry.enabled;
             case 'used': return Boolean(entry.used);
-            case 'unused': return !entry.used;
+            case 'unused': return isAvailableEntry(entry);
+            case 'ineligible': return isTrialIneligibleEntry(entry);
             case 'current': return Boolean(entry.current);
             default: return true;
           }
@@ -150,6 +176,9 @@
           entry.note,
           entry.enabled ? 'enabled 启用' : 'disabled 停用',
           entry.used ? 'used 已用' : 'unused 未用',
+          isTrialIneligibleEntry(entry) ? 'ineligible no trial no_trial 无试用资格 无资格' : '',
+          entry.trialEligibilityReason,
+          entry.trialEligibilityCheckedAt,
           entry.current ? 'current 当前' : '',
         ].join(' ').toLowerCase();
 
@@ -220,9 +249,10 @@
 
       const entriesWithCurrent = withCurrentFlag(renderedEntries);
       const usedCount = entriesWithCurrent.filter((entry) => entry.used).length;
+      const ineligibleCount = entriesWithCurrent.filter(isTrialIneligibleEntry).length;
       const enabledCount = entriesWithCurrent.filter((entry) => entry.enabled).length;
-      const availableCount = entriesWithCurrent.filter((entry) => entry.enabled && !entry.used).length;
-      dom.customEmailPoolSummary.textContent = `已加载 ${entriesWithCurrent.length} 个邮箱，其中 ${availableCount} 个可用，${enabledCount} 个启用，${usedCount} 个已标记为已用。`;
+      const availableCount = entriesWithCurrent.filter(isAvailableEntry).length;
+      dom.customEmailPoolSummary.textContent = `已加载 ${entriesWithCurrent.length} 个邮箱，其中 ${availableCount} 个可用，${enabledCount} 个启用，${usedCount} 个已用，${ineligibleCount} 个无试用资格。`;
       if (dom.btnCustomEmailPoolClearUsed) dom.btnCustomEmailPoolClearUsed.disabled = loading || usedCount === 0;
       if (dom.btnCustomEmailPoolDeleteAll) dom.btnCustomEmailPoolDeleteAll.disabled = loading || entriesWithCurrent.length === 0;
 
@@ -242,6 +272,8 @@
           <div class="luckmail-item-main">
             <div class="luckmail-item-email-row">
               <div class="luckmail-item-email">${helpers.escapeHtml(entry.email || '(未知邮箱)')}</div>
+              ${isTrialIneligibleEntry(entry) ? '<span class="luckmail-status-badge status-warning">无试用资格</span>' : ''}
+              ${entry.used ? '<span class="luckmail-status-badge status-used">已用</span>' : ''}
               <button
                 class="hotmail-copy-btn"
                 type="button"
@@ -257,12 +289,14 @@
               ${entry.verificationUrl ? '<span class="luckmail-tag active">取码URL</span>' : ''}
               ${entry.note ? `<span class="luckmail-tag">${helpers.escapeHtml(entry.note)}</span>` : ''}
             </div>
+            ${isTrialIneligibleEntry(entry) ? `<div class="luckmail-item-details status-warning-text">${helpers.escapeHtml(entry.trialEligibilityReason || '账号无试用资格，不会再被主流程选中。')}</div>` : ''}
             ${entry.verificationUrl ? `<div class="luckmail-item-details mono">${helpers.escapeHtml(entry.verificationUrl)}</div>` : ''}
           </div>
           <div class="luckmail-item-actions">
-            <button class="btn btn-outline btn-xs" type="button" data-action="use">使用此邮箱</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="use" ${isTrialIneligibleEntry(entry) ? 'disabled title="该邮箱无试用资格，不会被主流程选中"' : ''}>使用此邮箱</button>
             <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(entry.used ? '标记未用' : '标记已用')}</button>
             <button class="btn btn-outline btn-xs" type="button" data-action="toggle-enabled">${helpers.escapeHtml(entry.enabled ? '停用' : '启用')}</button>
+            ${isTrialIneligibleEntry(entry) ? '<button class="btn btn-outline btn-xs" type="button" data-action="clear-trial-status">清除无资格</button>' : ''}
             <button class="btn btn-outline btn-xs" type="button" data-action="delete">删除</button>
           </div>
         `;
@@ -310,6 +344,20 @@
           await patchEntries((entriesList) => entriesList.map((candidate) => (
             String(candidate.id) === entryId
               ? { ...candidate, enabled: !entry.enabled }
+              : candidate
+          )));
+        });
+
+        item.querySelector('[data-action="clear-trial-status"]')?.addEventListener('click', async () => {
+          await patchEntries((entriesList) => entriesList.map((candidate) => (
+            String(candidate.id) === entryId
+              ? {
+                  ...candidate,
+                  trialEligibilityStatus: '',
+                  trialEligibilityReason: '',
+                  trialEligibilityCheckedAt: '',
+                  note: candidate.note === '无试用资格' ? '' : candidate.note,
+                }
               : candidate
           )));
         });

@@ -1746,6 +1746,22 @@ function normalizeCustomEmailVerificationUrlForState(value = '') {
   return /^https?:\/\//i.test(raw) ? raw : '';
 }
 
+function normalizeCustomEmailPoolTrialEligibilityStatus(value = '') {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (['ineligible', 'not_eligible', 'no_trial', 'trial_ineligible', 'rejected'].includes(normalized)) return 'ineligible';
+  if (['eligible', 'trial_eligible', 'ok', 'passed'].includes(normalized)) return 'eligible';
+  if (['failed', 'error', 'unknown'].includes(normalized)) return 'failed';
+  return '';
+}
+
+function isCustomEmailPoolEntryTrialIneligible(entry = {}) {
+  return normalizeCustomEmailPoolTrialEligibilityStatus(entry?.trialEligibilityStatus) === 'ineligible';
+}
+
+function isCustomEmailPoolEntryAvailable(entry = {}) {
+  return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
+}
+
 function normalizeCustomEmailPoolEntryObjects(value = []) {
   const source = splitCustomEmailPoolEntrySource(value);
   const seenEmails = new Set();
@@ -1773,6 +1789,9 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       used: Boolean(asObject.used),
       note: String(asObject.note || '').trim(),
       lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+      trialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus(asObject.trialEligibilityStatus),
+      trialEligibilityReason: String(asObject.trialEligibilityReason || '').trim(),
+      trialEligibilityCheckedAt: String(asObject.trialEligibilityCheckedAt || '').trim(),
     });
   }
 
@@ -1794,7 +1813,7 @@ function getCustomEmailPool(state = {}) {
     const entries = normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries);
     if (entries.length > 0) {
       return entries
-        .filter((entry) => entry.enabled && !entry.used)
+        .filter(isCustomEmailPoolEntryAvailable)
         .map((entry) => entry.email);
     }
   }
@@ -1855,7 +1874,7 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
   }
 
   const nextCustomEmailPool = nextEntries
-    .filter((entry) => entry.enabled && !entry.used)
+    .filter(isCustomEmailPoolEntryAvailable)
     .map((entry) => entry.email);
   await setPersistentSettings({
     customEmailPoolEntries: nextEntries,
@@ -1876,6 +1895,97 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
   await addLog(`${logPrefix}已将 ${currentEmail} 标记为已用。`, options.level || 'ok');
   return {
     updated: true,
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+  };
+}
+
+async function markCurrentCustomEmailPoolEntryTrialIneligible(state = {}, options = {}) {
+  if (!isCustomEmailPoolGenerator(state)) {
+    return { updated: false };
+  }
+
+  const currentEmail = String(options.email || state?.email || '').trim().toLowerCase();
+  if (!currentEmail) {
+    return { updated: false };
+  }
+
+  const entries = getCustomEmailPoolEntries(state);
+  if (!entries.length) {
+    return { updated: false };
+  }
+
+  const reason = String(options.reason || '账号无试用资格').trim();
+  const checkedAt = String(options.checkedAt || new Date().toISOString()).trim();
+  const shouldClearSelectedEmail = String(state?.selectedCustomEmailPoolEmail || '').trim().toLowerCase() === currentEmail;
+  let matched = false;
+  let changed = false;
+  const nextEntries = entries.map((entry) => {
+    if (entry.email !== currentEmail) {
+      return entry;
+    }
+    matched = true;
+    const nextEntry = {
+      ...entry,
+      used: false,
+      trialEligibilityStatus: 'ineligible',
+      trialEligibilityReason: reason,
+      trialEligibilityCheckedAt: checkedAt,
+      note: entry.note || '无试用资格',
+    };
+    changed = changed
+      || entry.used !== nextEntry.used
+      || entry.trialEligibilityStatus !== nextEntry.trialEligibilityStatus
+      || entry.trialEligibilityReason !== nextEntry.trialEligibilityReason
+      || entry.trialEligibilityCheckedAt !== nextEntry.trialEligibilityCheckedAt
+      || entry.note !== nextEntry.note;
+    return nextEntry;
+  });
+
+  if (!matched) {
+    return { updated: false };
+  }
+
+  const nextCustomEmailPool = nextEntries
+    .filter(isCustomEmailPoolEntryAvailable)
+    .map((entry) => entry.email);
+
+  if (!changed && !shouldClearSelectedEmail) {
+    return {
+      updated: true,
+      unchanged: true,
+      email: currentEmail,
+      reason,
+      checkedAt,
+      customEmailPoolEntries: nextEntries,
+      customEmailPool: nextCustomEmailPool,
+    };
+  }
+
+  const selectionUpdate = shouldClearSelectedEmail ? { selectedCustomEmailPoolEmail: '' } : {};
+
+  await setPersistentSettings({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+  await setState({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+  broadcastDataUpdate({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+  const logPrefix = String(options.logPrefix || '').trim() || '当前账号：自定义邮箱池';
+  await addLog(`${logPrefix}：${currentEmail} 已标记为无试用资格。`, options.level || 'warn');
+  return {
+    updated: true,
+    email: currentEmail,
+    reason,
+    checkedAt,
     customEmailPoolEntries: nextEntries,
     customEmailPool: nextCustomEmailPool,
   };
@@ -1980,6 +2090,46 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   }
 
   return { updated };
+}
+
+async function markCurrentRegistrationAccountTrialIneligible(state = {}, options = {}) {
+  const providedState = state && typeof state === 'object' ? state : {};
+  const currentState = await getState();
+  const latestState = {
+    ...providedState,
+    ...(currentState && typeof currentState === 'object' ? currentState : {}),
+  };
+  const email = String(
+    options.email
+    || latestState.email
+    || latestState.registrationEmailState?.current
+    || latestState.step8VerificationTargetEmail
+    || ''
+  ).trim().toLowerCase();
+  const reason = String(options.reason || '账号无试用资格').trim();
+  const checkedAt = String(options.checkedAt || new Date().toISOString()).trim();
+
+  const result = await markCurrentCustomEmailPoolEntryTrialIneligible(latestState, {
+    email,
+    reason,
+    checkedAt,
+    logPrefix: `${String(options.logPrefix || '第 7 步').trim()}：自定义邮箱池`,
+    level: options.level || 'warn',
+  });
+
+  if (result?.updated) {
+    await clearCurrentRegistrationEmailRuntimeState(latestState, {
+      reason: 'trial_ineligible',
+      reasonLabel: '无试用资格',
+    });
+  }
+
+  return {
+    updated: Boolean(result?.updated),
+    email,
+    reason,
+    checkedAt,
+  };
 }
 
 async function markCurrentRegistrationAccountUnavailable(state = {}, options = {}) {
@@ -13626,6 +13776,7 @@ const totpMfaExecutor = self.MultiPageBackgroundEnableTotpMfa?.createEnableTotpM
   getState,
   getTabId,
   isTabAlive,
+  markCurrentRegistrationAccountTrialIneligible,
   markCurrentRegistrationAccountUsed,
   registerTab,
   sendTabMessageUntilStopped,
@@ -13702,6 +13853,7 @@ upiCredentialMembershipChecker = self.MultiPageBackgroundUpiCredentialMembership
   fetchVerificationCodeOnly: (...args) => verificationFlowHelpers.fetchVerificationCodeOnly(...args),
   getState,
   isTabAlive,
+  markRegistrationEmailTrialIneligible: markCurrentRegistrationAccountTrialIneligible,
   registerTab,
   redeemUpiCredentialWithAccessToken: (...args) => upiRedeemExecutor.redeemUpiCredentialWithAccessToken(...args),
   refreshPendingUpiCredentialMembershipRedeemStatuses: (...args) => messageRouter?.refreshPendingUpiCredentialMembershipRedeemStatuses?.(...args),
@@ -13860,6 +14012,7 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   listIcloudAliases,
   listLuckmailPurchasesForManagement,
   markCurrentCustomEmailPoolEntryUsed,
+  markCurrentRegistrationAccountTrialIneligible,
   markCurrentRegistrationAccountUsed,
   getCurrentMail2925Account,
   normalizeHotmailAccounts,

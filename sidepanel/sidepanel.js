@@ -6190,6 +6190,28 @@ function createCustomEmailPoolEntryId() {
   return `custom-pool-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizeCustomEmailPoolTrialEligibilityStatus(value = '') {
+  const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (['ineligible', 'not_eligible', 'no_trial', 'trial_ineligible', 'rejected'].includes(normalized)) {
+    return 'ineligible';
+  }
+  if (['eligible', 'trial_eligible', 'ok', 'passed'].includes(normalized)) {
+    return 'eligible';
+  }
+  if (['failed', 'error', 'unknown'].includes(normalized)) {
+    return 'failed';
+  }
+  return '';
+}
+
+function isCustomEmailPoolEntryTrialIneligible(entry = {}) {
+  return normalizeCustomEmailPoolTrialEligibilityStatus(entry?.trialEligibilityStatus) === 'ineligible';
+}
+
+function isCustomEmailPoolEntryAvailable(entry = {}) {
+  return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
+}
+
 function normalizeCustomEmailPoolEntryObjects(value = []) {
   const source = splitCustomEmailPoolEntrySource(value);
   const seenEmails = new Set();
@@ -6217,6 +6239,9 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       used: Boolean(asObject.used),
       note: String(asObject.note || '').trim(),
       lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+      trialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus(asObject.trialEligibilityStatus),
+      trialEligibilityReason: String(asObject.trialEligibilityReason || '').trim(),
+      trialEligibilityCheckedAt: String(asObject.trialEligibilityCheckedAt || '').trim(),
     });
   }
 
@@ -6257,7 +6282,7 @@ function getNormalizedCustomEmailPoolEntriesState() {
 
 function getActiveCustomEmailPoolEmails(entries = getNormalizedCustomEmailPoolEntriesState()) {
   return normalizeCustomEmailPoolEntryObjects(entries)
-    .filter((entry) => entry.enabled && !entry.used)
+    .filter(isCustomEmailPoolEntryAvailable)
     .map((entry) => entry.email);
 }
 
@@ -6266,7 +6291,7 @@ function setCustomEmailPoolEntriesState(entries = [], options = {}) {
   customEmailPoolEntriesState = normalizeCustomEmailPoolEntryObjects(entries);
   if (syncInput && inputCustomEmailPool) {
     inputCustomEmailPool.value = normalizeCustomEmailPoolEntryValues(
-      customEmailPoolEntriesState.filter((entry) => entry.enabled && !entry.used)
+      customEmailPoolEntriesState.filter(isCustomEmailPoolEntryAvailable)
     ).join('\n');
   }
 }

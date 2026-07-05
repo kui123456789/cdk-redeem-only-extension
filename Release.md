@@ -1,5 +1,31 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.5
+
+本版本修复试用资格失败后的邮箱池状态展示，并恢复 Free 导出中三条路线的邮箱取件链接字段，建议已安装 V1.0.4 的用户升级。
+
+### 修复
+
+- 第 7 步检测到账号无试用资格时，不再删除邮箱本身，也不写入 Free；会在自定义邮箱池中标记 `无试用资格`，并保留失败原因。
+- 自定义邮箱池新增无试用资格标识和 `清除无资格` 操作，方便手动恢复后重新测试。
+- Free 可兑换筛选会跳过已标记无试用资格的邮箱，避免后续自动兑换或一键兑换再次选中。
+- 恢复完整 2FA Free 导出格式：`邮箱---密码---2FA---邮箱取件地址---AT---具体时间`。
+- 恢复 Passkey Free 导出格式：`邮箱---密码---PASSKEY:credentialId---邮箱取件地址---AT---具体时间`。
+- 保持免 2FA Free 导出格式：`邮箱---邮箱取件地址---AT---具体时间`。
+- 导入解析同步支持上述带取件链接的 2FA / Passkey / 免 2FA Free 文本，避免链接被误读成 AT 或时间。
+
+### 验证
+
+- 已通过 `node --check background.js`。
+- 已通过 `node --check background/steps/upi-redeem.js`。
+- 已通过 `node --check background/upi-credential-membership-checker.js`。
+- 已通过 `node --check background/message-router.js`。
+- 已通过 `node --check sidepanel/account-records-manager.js`。
+- 已通过 `node --check sidepanel/sidepanel.js`。
+- 已通过 `node --check sidepanel/custom-email-pool-manager.js`。
+- 已通过 `git diff --check`。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏和后台 service worker 加载 V1.0.5 新代码。
+
 ## CDK Redeem Only V1.0.4
 
 本版本补齐 Passkey Free 路线、登录邮箱验证码补 AT，以及 Free/Plus 兑换显示体验，建议已安装 V1.0.3 的用户升级。

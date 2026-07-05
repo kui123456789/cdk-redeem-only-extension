@@ -37,6 +37,7 @@
       getState = async () => ({}),
       getTabId,
       isTabAlive,
+      markCurrentRegistrationAccountTrialIneligible = null,
       markCurrentRegistrationAccountUsed = null,
       now = () => Date.now(),
       registerTab,
@@ -238,6 +239,9 @@
         return false;
       }
       if (isRedeemChannelDailyLimitBlocked(item, channel)) {
+        return false;
+      }
+      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') {
         return false;
       }
       if (normalizeRedeemChannel(channel) === 'upi') {
@@ -3228,9 +3232,26 @@
         const message = getErrorMessage(error) || 'UPI 试用资格检测失败。';
         const failedAt = toIsoTimestamp();
         const trialEligibilityStatus = isUpiAccountIneligibleError(error) ? 'ineligible' : 'failed';
+        let emailPoolStatusUpdated = false;
+        if (trialEligibilityStatus === 'ineligible' && typeof markCurrentRegistrationAccountTrialIneligible === 'function') {
+          const markResult = await markCurrentRegistrationAccountTrialIneligible({
+            ...runtimeState,
+            ...patch,
+            email,
+          }, {
+            email,
+            reason: message,
+            checkedAt: failedAt,
+            logPrefix: '第 7 步 UPI 资格检查',
+            level: 'warn',
+          });
+          emailPoolStatusUpdated = Boolean(markResult?.updated);
+        }
         await addStepLog(
           visibleStep,
-          `UPI 注册后试用资格检查${trialEligibilityStatus === 'ineligible' ? '确认无资格' : '失败'}，账号未进入 Free 组：${email || 'unknown'}：${message}`,
+          trialEligibilityStatus === 'ineligible'
+            ? `UPI 注册后试用资格检查确认无资格，${emailPoolStatusUpdated ? '已在邮箱池标记“无试用资格”' : '未找到源邮箱池条目'}，不会写入 Free：${email || 'unknown'}：${message}`
+            : `UPI 注册后试用资格检查失败，账号未进入 Free 组：${email || 'unknown'}：${message}`,
           trialEligibilityStatus === 'ineligible' ? 'warn' : 'error'
         );
         return {
@@ -3240,6 +3261,7 @@
           checkedAt: failedAt,
           freeResults: null,
           trialEligibilityStatus,
+          emailPoolStatusUpdated,
         };
       }
     }
@@ -4413,7 +4435,9 @@
           })
         : {
             status: 'skipped',
-            reason: eligibility?.reason || 'UPI 资格检测未通过，账号未进入 Free 组',
+            reason: eligibility?.trialEligibilityStatus === 'ineligible'
+              ? (eligibility?.reason || '账号无试用资格，已在邮箱池标记，不写入 Free')
+              : (eligibility?.reason || 'UPI 资格检测未通过，账号未进入 Free 组'),
           };
       await addStepLog(
         visibleStep,
