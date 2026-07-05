@@ -177,26 +177,32 @@
   }
 
   function getLoginFailureMessage(data = {}) {
-    const reason = hasOwn(data, 'reason') ? String(data.reason || '') : '';
+    const reason = hasOwn(data, 'reason') ? String(ownValue(data, 'reason') || '') : '';
     if (hasOwn(FAILURE_MESSAGES, reason)) return FAILURE_MESSAGES[reason];
-    if (hasOwn(data, 'message')) return String(data.message || '');
-    if (hasOwn(data, 'error')) return String(data.error || '');
+    if (hasOwn(data, 'message')) {
+      const message = String(ownValue(data, 'message') || '');
+      if (message) return message;
+    }
+    if (hasOwn(data, 'error')) {
+      const error = String(ownValue(data, 'error') || '');
+      if (error) return error;
+    }
     return '登录失败，请稍后重试';
   }
 
   function normalizePasskeyLoginResponse(response = {}) {
     const data = response && typeof response === 'object' && !Array.isArray(response) ? response : {};
-    if (data.ok === false) {
+    if (ownValue(data, 'ok') === false) {
       throw new Error(getLoginFailureMessage(data));
     }
-    const cookieEntries = normalizeCookieEntries(data.cookies);
-    const accessToken = selectCleanToken(data.accessToken, data.access_token);
-    const sessionToken = selectCleanToken(data.sessionToken, data.session_token);
+    const cookieEntries = normalizeCookieEntries(ownValue(data, 'cookies'));
+    const accessToken = selectCleanToken(ownValue(data, 'accessToken'), ownValue(data, 'access_token'));
+    const sessionToken = selectCleanToken(ownValue(data, 'sessionToken'), ownValue(data, 'session_token'));
     if (!cookieEntries.length && !sessionToken && !accessToken) {
       throw new Error('后端未返回可导入的 cookies、sessionToken 或 accessToken');
     }
     const result = {
-      email: String(data.email || '').trim().toLowerCase(),
+      email: String(ownValue(data, 'email') || '').trim().toLowerCase(),
       accessToken,
       cookieEntries,
     };

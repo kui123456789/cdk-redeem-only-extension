@@ -181,6 +181,38 @@ test('allows accessToken-only response without ok field', () => {
   assert.deepEqual(result.cookieEntries, []);
 });
 
+test('ignores inherited accessToken and email fields', () => {
+  const accessToken = `eyJ${'a'.repeat(120)}`;
+  const response = Object.create({ accessToken, email: 'x@example.com' });
+  assert.throws(
+    () => normalizePasskeyLoginResponse(response),
+    /后端未返回可导入的 cookies、sessionToken 或 accessToken/
+  );
+});
+
+test('ignores inherited cookies and sessionToken fields', () => {
+  const sessionToken = `eyJ${'s'.repeat(120)}`;
+  const response = Object.create({
+    cookies: {
+      '__Secure-next-auth.session-token': sessionToken,
+    },
+    sessionToken,
+  });
+  assert.throws(
+    () => normalizePasskeyLoginResponse(response),
+    /后端未返回可导入的 cookies、sessionToken 或 accessToken/
+  );
+});
+
+test('ignores inherited ok false when own accessToken is valid', () => {
+  const accessToken = `eyJ${'a'.repeat(120)}`;
+  const response = Object.create({ ok: false, reason: 'missing-credential' });
+  response.accessToken = accessToken;
+  const result = normalizePasskeyLoginResponse(response);
+  assert.equal(result.accessToken, accessToken);
+  assert.deepEqual(result.cookieEntries, []);
+});
+
 test('rejects explicit backend failures even with accessToken', () => {
   const accessToken = `eyJ${'a'.repeat(120)}`;
   assert.throws(
@@ -194,4 +226,11 @@ test('maps backend failure reasons', () => {
   assert.equal(getLoginFailureMessage({ ok: false, reason: 'rate-limited' }), '请求太频繁，请稍后再试');
   assert.equal(getLoginFailureMessage({ ok: false, reason: 'server-error' }), '服务器错误，请稍后重试');
   assert.equal(getLoginFailureMessage({ ok: false, reason: '__proto__' }), '登录失败，请稍后重试');
+});
+
+test('falls back for own explicit failure with empty message and error', () => {
+  assert.throws(
+    () => normalizePasskeyLoginResponse({ ok: false, message: '', error: '' }),
+    /登录失败，请稍后重试/
+  );
 });
