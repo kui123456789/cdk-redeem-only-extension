@@ -1624,7 +1624,7 @@
       );
       const credentialHasPasskey = sourceCredential.passkeyEnabled === true || Boolean(credentialPasskeyCredentialId);
       const resultHasPasskey = sourceResult.passkeyEnabled === true || Boolean(resultPasskeyCredentialId);
-      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(sourceCredential);
+      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(sourceResult, sourceCredential);
       const passkeyPatch = credentialHasPasskey && !resultHasPasskey
         ? {
           passkeyEnabled: true,
@@ -1650,6 +1650,7 @@
           gptPassword: normalizeUpiCredentialMembershipText(sourceCredential.gptPassword || sourceCredential.password),
         }),
         ...passkeyPatch,
+        ...passkeyNumericMetadataPatch,
       };
     }
 
