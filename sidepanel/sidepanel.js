@@ -946,6 +946,38 @@ function getSelectedEmailGenerator() {
   return 'duck';
 }
 
+function normalizeLuckmailBaseUrl(value = '') {
+  if (window.LuckMailUtils?.normalizeLuckmailBaseUrl) {
+    return window.LuckMailUtils.normalizeLuckmailBaseUrl(value);
+  }
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    return DEFAULT_LUCKMAIL_BASE_URL;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return DEFAULT_LUCKMAIL_BASE_URL;
+    }
+    parsed.pathname = parsed.pathname.replace(/\/+$/g, '');
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/$/g, '');
+  } catch {
+    return DEFAULT_LUCKMAIL_BASE_URL;
+  }
+}
+
+function normalizeLuckmailEmailType(value = '') {
+  if (window.LuckMailUtils?.normalizeLuckmailEmailType) {
+    return window.LuckMailUtils.normalizeLuckmailEmailType(value);
+  }
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['self_built', 'ms_imap', 'ms_graph', 'google_variant'].includes(normalized)
+    ? normalized
+    : DEFAULT_LUCKMAIL_EMAIL_TYPE;
+}
+
 function getManagedAliasProviderUiCopy(provider = selectMailProvider.value, mail2925Mode = getSelectedMail2925Mode()) {
   if (!isManagedAliasProvider(provider, mail2925Mode)) {
     return null;
