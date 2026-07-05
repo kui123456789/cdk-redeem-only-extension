@@ -236,12 +236,14 @@
     return rootScope.MultiPagePasskeyLoginCore || {};
   }
 
-  function normalizeNerverPasskeyLoginBaseUrl(value = '') {
+  function normalizeNerverPasskeyLoginBaseUrl(value = '', options = {}) {
     const raw = normalizeString(value);
-    if (!raw) return '';
+    if (!raw) return DEFAULT_TOTP_API_BASE_URL;
     try {
       const url = new URL(raw);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('Passkey API 基础地址必须使用 http 或 https 协议。');
+      }
       url.hash = '';
       url.search = '';
       url.pathname = url.pathname
@@ -250,8 +252,11 @@
         .replace(/\/api\/v1\/totp\/(?:enable|lookup|code)$/i, '')
         .replace(/\/+$/g, '');
       return url.toString().replace(/\/+$/g, '');
-    } catch {
-      return '';
+    } catch (error) {
+      if (error instanceof Error && /Passkey API/.test(error.message)) {
+        throw error;
+      }
+      throw new Error('Passkey API 基础地址无效，请填写有效的 http(s) URL。');
     }
   }
 
@@ -274,6 +279,8 @@
         || credential.device_id
         || state?.deviceId
         || state?.passkeyDeviceId
+        || state?.passkeyLoginDeviceId
+        || state?.totpMfaDeviceId
         || state?.upiCredentialMembershipCheckDeviceId
       ),
       credentialId: normalizeString(credential.passkeyCredentialId || credential.credentialId || credential.credential_id),
@@ -3491,6 +3498,15 @@
       return `https://${host}${path}`;
     }
 
+    function normalizeChatGptCookieDomain(value = '') {
+      return normalizeString(value).replace(/\.$/, '').toLowerCase();
+    }
+
+    function isAllowedChatGptCookieDomain(value = '') {
+      const domain = normalizeChatGptCookieDomain(value).replace(/^\.+/, '');
+      return ['chatgpt.com', 'openai.com'].some((root) => domain === root || domain.endsWith(`.${root}`));
+    }
+
     async function setChatGptCookieEntries(cookieEntries = []) {
       const entries = Array.isArray(cookieEntries) ? cookieEntries : [];
       if (!chromeApi?.cookies?.set) {
@@ -3514,7 +3530,12 @@
           httpOnly: entry.httpOnly === true,
           sameSite: normalizeString(entry.sameSite || 'lax') || 'lax',
         };
-        const normalizedDomain = normalizeString(entry.domain).toLowerCase();
+        const normalizedDomain = normalizeChatGptCookieDomain(entry.domain);
+        if (normalizedDomain && !isAllowedChatGptCookieDomain(normalizedDomain)) {
+          skippedCount += 1;
+          await addLog(`UPI 备份核验：跳过非 ChatGPT/OpenAI 域名 cookie（${normalizedDomain}）。`, 'warn');
+          continue;
+        }
         if (!name.startsWith('__Host-') && entry.hostOnly !== true && normalizedDomain) {
           details.domain = normalizedDomain;
         }
