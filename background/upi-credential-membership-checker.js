@@ -398,11 +398,11 @@
         target.passkeyPrivateJwk = source.passkeyPrivateJwk;
       }
       target.passkeyPublicKeyCose = normalizeString(target.passkeyPublicKeyCose || source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose);
-      target.passkeySignCount = Number.isFinite(Number(target.passkeySignCount ?? source.passkeySignCount ?? source.signCount))
-        ? Math.max(0, Math.floor(Number(target.passkeySignCount ?? source.passkeySignCount ?? source.signCount)))
+      target.passkeySignCount = Number.isFinite(Number(target.passkeySignCount ?? target.signCount ?? source.passkeySignCount ?? source.signCount))
+        ? Math.max(0, Math.floor(Number(target.passkeySignCount ?? target.signCount ?? source.passkeySignCount ?? source.signCount)))
         : 0;
-      target.passkeyAlg = Number.isFinite(Number(target.passkeyAlg ?? source.passkeyAlg ?? source.alg))
-        ? Number(target.passkeyAlg ?? source.passkeyAlg ?? source.alg)
+      target.passkeyAlg = Number.isFinite(Number(target.passkeyAlg ?? target.alg ?? source.passkeyAlg ?? source.alg))
+        ? Number(target.passkeyAlg ?? target.alg ?? source.passkeyAlg ?? source.alg)
         : 0;
       target.passkeyApiPersisted = target.passkeyApiPersisted === true || source.passkeyApiPersisted === true || source.persisted === true;
       target.twoFactorEnabled = true;
