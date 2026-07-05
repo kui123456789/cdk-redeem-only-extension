@@ -261,10 +261,7 @@
 
   function isPasskeySessionCookieName(name = '') {
     const normalizedName = normalizeString(name).toLowerCase();
-    return normalizedName === '__secure-next-auth.session-token'
-      || normalizedName === 'next-auth.session-token'
-      || normalizedName.includes('authjs.session-token')
-      || normalizedName.includes('session-token');
+    return /^(?:__secure-next-auth|next-auth|__secure-authjs|authjs)\.session-token(?:\.\d+)?$/.test(normalizedName);
   }
 
   function hasWrittenPasskeySessionCookie(loginResult = {}, cookieApplyResult = {}) {

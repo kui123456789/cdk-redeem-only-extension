@@ -12,6 +12,7 @@ require('../background/upi-credential-membership-checker.js');
 
 const {
   buildPasskeyExportMarker,
+  createPasskeyApiLoginExecutor,
   getPasskeyCredentialIdFromExportMarker,
   parsePasskeyExportMarker,
 } = globalThis.MultiPagePasskeyApiLoginExecutor;
@@ -194,6 +195,42 @@ test('accepts intended ChatGPT and OpenAI cookie domains', () => {
     'auth.openai.com',
     '.openai.com',
   ]);
+});
+
+test('strictly matches passkey session cookies written by browser', () => {
+  const { hasWrittenPasskeySessionCookie } = createPasskeyApiLoginExecutor();
+  const sessionValue = `eyJ${'s'.repeat(120)}`;
+
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: 'not-a-real-session-token', value: sessionValue }],
+  }, {
+    writtenCookieNames: ['not-a-real-session-token'],
+  }), false);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token', value: sessionValue }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-next-auth.session-token.0', value: sessionValue }],
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token.0'],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: '__Secure-authjs.session-token', value: sessionValue }],
+  }, {
+    writtenCookieNames: ['__Secure-authjs.session-token'],
+  }), true);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    cookieEntries: [{ name: 'foo.session-token', value: sessionValue }],
+  }, {
+    writtenCookieNames: ['foo.session-token'],
+  }), false);
+  assert.equal(hasWrittenPasskeySessionCookie({
+    sessionToken: sessionValue,
+  }, {
+    writtenCookieNames: ['__Secure-next-auth.session-token'],
+  }), true);
 });
 
 test('falls back to sessionToken without cookies', () => {
