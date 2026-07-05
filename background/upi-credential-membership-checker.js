@@ -5,6 +5,7 @@
   const RESULTS_STORAGE_KEY = 'upiCredentialMembershipCheckResults';
   const DEFAULT_TOTP_API_BASE_URL = 'https://cha.nerver.cc';
   const TOTP_LOOKUP_TIMEOUT_MS = 20000;
+  const DEFAULT_PASSKEY_LOGIN_TIMEOUT_MS = 30000;
   const DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT = 3;
   const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
   const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
@@ -269,6 +270,72 @@
       || DEFAULT_TOTP_API_BASE_URL
     ) || DEFAULT_TOTP_API_BASE_URL;
     return `${baseUrl}/api/v1/passkey/login`;
+  }
+
+  function resolvePasskeyLoginTimeoutMs(state = {}) {
+    const configured = Number(state?.passkeyLoginTimeoutMs);
+    if (Number.isFinite(configured) && configured > 0) {
+      return Math.max(1, Math.floor(configured));
+    }
+    return DEFAULT_PASSKEY_LOGIN_TIMEOUT_MS;
+  }
+
+  function normalizeBackendErrorValue(value) {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return normalizeString(value);
+    }
+    try {
+      return normalizeString(JSON.stringify(value)).slice(0, 300);
+    } catch {
+      return normalizeString(value);
+    }
+  }
+
+  function getBackendOwnErrorMessage(payload = {}) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return '';
+    for (const key of ['reason', 'message', 'error']) {
+      if (Object.prototype.hasOwnProperty.call(payload, key)) {
+        const message = normalizeBackendErrorValue(payload[key]);
+        if (message) return message;
+      }
+    }
+    return '';
+  }
+
+  async function fetchPasskeyLoginResponse(fetchImpl, apiUrl, requestOptions = {}, timeoutMs = DEFAULT_PASSKEY_LOGIN_TIMEOUT_MS) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const options = { ...requestOptions };
+    let timeoutId = null;
+    let timedOut = false;
+    if (controller) {
+      options.signal = controller.signal;
+    }
+    try {
+      if (controller) {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs);
+        return await fetchImpl(apiUrl, options);
+      }
+      return await new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          reject(new Error('Passkey 登录接口请求超时'));
+        }, timeoutMs);
+        Promise.resolve()
+          .then(() => fetchImpl(apiUrl, options))
+          .then(resolve, reject);
+      });
+    } catch (error) {
+      if (timedOut || error?.name === 'AbortError') {
+        throw new Error('Passkey 登录接口请求超时');
+      }
+      throw error;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
   }
 
   function buildPasskeyLoginOptionsFromCredential(credential = {}, state = {}) {
@@ -3510,7 +3577,7 @@
     async function setChatGptCookieEntries(cookieEntries = []) {
       const entries = Array.isArray(cookieEntries) ? cookieEntries : [];
       if (!chromeApi?.cookies?.set) {
-        return { setCount: 0, skippedCount: entries.length };
+        return { setCount: 0, skipped: entries.length, skippedCount: entries.length };
       }
       let setCount = 0;
       let skippedCount = 0;
@@ -3552,14 +3619,14 @@
           skippedCount += 1;
         }
       }
-      return { setCount, skippedCount };
+      return { setCount, skipped: skippedCount, skippedCount };
     }
 
     async function applyPasskeyLoginCookies(loginResult = {}, credential = {}, options = {}) {
       const cookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
       const sessionToken = normalizeString(loginResult?.sessionToken);
       if (!cookieEntries.length && !sessionToken) {
-        return { tabId: 0, setCount: 0 };
+        return { tabId: 0, setCount: 0, skipped: 0 };
       }
       const throwIfStopRequested = resolveStopChecker(options, 'check');
       throwIfStopRequested();
@@ -3576,16 +3643,16 @@
         httpOnly: true,
         sameSite: 'lax',
       }];
-      const { setCount, skippedCount } = await setChatGptCookieEntries(entries);
+      const { setCount, skipped } = await setChatGptCookieEntries(entries);
       throwIfStopRequested();
       await addLog(
-        `UPI 备份核验：${credential.email} Passkey API 登录已写入 ${setCount} 个 ChatGPT cookie${skippedCount ? `，跳过 ${skippedCount} 个` : ''}。`,
+        `UPI 备份核验：${credential.email} Passkey API 登录已写入 ${setCount} 个 ChatGPT cookie${skipped ? `，跳过 ${skipped} 个` : ''}。`,
         setCount > 0 ? 'ok' : 'warn'
       );
       if (chromeApi?.tabs?.reload && Number.isInteger(tabId)) {
         await chromeApi.tabs.reload(tabId).catch(() => null);
       }
-      return { tabId, setCount };
+      return { tabId, setCount, skipped };
     }
 
     async function tryPasskeyApiLoginAndReadAccessToken(credential = {}, state = {}, options = {}) {
@@ -3605,30 +3672,35 @@
       const throwIfStopRequested = resolveStopChecker(options, 'check');
       const targetEmail = normalizeEmail(credential.email);
       const apiUrl = buildPasskeyLoginApiUrl(state);
+      const timeoutMs = resolvePasskeyLoginTimeoutMs(state);
       const requestBody = core.buildPasskeyLoginRequest(
         targetEmail,
         buildPasskeyLoginOptionsFromCredential(credential, state)
       );
       throwIfStopRequested();
       await addLog(`UPI 备份核验：${credential.email} 正在调用 Passkey API 登录。`, 'info');
-      const response = await fetchImpl(apiUrl, {
+      const response = await fetchPasskeyLoginResponse(fetchImpl, apiUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(requestBody),
-      });
+      }, timeoutMs);
       throwIfStopRequested();
       const text = await response.text().catch(() => '');
       let payload = {};
+      let parsedJson = true;
       try {
         payload = text ? JSON.parse(text) : {};
       } catch {
+        parsedJson = false;
         payload = { raw: text };
       }
       if (!response.ok) {
+        const ownBackendMessage = parsedJson ? getBackendOwnErrorMessage(payload) : '';
+        const plainTextMessage = normalizeString(text);
         const backendMessage = typeof core.getLoginFailureMessage === 'function'
           ? normalizeString(core.getLoginFailureMessage(payload))
           : '';
-        const reason = backendMessage || normalizeString(payload?.reason || payload?.message || payload?.error || text);
+        const reason = ownBackendMessage || backendMessage || (!parsedJson ? plainTextMessage : '') || response.statusText || `HTTP ${response.status}`;
         const error = new Error(`Passkey API 登录返回 HTTP ${response.status}${reason ? `：${reason}` : ''}`);
         error.status = response.status;
         error.payload = payload;
@@ -3643,9 +3715,19 @@
         );
       }
       let tabId = 0;
+      let cookieApplyResult = { tabId: 0, setCount: 0, skipped: 0 };
       if (options.applyCookies !== false) {
         const applied = await applyPasskeyLoginCookies(loginResult, credential, { throwIfStopRequested });
+        cookieApplyResult = applied;
         tabId = applied.tabId || 0;
+      }
+      loginResult.cookieApplyResult = cookieApplyResult;
+      const returnedCookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
+      const returnedSessionToken = normalizeString(loginResult?.sessionToken);
+      if (!loginResult.accessToken && (returnedCookieEntries.length || returnedSessionToken) && cookieApplyResult.setCount <= 0) {
+        const message = `UPI 备份核验：${credential.email} Passkey API 登录返回了 Cookie，但未能写入浏览器 Cookie，已停止继续读取页面 AT。`;
+        await addLog(message, 'warn');
+        throw new Error(message);
       }
       if (loginResult.accessToken) {
         await addLog(
@@ -3664,6 +3746,7 @@
           email: responseEmail || targetEmail,
           passkeyLogin: true,
         },
+        cookieApplyResult,
         passkeyLoginResult: loginResult,
       };
     }
