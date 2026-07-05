@@ -12,7 +12,7 @@
 - 新增 `免 2FA Free 路线`，由侧边栏开关选择。
 - 免 2FA 路线必须检测 UPI 试用资格，通过后才写入 Free。
 - 免 2FA Free 账号可参与 Free 组刷新、导出和 UPI/IDEAL 兑换。
-- 免 2FA Free 导出支持 `邮箱---邮箱获取验证码链接---AT`。
+- 免 2FA Free 导出支持 `邮箱---邮箱获取验证码链接---AT---时间戳`。
 
 ## 非目标
 
@@ -50,6 +50,7 @@
 email
 verificationUrl
 accessToken
+recordedAt
 planType=free
 status=free
 trialEligible=true
@@ -62,6 +63,7 @@ totpSecret=''
 
 - `accessToken` 必须保留，兑换和刷新会员状态依赖 AT。
 - `verificationUrl` 必须保留，用于导出和后续人工取码。
+- `recordedAt` 必须保留，使用写入/捕获这条免 2FA Free 记录时的 Unix epoch 毫秒时间戳。
 - `password` / `gptPassword` 可以为空。
 - `totpSecret` 可以为空。
 - 不因缺少 2FA secret 而从 Free 组隐藏。
@@ -72,12 +74,13 @@ totpSecret=''
 Free 导出需要兼容免 2FA 格式：
 
 ```text
-邮箱---邮箱获取验证码链接---AT
+邮箱---邮箱获取验证码链接---AT---时间戳
 ```
 
 导出规则：
 
-- 如果 Free 账号来自免 2FA 路线，并且有 `email`、`verificationUrl`、`accessToken`，导出三段格式。
+- 如果 Free 账号来自免 2FA 路线，并且有 `email`、`verificationUrl`、`accessToken`，导出四段格式。
+- 第四段时间戳优先使用该账号记录的 `recordedAt`，缺失时使用账号写入 Free 时的当前 Unix epoch 毫秒。
 - 如果账号有旧格式需要的密码、2FA 或其它字段，继续保留现有导出兼容逻辑。
 - 导入配置时不能因为缺密码或缺 2FA secret 丢弃免 2FA Free 账号。
 
@@ -119,7 +122,7 @@ Free 导出需要兼容免 2FA 格式：
 - 免 2FA Free 账号缺 AT 时不进入一键兑换候选。
 - 免 2FA Free 账号可以刷新邮箱状态。
 - 免 2FA Free 账号可以参与 UPI/IDEAL 兑换。
-- Free 导出能输出 `邮箱---邮箱获取验证码链接---AT`。
+- Free 导出能输出 `邮箱---邮箱获取验证码链接---AT---时间戳`。
 - 导入包含免 2FA Free 账号的配置后，账号不会因为缺密码或缺 2FA secret 消失。
 
 ## 发布说明
