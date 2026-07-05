@@ -50,6 +50,42 @@
     return String(value || '').trim();
   }
 
+  function readFirstFiniteNumericMetadataValue(values = []) {
+    for (const value of values) {
+      if (value === undefined || value === null) continue;
+      if (typeof value === 'string' && value.trim() === '') continue;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) return numeric;
+    }
+    return undefined;
+  }
+
+  function readPasskeySignCountMetadata(...sources) {
+    const numeric = readFirstFiniteNumericMetadataValue(sources.flatMap((source) => (
+      source && typeof source === 'object' && !Array.isArray(source)
+        ? [source.passkeySignCount, source.signCount, source.sign_count]
+        : [source]
+    )));
+    return numeric === undefined ? undefined : Math.max(0, Math.floor(numeric));
+  }
+
+  function readPasskeyAlgMetadata(...sources) {
+    return readFirstFiniteNumericMetadataValue(sources.flatMap((source) => (
+      source && typeof source === 'object' && !Array.isArray(source)
+        ? [source.passkeyAlg, source.alg]
+        : [source]
+    )));
+  }
+
+  function buildPasskeyNumericMetadataPatch(...sources) {
+    const signCount = readPasskeySignCountMetadata(...sources);
+    const alg = readPasskeyAlgMetadata(...sources);
+    return {
+      ...(signCount !== undefined ? { passkeySignCount: signCount } : {}),
+      ...(alg !== undefined ? { passkeyAlg: alg } : {}),
+    };
+  }
+
   function normalizeBoolean(value) {
     if (value === true) return true;
     if (value === false || value === null || value === undefined) return false;
@@ -340,6 +376,8 @@
   }
 
   function buildPasskeyLoginOptionsFromCredential(credential = {}, state = {}) {
+    const signCount = readPasskeySignCountMetadata(credential);
+    const alg = readPasskeyAlgMetadata(credential);
     const options = {
       deviceId: normalizeString(
         credential.deviceId
@@ -355,8 +393,8 @@
       privateJwk: credential.passkeyPrivateJwk || credential.privateJwk || credential.private_jwk,
       rpId: normalizeString(credential.passkeyRpId || credential.rpId || credential.rp_id),
       userHandle: normalizeString(credential.passkeyUserHandle || credential.userHandle || credential.user_handle),
-      signCount: credential.passkeySignCount ?? credential.signCount ?? credential.sign_count,
-      alg: credential.passkeyAlg ?? credential.alg,
+      ...(signCount !== undefined ? { signCount } : {}),
+      ...(alg !== undefined ? { alg } : {}),
     };
     Object.keys(options).forEach((key) => {
       if (options[key] === undefined || options[key] === null || options[key] === '') {
@@ -398,12 +436,7 @@
         target.passkeyPrivateJwk = source.passkeyPrivateJwk;
       }
       target.passkeyPublicKeyCose = normalizeString(target.passkeyPublicKeyCose || source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose);
-      target.passkeySignCount = Number.isFinite(Number(target.passkeySignCount ?? target.signCount ?? source.passkeySignCount ?? source.signCount))
-        ? Math.max(0, Math.floor(Number(target.passkeySignCount ?? target.signCount ?? source.passkeySignCount ?? source.signCount)))
-        : 0;
-      target.passkeyAlg = Number.isFinite(Number(target.passkeyAlg ?? target.alg ?? source.passkeyAlg ?? source.alg))
-        ? Number(target.passkeyAlg ?? target.alg ?? source.passkeyAlg ?? source.alg)
-        : 0;
+      Object.assign(target, buildPasskeyNumericMetadataPatch(target, source));
       target.passkeyApiPersisted = target.passkeyApiPersisted === true || source.passkeyApiPersisted === true || source.persisted === true;
       target.twoFactorEnabled = true;
       target.no2faFreeRoute = false;
@@ -1340,6 +1373,7 @@
         : {};
       const email = normalizeEmail(record.email || key);
       if (!email) return;
+      const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(record);
       records[email] = {
         ...record,
         email,
@@ -1355,12 +1389,7 @@
           ? record.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose || record.publicKeyCose || record.public_key_cose),
-        passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
-          ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
-          : 0,
-        passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
-          ? Number(record.passkeyAlg ?? record.alg)
-          : 0,
+        ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: record.passkeyApiPersisted === true || record.persisted === true,
         updatedAt: normalizeString(record.updatedAt || ''),
       };
@@ -1376,6 +1405,7 @@
         const email = normalizeEmail(record.email);
         if (!email || seen.has(email)) return null;
         seen.add(email);
+        const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(record);
         return {
           email,
           password: normalizeString(record.password),
@@ -1391,12 +1421,7 @@
             ? record.passkeyPrivateJwk
             : null,
           passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose),
-          passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
-            ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
-            : 0,
-          passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
-            ? Number(record.passkeyAlg ?? record.alg)
-            : 0,
+          ...passkeyNumericMetadataPatch,
           passkeyApiPersisted: record.passkeyApiPersisted === true,
           accessToken: normalizeString(record.accessToken || record.token || record.access_token),
           accessTokenUpdatedAt: normalizeString(record.accessTokenUpdatedAt || record.updatedAt),
@@ -1427,6 +1452,7 @@
       item.idealRedeemFailureCount ?? (redeemChannel === 'ideal' ? legacyFailureCount : 0)
     ) || 0));
     const redeemLocked = normalizeBoolean(item.redeemLocked) || idealRedeemFailureCount >= REDEEM_CHANNEL_FAILURE_LIMIT;
+    const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(item);
     const normalized = {
       email,
       password: normalizeString(item.password),
@@ -1445,12 +1471,7 @@
         ? item.passkeyPrivateJwk
         : null,
       passkeyPublicKeyCose: normalizeString(item.passkeyPublicKeyCose || item.publicKeyCose || item.public_key_cose),
-      passkeySignCount: Number.isFinite(Number(item.passkeySignCount ?? item.signCount))
-        ? Math.max(0, Math.floor(Number(item.passkeySignCount ?? item.signCount)))
-        : 0,
-      passkeyAlg: Number.isFinite(Number(item.passkeyAlg ?? item.alg))
-        ? Number(item.passkeyAlg ?? item.alg)
-        : 0,
+      ...passkeyNumericMetadataPatch,
       passkeyApiPersisted: item.passkeyApiPersisted === true || item.persisted === true,
       twoFactorEnabled: item.twoFactorEnabled === true
         || Boolean(normalizeTotpSecret(item.totpMfaSecret))
@@ -2091,31 +2112,29 @@
       const backups = normalizeCredentialBackupMap(stored?.[BACKUP_STORAGE_KEY] || {});
       const items = Object.values(backups)
         .sort((left, right) => Date.parse(right.updatedAt || '') - Date.parse(left.updatedAt || ''))
-        .map((record) => ({
-          email: normalizeEmail(record.email),
-          password: normalizeString(record.password),
-          totpMfaSecret: normalizeTotpSecret(record.totpMfaSecret),
-          verificationUrl: normalizeString(record.verificationUrl || record.emailVerificationUrl || record.url),
-          passkeyEnabled: record.passkeyEnabled === true,
-          passkeyEnabledAt: normalizeString(record.passkeyEnabledAt),
-          passkeyCredentialId: normalizeString(record.passkeyCredentialId),
-          passkeyFactorId: normalizeString(record.passkeyFactorId),
-          passkeyRpId: normalizeString(record.passkeyRpId),
-          passkeyUserHandle: normalizeString(record.passkeyUserHandle),
-          passkeyPrivateJwk: record.passkeyPrivateJwk && typeof record.passkeyPrivateJwk === 'object' && !Array.isArray(record.passkeyPrivateJwk)
-            ? record.passkeyPrivateJwk
-            : null,
-          passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose),
-          passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
-            ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
-            : 0,
-          passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
-            ? Number(record.passkeyAlg ?? record.alg)
-            : 0,
-          passkeyApiPersisted: record.passkeyApiPersisted === true,
-          updatedAt: normalizeString(record.updatedAt),
-          source: 'local',
-        }))
+        .map((record) => {
+          const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(record);
+          return {
+            email: normalizeEmail(record.email),
+            password: normalizeString(record.password),
+            totpMfaSecret: normalizeTotpSecret(record.totpMfaSecret),
+            verificationUrl: normalizeString(record.verificationUrl || record.emailVerificationUrl || record.url),
+            passkeyEnabled: record.passkeyEnabled === true,
+            passkeyEnabledAt: normalizeString(record.passkeyEnabledAt),
+            passkeyCredentialId: normalizeString(record.passkeyCredentialId),
+            passkeyFactorId: normalizeString(record.passkeyFactorId),
+            passkeyRpId: normalizeString(record.passkeyRpId),
+            passkeyUserHandle: normalizeString(record.passkeyUserHandle),
+            passkeyPrivateJwk: record.passkeyPrivateJwk && typeof record.passkeyPrivateJwk === 'object' && !Array.isArray(record.passkeyPrivateJwk)
+              ? record.passkeyPrivateJwk
+              : null,
+            passkeyPublicKeyCose: normalizeString(record.passkeyPublicKeyCose),
+            ...passkeyNumericMetadataPatch,
+            passkeyApiPersisted: record.passkeyApiPersisted === true,
+            updatedAt: normalizeString(record.updatedAt),
+            source: 'local',
+          };
+        })
         .filter((item) => item.email);
       return {
         items,
@@ -2422,6 +2441,7 @@
             const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
             const no2faFreeRoute = source.no2faFreeRoute === true;
             const recordedAt = Math.max(0, Math.floor(Number(source.recordedAt || source.no2faFreeRecordedAt) || 0));
+            const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(source);
             return {
               email: normalizeEmail(source.email),
               password: no2faFreeRoute ? '' : normalizeString(source.password),
@@ -2437,12 +2457,7 @@
                 ? source.passkeyPrivateJwk
                 : null,
               passkeyPublicKeyCose: normalizeString(source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose),
-              passkeySignCount: Number.isFinite(Number(source.passkeySignCount ?? source.signCount))
-                ? Math.max(0, Math.floor(Number(source.passkeySignCount ?? source.signCount)))
-                : 0,
-              passkeyAlg: Number.isFinite(Number(source.passkeyAlg ?? source.alg))
-                ? Number(source.passkeyAlg ?? source.alg)
-                : 0,
+              ...passkeyNumericMetadataPatch,
               passkeyApiPersisted: source.passkeyApiPersisted === true || source.persisted === true,
               verificationUrl: normalizeString(source.verificationUrl || source.emailVerificationUrl || source.url),
               recordedAt,
@@ -2625,22 +2640,7 @@
               : (getRedeemField('upiRedeemCdkey') || getRedeemField('cdkey'))
           )
         : (shouldResetRedeemState ? '' : normalizeString(existingItem.upiRedeemCdkey));
-      const passkeySignCountSource = input.passkeySignCount
-        ?? input.signCount
-        ?? credential.passkeySignCount
-        ?? credential.signCount
-        ?? backupCredential.passkeySignCount
-        ?? backupCredential.signCount
-        ?? existingItem.passkeySignCount
-        ?? existingItem.signCount;
-      const passkeyAlgSource = input.passkeyAlg
-        ?? input.alg
-        ?? credential.passkeyAlg
-        ?? credential.alg
-        ?? backupCredential.passkeyAlg
-        ?? backupCredential.alg
-        ?? existingItem.passkeyAlg
-        ?? existingItem.alg;
+      const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(input, credential, backupCredential, existingItem);
       const nextItems = upsertResultItem(currentResults.items, {
         ...existingItem,
         ...backupCredential,
@@ -2663,12 +2663,7 @@
           ? passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeString(input.passkeyPublicKeyCose || credential.passkeyPublicKeyCose || backupCredential.passkeyPublicKeyCose || existingItem.passkeyPublicKeyCose),
-        passkeySignCount: Number.isFinite(Number(passkeySignCountSource))
-          ? Math.max(0, Math.floor(Number(passkeySignCountSource)))
-          : 0,
-        passkeyAlg: Number.isFinite(Number(passkeyAlgSource))
-          ? Number(passkeyAlgSource)
-          : 0,
+        ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: input.passkeyApiPersisted === true || credential.passkeyApiPersisted === true || backupCredential.passkeyApiPersisted === true || existingItem.passkeyApiPersisted === true,
         status: 'free',
         planType: 'free',

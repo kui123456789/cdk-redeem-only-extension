@@ -3876,6 +3876,42 @@ function normalizeCredentialBackupText(value = '') {
   return String(value || '').trim();
 }
 
+function readFirstCredentialBackupNumericMetadataValue(values = []) {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && value.trim() === '') continue;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  return undefined;
+}
+
+function readCredentialBackupPasskeySignCount(...sources) {
+  const numeric = readFirstCredentialBackupNumericMetadataValue(sources.flatMap((source) => (
+    source && typeof source === 'object' && !Array.isArray(source)
+      ? [source.passkeySignCount, source.signCount, source.sign_count]
+      : [source]
+  )));
+  return numeric === undefined ? undefined : Math.max(0, Math.floor(numeric));
+}
+
+function readCredentialBackupPasskeyAlg(...sources) {
+  return readFirstCredentialBackupNumericMetadataValue(sources.flatMap((source) => (
+    source && typeof source === 'object' && !Array.isArray(source)
+      ? [source.passkeyAlg, source.alg]
+      : [source]
+  )));
+}
+
+function buildCredentialBackupPasskeyNumericMetadataPatch(...sources) {
+  const signCount = readCredentialBackupPasskeySignCount(...sources);
+  const alg = readCredentialBackupPasskeyAlg(...sources);
+  return {
+    ...(signCount !== undefined ? { passkeySignCount: signCount } : {}),
+    ...(alg !== undefined ? { passkeyAlg: alg } : {}),
+  };
+}
+
 function maskCredentialTotpSecret(secret = '') {
   const normalized = normalizeCredentialBackupText(secret).replace(/\s+/g, '').toUpperCase();
   if (!normalized) {
@@ -3902,6 +3938,7 @@ function normalizeUpiAccountCredentialBackups(value = {}) {
     const passkeyPrivateJwk = record.passkeyPrivateJwk && typeof record.passkeyPrivateJwk === 'object' && !Array.isArray(record.passkeyPrivateJwk)
       ? record.passkeyPrivateJwk
       : null;
+    const passkeyNumericMetadataPatch = buildCredentialBackupPasskeyNumericMetadataPatch(record);
     normalized[email] = {
       ...record,
       email,
@@ -3920,12 +3957,7 @@ function normalizeUpiAccountCredentialBackups(value = {}) {
       passkeyUserHandle: normalizeCredentialBackupText(record.passkeyUserHandle || record.userHandle || record.user_handle),
       passkeyPrivateJwk,
       passkeyPublicKeyCose: normalizeCredentialBackupText(record.passkeyPublicKeyCose || record.publicKeyCose || record.public_key_cose),
-      passkeySignCount: Number.isFinite(Number(record.passkeySignCount ?? record.signCount))
-        ? Math.max(0, Math.floor(Number(record.passkeySignCount ?? record.signCount)))
-        : 0,
-      passkeyAlg: Number.isFinite(Number(record.passkeyAlg ?? record.alg))
-        ? Number(record.passkeyAlg ?? record.alg)
-        : 0,
+      ...passkeyNumericMetadataPatch,
       passkeyApiPersisted: record.passkeyApiPersisted === true || record.persisted === true,
       updatedAt: normalizeCredentialBackupText(record.updatedAt),
     };
@@ -3965,6 +3997,7 @@ async function upsertUpiAccountCredentialBackup(input = {}) {
   const passkeyPrivateJwk = input.passkeyPrivateJwk !== undefined
     ? input.passkeyPrivateJwk
     : (current.passkeyPrivateJwk || null);
+  const passkeyNumericMetadataPatch = buildCredentialBackupPasskeyNumericMetadataPatch(input, current);
   const nextRecord = {
     ...current,
     email,
@@ -3986,12 +4019,7 @@ async function upsertUpiAccountCredentialBackup(input = {}) {
       ? passkeyPrivateJwk
       : null,
     passkeyPublicKeyCose: normalizeCredentialBackupText(input.passkeyPublicKeyCose ?? input.publicKeyCose ?? current.passkeyPublicKeyCose),
-    passkeySignCount: Number.isFinite(Number(input.passkeySignCount ?? input.signCount ?? current.passkeySignCount ?? current.signCount))
-      ? Math.max(0, Math.floor(Number(input.passkeySignCount ?? input.signCount ?? current.passkeySignCount ?? current.signCount)))
-      : 0,
-    passkeyAlg: Number.isFinite(Number(input.passkeyAlg ?? input.alg ?? current.passkeyAlg ?? current.alg))
-      ? Number(input.passkeyAlg ?? input.alg ?? current.passkeyAlg ?? current.alg)
-      : 0,
+    ...passkeyNumericMetadataPatch,
     passkeyApiPersisted: input.passkeyApiPersisted === true || current.passkeyApiPersisted === true,
     sourceStep: normalizeCredentialBackupText(input.sourceStep || current.sourceStep),
     updatedAt,

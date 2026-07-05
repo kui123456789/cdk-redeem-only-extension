@@ -1374,6 +1374,42 @@
       return String(value || '').trim();
     }
 
+    function readFirstUpiCredentialMembershipNumericMetadataValue(values = []) {
+      for (const value of values) {
+        if (value === undefined || value === null) continue;
+        if (typeof value === 'string' && value.trim() === '') continue;
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) return numeric;
+      }
+      return undefined;
+    }
+
+    function readUpiCredentialMembershipPasskeySignCount(...sources) {
+      const numeric = readFirstUpiCredentialMembershipNumericMetadataValue(sources.flatMap((source) => (
+        source && typeof source === 'object' && !Array.isArray(source)
+          ? [source.passkeySignCount, source.signCount, source.sign_count]
+          : [source]
+      )));
+      return numeric === undefined ? undefined : Math.max(0, Math.floor(numeric));
+    }
+
+    function readUpiCredentialMembershipPasskeyAlg(...sources) {
+      return readFirstUpiCredentialMembershipNumericMetadataValue(sources.flatMap((source) => (
+        source && typeof source === 'object' && !Array.isArray(source)
+          ? [source.passkeyAlg, source.alg]
+          : [source]
+      )));
+    }
+
+    function buildUpiCredentialMembershipPasskeyNumericMetadataPatch(...sources) {
+      const signCount = readUpiCredentialMembershipPasskeySignCount(...sources);
+      const alg = readUpiCredentialMembershipPasskeyAlg(...sources);
+      return {
+        ...(signCount !== undefined ? { passkeySignCount: signCount } : {}),
+        ...(alg !== undefined ? { passkeyAlg: alg } : {}),
+      };
+    }
+
     function normalizeUpiCredentialMembershipTotpSecret(value = '') {
       return normalizeUpiCredentialMembershipText(value).replace(/\s+/g, '').toUpperCase();
     }
@@ -1517,6 +1553,7 @@
       const passkeyEnabled = no2faFreeRoute ? false : (
         source.passkeyEnabled === true || Boolean(passkeyCredentialId)
       );
+      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(source);
       return {
         ...source,
         email,
@@ -1546,12 +1583,7 @@
           ? source.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose || ''),
-        passkeySignCount: Number.isFinite(Number(source.passkeySignCount ?? source.signCount))
-          ? Math.max(0, Math.floor(Number(source.passkeySignCount ?? source.signCount)))
-          : 0,
-        passkeyAlg: Number.isFinite(Number(source.passkeyAlg ?? source.alg))
-          ? Number(source.passkeyAlg ?? source.alg)
-          : 0,
+        ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: source.passkeyApiPersisted === true || source.persisted === true,
         twoFactorEnabled: no2faFreeRoute
           ? false
@@ -1592,6 +1624,7 @@
       );
       const credentialHasPasskey = sourceCredential.passkeyEnabled === true || Boolean(credentialPasskeyCredentialId);
       const resultHasPasskey = sourceResult.passkeyEnabled === true || Boolean(resultPasskeyCredentialId);
+      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(sourceCredential);
       const passkeyPatch = credentialHasPasskey && !resultHasPasskey
         ? {
           passkeyEnabled: true,
@@ -1604,12 +1637,7 @@
             ? sourceCredential.passkeyPrivateJwk
             : null,
           passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(sourceCredential.passkeyPublicKeyCose || sourceCredential.publicKeyCose || sourceCredential.public_key_cose),
-          passkeySignCount: Number.isFinite(Number(sourceCredential.passkeySignCount ?? sourceCredential.signCount))
-            ? Math.max(0, Math.floor(Number(sourceCredential.passkeySignCount ?? sourceCredential.signCount)))
-            : 0,
-          passkeyAlg: Number.isFinite(Number(sourceCredential.passkeyAlg ?? sourceCredential.alg))
-            ? Number(sourceCredential.passkeyAlg ?? sourceCredential.alg)
-            : 0,
+          ...passkeyNumericMetadataPatch,
           passkeyApiPersisted: sourceCredential.passkeyApiPersisted === true || sourceCredential.persisted === true,
           twoFactorEnabled: true,
         }
@@ -3456,6 +3484,7 @@
     function buildUpiCredentialMembershipRedeemCredential(row = {}) {
       const passkeyCredentialId = normalizeUpiCredentialMembershipText(row.passkeyCredentialId || row.credentialId || row.credential_id);
       const passkeyEnabled = row.passkeyEnabled === true || Boolean(passkeyCredentialId);
+      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(row);
       return {
         email: normalizeUpiCredentialMembershipEmail(row.email),
         password: normalizeUpiCredentialMembershipText(row.password),
@@ -3471,12 +3500,7 @@
           ? row.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(row.passkeyPublicKeyCose || row.publicKeyCose || row.public_key_cose),
-        passkeySignCount: Number.isFinite(Number(row.passkeySignCount ?? row.signCount))
-          ? Math.max(0, Math.floor(Number(row.passkeySignCount ?? row.signCount)))
-          : 0,
-        passkeyAlg: Number.isFinite(Number(row.passkeyAlg ?? row.alg))
-          ? Number(row.passkeyAlg ?? row.alg)
-          : 0,
+        ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: row.passkeyApiPersisted === true || row.persisted === true,
         accessToken: normalizeUpiCredentialMembershipText(row.accessToken),
         accessTokenUpdatedAt: normalizeUpiCredentialMembershipText(row.accessTokenUpdatedAt || row.checkedAt),
@@ -3499,6 +3523,7 @@
     function buildUpiCredentialMembershipActionCredential(row = {}) {
       const passkeyCredentialId = normalizeUpiCredentialMembershipText(row.passkeyCredentialId || row.credentialId || row.credential_id);
       const passkeyEnabled = row.passkeyEnabled === true || Boolean(passkeyCredentialId);
+      const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(row);
       return {
         ...row,
         email: normalizeUpiCredentialMembershipEmail(row.email),
@@ -3515,12 +3540,7 @@
           ? row.passkeyPrivateJwk
           : null,
         passkeyPublicKeyCose: normalizeUpiCredentialMembershipText(row.passkeyPublicKeyCose || row.publicKeyCose || row.public_key_cose),
-        passkeySignCount: Number.isFinite(Number(row.passkeySignCount ?? row.signCount))
-          ? Math.max(0, Math.floor(Number(row.passkeySignCount ?? row.signCount)))
-          : 0,
-        passkeyAlg: Number.isFinite(Number(row.passkeyAlg ?? row.alg))
-          ? Number(row.passkeyAlg ?? row.alg)
-          : 0,
+        ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: row.passkeyApiPersisted === true || row.persisted === true,
         accessToken: normalizeUpiCredentialMembershipText(row.accessToken),
         accessTokenUpdatedAt: normalizeUpiCredentialMembershipText(row.accessTokenUpdatedAt || row.checkedAt),
