@@ -41,6 +41,10 @@
       && /请\s*24\s*小时后再试/.test(text);
   }
 
+  function isRedeemCrossRegionPaymentUnavailableReason(message = '') {
+    return /\bpm-unavailable\b/i.test(normalizeString(message));
+  }
+
   return {
     normalizeRedeemChannel,
     getRedeemChannelFailureField,
@@ -48,5 +52,6 @@
     getRedeemChannelDailyLimitBlockedUntilField,
     getRedeemChannelDailyLimitReasonField,
     isRedeemChannelDailyLimitReason,
+    isRedeemCrossRegionPaymentUnavailableReason,
   };
 });

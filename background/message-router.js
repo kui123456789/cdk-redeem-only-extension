@@ -510,6 +510,14 @@
         && /请\s*24\s*小时后再试/.test(text);
     }
 
+    function isRedeemCrossRegionPaymentUnavailableReason(message = '') {
+      const helper = getRedeemChannelStateHelpers().isRedeemCrossRegionPaymentUnavailableReason;
+      if (typeof helper === 'function') {
+        return helper(message);
+      }
+      return /\bpm-unavailable\b/i.test(normalizeString(message));
+    }
+
     function buildRedeemChannelDailyLimitPatch(channel = 'upi', reason = '', failedAt = '') {
       if (!isRedeemChannelDailyLimitReason(reason)) {
         return {};
@@ -555,6 +563,14 @@
         redeemChannel: normalizedChannel,
         ...buildRedeemChannelDailyLimitPatch(normalizedChannel, reason, failedAt),
       };
+      if (isRedeemCrossRegionPaymentUnavailableReason(reason)) {
+        return {
+          ...patch,
+          redeemLocked: true,
+          redeemLockedReason: `跨地区支付不可用，账号已封存，不再兑换：${reason}`,
+          redeemLockedAt: failedAt,
+        };
+      }
       if (normalizedChannel === 'ideal' && count >= failureLimit) {
         const lockReason = `IDEAL 已失败 ${failureLimit} 次，账号已封存，不再使用：${reason}`;
         return {
