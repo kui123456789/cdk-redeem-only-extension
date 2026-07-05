@@ -231,6 +231,66 @@
       || Boolean(normalizeString(item.passkeyCredentialId || item.credentialId || item.credential_id));
   }
 
+  function getPasskeyLoginCore() {
+    const rootScope = typeof self !== 'undefined' ? self : globalThis;
+    return rootScope.MultiPagePasskeyLoginCore || {};
+  }
+
+  function normalizeNerverPasskeyLoginBaseUrl(value = '') {
+    const raw = normalizeString(value);
+    if (!raw) return '';
+    try {
+      const url = new URL(raw);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+      url.hash = '';
+      url.search = '';
+      url.pathname = url.pathname
+        .replace(/\/+$/g, '')
+        .replace(/\/api\/v1\/passkey\/(?:enable|login)$/i, '')
+        .replace(/\/api\/v1\/totp\/(?:enable|lookup|code)$/i, '')
+        .replace(/\/+$/g, '');
+      return url.toString().replace(/\/+$/g, '');
+    } catch {
+      return '';
+    }
+  }
+
+  function buildPasskeyLoginApiUrl(state = {}) {
+    const baseUrl = normalizeNerverPasskeyLoginBaseUrl(
+      state?.passkeyLoginApiBaseUrl
+      || state?.passkeyApiBaseUrl
+      || state?.upiCredentialMembershipCheckTotpApiBaseUrl
+      || state?.totpMfaApiBaseUrl
+      || DEFAULT_TOTP_API_BASE_URL
+    ) || DEFAULT_TOTP_API_BASE_URL;
+    return `${baseUrl}/api/v1/passkey/login`;
+  }
+
+  function buildPasskeyLoginOptionsFromCredential(credential = {}, state = {}) {
+    const options = {
+      deviceId: normalizeString(
+        credential.deviceId
+        || credential.passkeyDeviceId
+        || credential.device_id
+        || state?.deviceId
+        || state?.passkeyDeviceId
+        || state?.upiCredentialMembershipCheckDeviceId
+      ),
+      credentialId: normalizeString(credential.passkeyCredentialId || credential.credentialId || credential.credential_id),
+      privateJwk: credential.passkeyPrivateJwk || credential.privateJwk || credential.private_jwk,
+      rpId: normalizeString(credential.passkeyRpId || credential.rpId || credential.rp_id),
+      userHandle: normalizeString(credential.passkeyUserHandle || credential.userHandle || credential.user_handle),
+      signCount: credential.passkeySignCount ?? credential.signCount ?? credential.sign_count,
+      alg: credential.passkeyAlg ?? credential.alg,
+    };
+    Object.keys(options).forEach((key) => {
+      if (options[key] === undefined || options[key] === null || options[key] === '') {
+        delete options[key];
+      }
+    });
+    return options;
+  }
+
   function mergeCredentialAuthMaterial(primary = {}, fallback = {}) {
     const target = primary && typeof primary === 'object' && !Array.isArray(primary) ? { ...primary } : {};
     const source = fallback && typeof fallback === 'object' && !Array.isArray(fallback) ? fallback : {};
@@ -3418,6 +3478,173 @@
         codeLabel: '2FA 动态码',
         verificationKind: 'totp',
       });
+    }
+
+    function buildChatGptCookieUrl(entry = {}) {
+      const rawDomain = normalizeString(entry?.domain).replace(/^\.+/, '').replace(/\.$/, '').toLowerCase();
+      const allowedRoots = ['chatgpt.com', 'openai.com'];
+      const host = allowedRoots.some((root) => rawDomain === root || rawDomain.endsWith(`.${root}`))
+        ? rawDomain
+        : 'chatgpt.com';
+      const rawPath = normalizeString(entry?.path || '/');
+      const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+      return `https://${host}${path}`;
+    }
+
+    async function setChatGptCookieEntries(cookieEntries = []) {
+      const entries = Array.isArray(cookieEntries) ? cookieEntries : [];
+      if (!chromeApi?.cookies?.set) {
+        return { setCount: 0, skippedCount: entries.length };
+      }
+      let setCount = 0;
+      let skippedCount = 0;
+      for (const entry of entries) {
+        const name = normalizeString(entry?.name);
+        if (!name || entry?.value === undefined || entry?.value === null) {
+          skippedCount += 1;
+          continue;
+        }
+        const rawPath = normalizeString(entry.path || '/') || '/';
+        const details = {
+          url: buildChatGptCookieUrl(entry),
+          name,
+          value: String(entry.value),
+          path: rawPath.startsWith('/') ? rawPath : `/${rawPath}`,
+          secure: entry.secure !== false,
+          httpOnly: entry.httpOnly === true,
+          sameSite: normalizeString(entry.sameSite || 'lax') || 'lax',
+        };
+        const normalizedDomain = normalizeString(entry.domain).toLowerCase();
+        if (!name.startsWith('__Host-') && entry.hostOnly !== true && normalizedDomain) {
+          details.domain = normalizedDomain;
+        }
+        const expirationDate = Number(entry.expirationDate);
+        if (Number.isFinite(expirationDate) && expirationDate > 0) {
+          details.expirationDate = expirationDate;
+        }
+        if (entry.storeId) details.storeId = entry.storeId;
+        if (entry.partitionKey) details.partitionKey = entry.partitionKey;
+        try {
+          await chromeApi.cookies.set(details);
+          setCount += 1;
+        } catch {
+          skippedCount += 1;
+        }
+      }
+      return { setCount, skippedCount };
+    }
+
+    async function applyPasskeyLoginCookies(loginResult = {}, credential = {}, options = {}) {
+      const cookieEntries = Array.isArray(loginResult?.cookieEntries) ? loginResult.cookieEntries : [];
+      const sessionToken = normalizeString(loginResult?.sessionToken);
+      if (!cookieEntries.length && !sessionToken) {
+        return { tabId: 0, setCount: 0 };
+      }
+      const throwIfStopRequested = resolveStopChecker(options, 'check');
+      throwIfStopRequested();
+      await clearOpenAiCookies();
+      throwIfStopRequested();
+      const tabId = await openFreshLoginTab(credential.email);
+      throwIfStopRequested();
+      const entries = cookieEntries.length ? cookieEntries : [{
+        name: '__Secure-next-auth.session-token',
+        value: sessionToken,
+        domain: '.chatgpt.com',
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax',
+      }];
+      const { setCount, skippedCount } = await setChatGptCookieEntries(entries);
+      throwIfStopRequested();
+      await addLog(
+        `UPI 备份核验：${credential.email} Passkey API 登录已写入 ${setCount} 个 ChatGPT cookie${skippedCount ? `，跳过 ${skippedCount} 个` : ''}。`,
+        setCount > 0 ? 'ok' : 'warn'
+      );
+      if (chromeApi?.tabs?.reload && Number.isInteger(tabId)) {
+        await chromeApi.tabs.reload(tabId).catch(() => null);
+      }
+      return { tabId, setCount };
+    }
+
+    async function tryPasskeyApiLoginAndReadAccessToken(credential = {}, state = {}, options = {}) {
+      if (!hasPasskeyCredential(credential)) {
+        return null;
+      }
+      const core = getPasskeyLoginCore();
+      if (
+        typeof core.buildPasskeyLoginRequest !== 'function'
+        || typeof core.normalizePasskeyLoginResponse !== 'function'
+      ) {
+        throw new Error('Passkey API 登录能力尚未加载。');
+      }
+      if (typeof fetchImpl !== 'function') {
+        throw new Error('当前环境不支持 fetch，无法调用 Passkey 登录接口。');
+      }
+      const throwIfStopRequested = resolveStopChecker(options, 'check');
+      const targetEmail = normalizeEmail(credential.email);
+      const apiUrl = buildPasskeyLoginApiUrl(state);
+      const requestBody = core.buildPasskeyLoginRequest(
+        targetEmail,
+        buildPasskeyLoginOptionsFromCredential(credential, state)
+      );
+      throwIfStopRequested();
+      await addLog(`UPI 备份核验：${credential.email} 正在调用 Passkey API 登录。`, 'info');
+      const response = await fetchImpl(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      throwIfStopRequested();
+      const text = await response.text().catch(() => '');
+      let payload = {};
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch {
+        payload = { raw: text };
+      }
+      if (!response.ok) {
+        const backendMessage = typeof core.getLoginFailureMessage === 'function'
+          ? normalizeString(core.getLoginFailureMessage(payload))
+          : '';
+        const reason = backendMessage || normalizeString(payload?.reason || payload?.message || payload?.error || text);
+        const error = new Error(`Passkey API 登录返回 HTTP ${response.status}${reason ? `：${reason}` : ''}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+      }
+      const loginResult = core.normalizePasskeyLoginResponse(payload);
+      const responseEmail = normalizeEmail(loginResult.email || payload?.email);
+      if (targetEmail && responseEmail && responseEmail !== targetEmail) {
+        throw createSessionAccountMismatchError(
+          `UPI 备份核验：${credential.email} Passkey API 登录返回账号 ${responseEmail}，不是当前目标 ${targetEmail}，已停止提交 CDK。`,
+          { sessionEmail: responseEmail, targetEmail }
+        );
+      }
+      let tabId = 0;
+      if (options.applyCookies !== false) {
+        const applied = await applyPasskeyLoginCookies(loginResult, credential, { throwIfStopRequested });
+        tabId = applied.tabId || 0;
+      }
+      if (loginResult.accessToken) {
+        await addLog(
+          `UPI 备份核验：${credential.email} Passkey API 登录已获取 AT（token 摘要 ${maskAccessToken(loginResult.accessToken)}）。`,
+          'ok'
+        );
+      } else {
+        await addLog(`UPI 备份核验：${credential.email} Passkey API 登录已获取 Cookie，将继续读取页面 AT。`, 'ok');
+      }
+      return {
+        tabId,
+        accessToken: loginResult.accessToken,
+        session: {
+          accessToken: loginResult.accessToken,
+          accountEmail: responseEmail || targetEmail,
+          email: responseEmail || targetEmail,
+          passkeyLogin: true,
+        },
+        passkeyLoginResult: loginResult,
+      };
     }
 
     async function loginAndReadAccessToken(credential, state, options = {}) {
