@@ -10,12 +10,20 @@
 
 ---
 
+## Execution Results
+
+| Task | Result |
+| --- | --- |
+| Sidepanel normalizer fallback | Added regression tests and preserved legacy fallback defaults. |
+| Background auto-run status | Extracted status payload and phase predicates into `background/bootstrap/auto-run-status.js`. |
+| Sidepanel auto-run state | Extracted current auto-run state sync and pending run-count gate into `sidepanel/auto-run-state.js`; preserved nullish phase fallback semantics. |
+
 ## Current State
 
 | File | Lines | Note |
 | --- | ---: | --- |
-| `background.js` | 15,915 | Still mixes auto-run status broadcasting, runtime orchestration, provider glue, and startup wiring. |
-| `sidepanel/sidepanel.js` | 10,732 | Still mixes auto-run state sync, settings/event wiring, config actions, and top-level message handling. |
+| `background.js` | 15,901 | Still mixes auto-run status broadcasting, runtime orchestration, provider glue, and startup wiring. |
+| `sidepanel/sidepanel.js` | 10,659 | Still mixes auto-run state sync, settings/event wiring, config actions, and top-level message handling. |
 | `background/upi-credential-membership-checker.js` | 7,497 | Large but under current smoke warning threshold; leave for a later membership-focused pass. |
 | `content/signup-page.js` | 6,820 | Large but already split into page detector/orchestrator helpers; leave for later. |
 
