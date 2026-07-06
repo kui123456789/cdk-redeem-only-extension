@@ -47,6 +47,32 @@ Already-split modules to reuse, not duplicate:
 - `background/membership/login-session-executor.js`
 - `content/auth-page-detectors.js`
 
+## Execution Results
+
+Implemented on branch `codex/codebase-decomposition-phase-six`.
+
+| Task | Commit(s) | Result |
+| --- | --- | --- |
+| Task 1 | `8d0e3a7` | Extracted `background/bootstrap/content-script-registry.js`. |
+| Task 2 | `d657b6b`, `0ff9665` | Extracted `background/bootstrap/signup-executor-registry.js` and removed an accidental out-of-scope UPI dependency during review. |
+| Task 3 | `665b417` | Extracted `background/bootstrap/runtime-listeners.js`. |
+| Task 4 | `f11703b`, `c40f536` | Extracted `sidepanel/config-menu-controller.js` and added async callback error handling during review. |
+| Task 5 | `3a21b43` | Extracted `sidepanel/workflow-action-bindings.js`. |
+| Task 6 | `aa1829a` | Extracted `sidepanel/settings-field-bindings.js`. |
+
+Final tracked source size snapshot:
+
+| File | Baseline lines | Final lines | Note |
+| --- | ---: | ---: | --- |
+| `background.js` | 15,904 | 15,693 | Reduced by moving content script, executor, and listener glue out. |
+| `sidepanel/sidepanel.js` | 10,620 | 10,628 | Remained stable while moving config/action/settings binding glue out and adding small integration calls. |
+| `background/bootstrap/content-script-registry.js` | 0 | 49 | New focused module. |
+| `background/bootstrap/signup-executor-registry.js` | 0 | 437 | New focused module. |
+| `background/bootstrap/runtime-listeners.js` | 0 | 35 | New focused module. |
+| `sidepanel/config-menu-controller.js` | 0 | 118 | New focused module. |
+| `sidepanel/workflow-action-bindings.js` | 0 | 29 | New focused module. |
+| `sidepanel/settings-field-bindings.js` | 0 | 28 | New focused module. |
+
 ## Target File Structure
 
 - `background/bootstrap/content-script-registry.js`: owns signup/auth content-script file order and normalization.
