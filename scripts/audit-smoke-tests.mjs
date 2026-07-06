@@ -180,6 +180,7 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-session.js',
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
+    'background/bootstrap/content-script-registry.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
     'background/membership/login-session-executor.js',
@@ -261,6 +262,7 @@ function checkStaticContracts() {
   const autoRunSession = readText('background/bootstrap/auto-run-session.js');
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
+  const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
   const membershipLoginSessionExecutor = readText('background/membership/login-session-executor.js');
@@ -414,6 +416,8 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/auto-run-session.js'", 'background auto-run session script load');
   assertIncludes(background, "'background/bootstrap/auto-run-timer-plan.js'", 'background auto-run timer plan script load');
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
+  assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
+  assertIncludes(background, 'MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry()', 'content script registry wiring');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
@@ -511,15 +515,15 @@ function checkStaticContracts() {
   assertIncludes(checker, 'getRedeemCdkeyUsageHelpers()', 'membership checker CDK usage wrapper');
   assertIncludes(router, 'getRedeemChannelStateHelpers()', 'router channel state wrapper');
   assertIncludes(router, 'getRedeemCdkeyUsageHelpers()', 'router CDK usage wrapper');
-  assertIncludes(background, "'content/auth-page-detectors.js'", 'background auth page detectors injection');
-  assertIncludes(background, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
-  assertIncludes(background, "'content/signup-entry-page.js'", 'background signup entry page injection');
-  assertIncludes(background, "'content/signup-verification-page.js'", 'background signup verification page injection');
-  assertIncludes(background, "'content/signup-password-page.js'", 'background signup password page injection');
-  assertIncludes(background, "'content/signup-profile-page.js'", 'background signup profile page injection');
-  assertIncludes(background, "'content/signup-session-page.js'", 'background signup session page injection');
-  assertIncludes(background, "'content/signup-page-detector.js'", 'background signup detector injection');
-  assertIncludes(background, "'content/signup-page-orchestrator.js'", 'background signup orchestrator injection');
+  assertIncludes(contentScriptRegistry, "'content/auth-page-detectors.js'", 'background auth page detectors injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-entry-page.js'", 'background signup entry page injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-verification-page.js'", 'background signup verification page injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-password-page.js'", 'background signup password page injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-profile-page.js'", 'background signup profile page injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-session-page.js'", 'background signup session page injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-page-detector.js'", 'background signup detector injection');
+  assertIncludes(contentScriptRegistry, "'content/signup-page-orchestrator.js'", 'background signup orchestrator injection');
   [
     'content/auth-page-detectors.js',
     'content/signup-dom-utils.js',
@@ -534,7 +538,7 @@ function checkStaticContracts() {
   ].reduce((previousFile, currentFile) => {
     if (previousFile) {
       assertBefore(
-        background,
+        contentScriptRegistry,
         `'${previousFile}'`,
         `'${currentFile}'`,
         'background signup content injection order'

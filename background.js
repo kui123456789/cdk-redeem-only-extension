@@ -25,6 +25,7 @@ importScripts(
   'background/bootstrap/auto-run-session.js',
   'background/bootstrap/auto-run-timer-plan.js',
   'background/bootstrap/auto-run-status.js',
+  'background/bootstrap/content-script-registry.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -12935,23 +12936,10 @@ async function resumeAutoRun() {
 // Signup / OAuth Helpers
 // ============================================================
 
-const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
-const SIGNUP_AUTH_ENTRY_URL = 'https://chatgpt.com/auth/login';
-const SIGNUP_PAGE_INJECT_FILES = [
-  'content/utils.js',
-  'content/operation-delay.js',
-  'content/auth-page-recovery.js',
-  'content/auth-page-detectors.js',
-  'content/signup-dom-utils.js',
-  'content/signup-entry-page.js',
-  'content/signup-verification-page.js',
-  'content/signup-password-page.js',
-  'content/signup-profile-page.js',
-  'content/signup-session-page.js',
-  'content/signup-page-detector.js',
-  'content/signup-page-orchestrator.js',
-  'content/signup-page.js',
-];
+const contentScriptRegistry = self.MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry();
+const SIGNUP_ENTRY_URL = contentScriptRegistry.getSignupEntryUrl();
+const SIGNUP_AUTH_ENTRY_URL = contentScriptRegistry.getSignupAuthEntryUrl();
+const SIGNUP_PAGE_INJECT_FILES = contentScriptRegistry.getSignupPageInjectFiles();
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
