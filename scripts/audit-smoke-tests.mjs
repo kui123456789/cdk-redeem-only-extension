@@ -208,6 +208,7 @@ function checkCoreFiles() {
     'sidepanel/toast-service.js',
     'sidepanel/log-panel-manager.js',
     'sidepanel/workflow-state-view.js',
+    'sidepanel/workflow-button-state.js',
     'sidepanel/auto-run-normalizers.js',
     'sidepanel/auto-run-countdown-view.js',
     'sidepanel/auto-run-state.js',
@@ -265,6 +266,7 @@ function checkStaticContracts() {
   const toastService = readText('sidepanel/toast-service.js');
   const logPanelManager = readText('sidepanel/log-panel-manager.js');
   const workflowStateView = readText('sidepanel/workflow-state-view.js');
+  const workflowButtonState = readText('sidepanel/workflow-button-state.js');
   const autoRunNormalizers = readText('sidepanel/auto-run-normalizers.js');
   const autoRunCountdownView = readText('sidepanel/auto-run-countdown-view.js');
   const autoRunState = readText('sidepanel/auto-run-state.js');
@@ -299,6 +301,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
   assertIncludes(sidepanelHtml, 'src="workflow-state-view.js"', 'sidepanel workflow state view script load');
+  assertIncludes(sidepanelHtml, 'src="workflow-button-state.js"', 'sidepanel workflow button state script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'sidepanel auto-run countdown view script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-state.js"', 'sidepanel auto-run state script load');
@@ -306,6 +309,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-state-view.js"', 'src="sidepanel.js"', 'sidepanel workflow view must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="workflow-button-state.js"', 'src="sidepanel.js"', 'sidepanel workflow button state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'src="sidepanel.js"', 'sidepanel auto-run countdown view must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-state.js"', 'src="sidepanel.js"', 'sidepanel auto-run state must load before sidepanel.js');
@@ -339,6 +343,9 @@ function checkStaticContracts() {
   assertIncludes(logPanelManager, 'create', 'sidepanel log panel manager factory');
   assertIncludes(workflowStateView, 'SidepanelWorkflowStateView', 'sidepanel workflow state view global');
   assertIncludes(workflowStateView, 'renderStepStatuses', 'sidepanel workflow state renderer');
+  assertIncludes(workflowButtonState, 'SidepanelWorkflowButtonState', 'sidepanel workflow button state global');
+  assertIncludes(workflowButtonState, 'createWorkflowButtonStateManager', 'sidepanel workflow button state factory');
+  assertIncludes(workflowButtonState, 'getManualSkipButtonState', 'sidepanel workflow skip button state helper');
   assertIncludes(autoRunNormalizers, 'SidepanelAutoRunNormalizers', 'sidepanel auto-run normalizers global');
   assertIncludes(autoRunNormalizers, 'createAutoRunNormalizers', 'sidepanel auto-run normalizers factory');
   assertIncludes(autoRunNormalizers, 'normalizeAutoStepDelaySeconds', 'sidepanel auto-run step delay normalizer');
@@ -627,6 +634,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/styles/account-records.css', 1200, 'account records stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-ui-helpers.js', 200, 'sidepanel UI helpers size guard');
   assertFileLineCountAtMost('sidepanel/action-modal-service.js', 300, 'action modal service size guard');
+  assertFileLineCountAtMost('sidepanel/workflow-button-state.js', 220, 'sidepanel workflow button state size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-normalizers.js', 200, 'sidepanel auto-run normalizers size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-countdown-view.js', 250, 'sidepanel auto-run countdown view size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-state.js', 280, 'sidepanel auto-run state size guard');

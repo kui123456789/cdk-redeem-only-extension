@@ -1230,6 +1230,12 @@ function validateCurrentRegistrationEmail(email = inputEmail.value.trim(), optio
 
 const autoRunStateModel = window.SidepanelAutoRunState.createAutoRunStateModel();
 let currentAutoRun = autoRunStateModel.getAutoRunState();
+const workflowButtonStateManager = window.SidepanelWorkflowButtonState.createWorkflowButtonStateManager({
+  getNodeIds: () => NODE_IDS,
+  getIndependentExecuteNodes: () => INDEPENDENT_EXECUTE_NODES,
+  getSkippableNodes: () => SKIPPABLE_NODES,
+  isDoneStatus: (status) => isDoneStatus(status),
+});
 let settingsDirty = false;
 let settingsSaveInFlight = false;
 let settingsAutoSaveTimer = null;
@@ -2575,18 +2581,11 @@ function updateProgressCounter() {
 }
 
 function arePreviousNodesReadyForManualExecute(nodeId = '', statuses = getNodeStatuses()) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  const currentIndex = NODE_IDS.indexOf(normalizedNodeId);
-  if (currentIndex <= 0) {
-    return true;
-  }
-  return NODE_IDS.slice(0, currentIndex).every((previousNodeId) => isDoneStatus(statuses[previousNodeId]));
+  return workflowButtonStateManager.arePreviousNodesReadyForManualExecute(nodeId, statuses);
 }
 
 function canExecuteNodeWithoutPreviousNode(nodeId = '', statuses = getNodeStatuses()) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  return INDEPENDENT_EXECUTE_NODES.has(normalizedNodeId)
-    && arePreviousNodesReadyForManualExecute(normalizedNodeId, statuses);
+  return workflowButtonStateManager.canExecuteNodeWithoutPreviousNode(nodeId, statuses);
 }
 
 function updateButtonStates() {
@@ -2602,39 +2601,40 @@ function updateButtonStates() {
     if (!btn) {
       return;
     }
-    const currentStatus = statuses[nodeId];
-    const previousNodeId = index > 0 ? NODE_IDS[index - 1] : '';
-    const previousStatus = previousNodeId ? statuses[previousNodeId] : 'completed';
-    const previousReady = arePreviousNodesReadyForManualExecute(nodeId, statuses);
-    const canRun = index === 0
-      || canExecuteNodeWithoutPreviousNode(nodeId, statuses)
-      || (previousReady && isDoneStatus(previousStatus))
-      || (previousReady && (currentStatus === 'failed' || currentStatus === 'stopped' || isDoneStatus(currentStatus)));
-    btn.disabled = anyRunning || autoLocked || autoScheduled || !canRun;
+    btn.disabled = workflowButtonStateManager.getStepButtonState({
+      nodeId,
+      index,
+      statuses,
+      anyRunning,
+      autoLocked,
+      autoScheduled,
+    }).disabled;
   });
 
   document.querySelectorAll('.step-manual-btn').forEach((btn) => {
     const nodeId = String(btn.dataset.nodeId || '').trim();
-    const currentStatus = statuses[nodeId];
-    const currentIndex = NODE_IDS.indexOf(nodeId);
-    const previousNodeId = currentIndex > 0 ? NODE_IDS[currentIndex - 1] : '';
-    const previousStatus = previousNodeId ? statuses[previousNodeId] : 'completed';
-    const canSkip = SKIPPABLE_NODES.has(nodeId)
-      && !anyRunning
-      && !autoLocked
-      && !autoScheduled
-      && currentStatus !== 'running'
-      && !isDoneStatus(currentStatus)
-      && (!previousNodeId || isDoneStatus(previousStatus));
-    btn.style.display = canSkip ? '' : 'none';
-    btn.disabled = !canSkip;
-    btn.title = canSkip ? `跳过节点 ${nodeId}` : '当前不可跳过';
+    const skipState = workflowButtonStateManager.getManualSkipButtonState({
+      nodeId,
+      statuses,
+      anyRunning,
+      autoLocked,
+      autoScheduled,
+    });
+    btn.style.display = skipState.visible ? '' : 'none';
+    btn.disabled = skipState.disabled;
+    btn.title = skipState.title;
   });
 
+  const workflowControlsBusy = workflowButtonStateManager.isResetDisabled({
+    anyRunning,
+    autoScheduled,
+    autoPaused,
+    autoLocked,
+  });
   if (btnReset) {
-    btnReset.disabled = anyRunning || autoScheduled || autoPaused || autoLocked;
+    btnReset.disabled = workflowControlsBusy;
   }
-  updateStopButtonState(anyRunning || autoScheduled || autoPaused || autoLocked);
+  updateStopButtonState(workflowControlsBusy);
   updateProgressCounter();
 }
 
