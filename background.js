@@ -12941,6 +12941,7 @@ const SIGNUP_PAGE_INJECT_FILES = [
   'content/utils.js',
   'content/operation-delay.js',
   'content/auth-page-recovery.js',
+  'content/auth-page-detectors.js',
   'content/signup-dom-utils.js',
   'content/signup-entry-page.js',
   'content/signup-verification-page.js',

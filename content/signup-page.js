@@ -15,6 +15,11 @@ function getOperationDelayRunner() {
     : async (_metadata, operation) => operation();
 }
 
+function getAuthPageDetectors() {
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  return rootScope.MultiPageAuthPageDetectors || {};
+}
+
 if (document.documentElement.getAttribute(SIGNUP_PAGE_LISTENER_SENTINEL) !== '1') {
   document.documentElement.setAttribute(SIGNUP_PAGE_LISTENER_SENTINEL, '1');
 
@@ -591,18 +596,34 @@ function getSignupEmailContinueButton({ allowDisabled = false } = {}) {
 }
 
 function isExcludedSignupEntryActionText(text = '') {
+  const detector = getAuthPageDetectors().isExcludedSignupEntryText;
+  if (typeof detector === 'function') {
+    return Boolean(detector(text));
+  }
   return Boolean(getSignupEntryPageHelpers().isExcludedSignupEntryActionText?.(text));
 }
 
 function isSignupEntryTriggerText(text = '') {
+  const detector = getAuthPageDetectors().isSignupEntryText;
+  if (typeof detector === 'function') {
+    return Boolean(detector(text));
+  }
   return Boolean(getSignupEntryPageHelpers().isSignupEntryTriggerText?.(text));
 }
 
 function isSignupAuthEntryTriggerText(text = '') {
+  const detectors = getAuthPageDetectors();
+  if (typeof detectors.isSignupEntryText === 'function' || typeof detectors.isLoginEntryText === 'function') {
+    return Boolean(detectors.isSignupEntryText?.(text) || detectors.isLoginEntryText?.(text));
+  }
   return Boolean(getSignupEntryPageHelpers().isSignupAuthEntryTriggerText?.(text));
 }
 
 function isHindiLoginEntryText(text = '') {
+  const detector = getAuthPageDetectors().isHindiLoginEntryText || getAuthPageDetectors().isLoginEntryText;
+  if (typeof detector === 'function') {
+    return Boolean(detector(text));
+  }
   return Boolean(getSignupEntryPageHelpers().isHindiLoginEntryText?.(text));
 }
 
@@ -1630,6 +1651,10 @@ function isStep5Ready() {
 }
 
 function isSignupProfilePageUrl(rawUrl = location.href) {
+  const detector = getAuthPageDetectors().isSignupProfileUrl || getAuthPageDetectors().isAboutYouUrl;
+  if (typeof detector === 'function') {
+    return Boolean(detector(rawUrl));
+  }
   const helper = getSignupProfilePageHelpers().detectProfilePage;
   if (typeof helper === 'function') {
     return Boolean(helper(rawUrl));
@@ -1690,78 +1715,79 @@ function isPasskeyEnrollmentPage() {
 }
 
 function isLikelyLoggedInChatgptHomeUrl(rawUrl = location.href) {
-  const helper = getSignupSessionPageHelpers().detectLoggedInHome;
-  if (typeof helper === 'function') {
-    return Boolean(helper(rawUrl));
+  const detector = getAuthPageDetectors().isChatGptHomeUrl;
+  if (typeof detector === 'function' && !detector(rawUrl)) {
+    return false;
+  }
+  if (typeof detector !== 'function') {
+    const url = String(rawUrl || '').trim();
+    if (!url) {
+      return false;
+    }
+
+    try {
+      const parsed = new URL(url);
+      const host = String(parsed.hostname || '').toLowerCase();
+      if (!['chatgpt.com', 'www.chatgpt.com', 'chat.openai.com'].includes(host)) {
+        return false;
+      }
+
+      const path = String(parsed.pathname || '');
+      if (/^\/(?:auth\/|create-account\/|email-verification|log-in)(?:[/?#]|$)/i.test(path)) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
   }
 
-  const url = String(rawUrl || '').trim();
-  if (!url) {
+  const signupTrigger = typeof findSignupEntryTrigger === 'function'
+    ? findSignupEntryTrigger()
+    : null;
+  if (signupTrigger) {
     return false;
   }
 
-  try {
-    const parsed = new URL(url);
-    const host = String(parsed.hostname || '').toLowerCase();
-    if (!['chatgpt.com', 'www.chatgpt.com', 'chat.openai.com'].includes(host)) {
-      return false;
-    }
+  if (typeof document !== 'undefined' && document && typeof document.querySelectorAll === 'function') {
+    const loginActionPattern = /登录|log\s*in|sign\s*in/i;
+    const candidates = document.querySelectorAll(
+      'a, button, [role="button"], [role="link"], input[type="button"], input[type="submit"]'
+    );
 
-    const path = String(parsed.pathname || '');
-    if (/^\/(?:auth\/|create-account\/|email-verification|log-in)(?:[/?#]|$)/i.test(path)) {
-      return false;
-    }
+    for (const el of candidates) {
+      const text = typeof getActionText === 'function'
+        ? getActionText(el)
+        : [
+          el?.textContent,
+          el?.value,
+          el?.getAttribute?.('aria-label'),
+          el?.getAttribute?.('title'),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      if (!text || !loginActionPattern.test(text)) {
+        continue;
+      }
 
-    const signupTrigger = typeof findSignupEntryTrigger === 'function'
-      ? findSignupEntryTrigger()
-      : null;
-    if (signupTrigger) {
-      return false;
-    }
+      const visible = typeof isVisibleElement === 'function'
+        ? isVisibleElement(el)
+        : true;
+      if (!visible) {
+        continue;
+      }
 
-    if (typeof document !== 'undefined' && document && typeof document.querySelectorAll === 'function') {
-      const loginActionPattern = /登录|log\s*in|sign\s*in/i;
-      const candidates = document.querySelectorAll(
-        'a, button, [role="button"], [role="link"], input[type="button"], input[type="submit"]'
-      );
-
-      for (const el of candidates) {
-        const text = typeof getActionText === 'function'
-          ? getActionText(el)
-          : [
-            el?.textContent,
-            el?.value,
-            el?.getAttribute?.('aria-label'),
-            el?.getAttribute?.('title'),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        if (!text || !loginActionPattern.test(text)) {
-          continue;
-        }
-
-        const visible = typeof isVisibleElement === 'function'
-          ? isVisibleElement(el)
-          : true;
-        if (!visible) {
-          continue;
-        }
-
-        const enabled = typeof isActionEnabled === 'function'
-          ? isActionEnabled(el)
-          : (Boolean(el) && !el.disabled && el?.getAttribute?.('aria-disabled') !== 'true');
-        if (enabled) {
-          return false;
-        }
+      const enabled = typeof isActionEnabled === 'function'
+        ? isActionEnabled(el)
+        : (Boolean(el) && !el.disabled && el?.getAttribute?.('aria-disabled') !== 'true');
+      if (enabled) {
+        return false;
       }
     }
-
-    return true;
-  } catch {
-    return false;
   }
+
+  return true;
 }
 
 function getStep4PostVerificationState(options = {}) {
@@ -1823,7 +1849,9 @@ function getSignupVerificationPostSubmitState() {
 }
 
 function getPageTextSnapshot() {
-  return getSignupPageDetector().getPageTextSnapshot();
+  const snapshot = getSignupPageDetector().getPageTextSnapshot();
+  const normalizePageText = getAuthPageDetectors().normalizePageText;
+  return typeof normalizePageText === 'function' ? normalizePageText(snapshot) : snapshot;
 }
 
 function getLoginVerificationDisplayedEmail() {
@@ -2226,6 +2254,10 @@ function getStep5ErrorText() {
 
 
 function isSignupPasswordPage() {
+  const detector = getAuthPageDetectors().isPasswordPageUrl;
+  if (typeof detector === 'function') {
+    return Boolean(detector(location.href));
+  }
   const helper = getSignupPasswordPageHelpers().detectPasswordPage;
   if (typeof helper === 'function') {
     return Boolean(helper());
