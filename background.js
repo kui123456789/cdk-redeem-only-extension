@@ -25,6 +25,7 @@ importScripts(
   'background/mail-rule-registry.js',
   'flows/openai/mail-rules.js',
   'background/message-router.js',
+  'shared/membership-credential-format.js',
   'background/upi-credential-membership-checker.js',
   'background/verification-flow.js',
   'background/auto-run-controller.js',

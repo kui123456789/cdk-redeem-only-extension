@@ -225,6 +225,13 @@ function checkStaticContracts() {
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
+  assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
+  assertBefore(
+    background,
+    "'shared/membership-credential-format.js'",
+    "'background/upi-credential-membership-checker.js'",
+    'background membership credential format must load before membership checker'
+  );
   assertIncludes(background, "'background/redeem/redeem-cdkey-usage.js'", 'background redeem CDK usage script load');
   assertIncludes(redeemChannelState, 'createRedeemChannelState', 'redeem channel state factory');
   assertIncludes(redeemChannelState, 'getRedeemChannelFailureField', 'redeem channel failure field helper');
