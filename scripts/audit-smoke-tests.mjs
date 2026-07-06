@@ -120,6 +120,7 @@ function checkCoreFiles() {
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
     'shared/redeem-channel-state.js',
+    'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
@@ -166,6 +167,7 @@ function checkStaticContracts() {
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
+  const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
@@ -187,6 +189,9 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
+  assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
+  assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
+  assertIncludes(membershipCredentialFormat, 'formatFreeCredentialLine', 'membership Free export formatter');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
   assertBefore(
     sidepanelHtml,
@@ -338,6 +343,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
+  assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
