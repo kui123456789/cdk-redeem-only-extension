@@ -34,6 +34,7 @@
       exportUpiAccountCredentialBackupTextFile = null,
       checkUpiCredentialMembershipBatch = null,
       checkUpiCredentialMembershipOne = null,
+      checkUpiCredentialMembershipTrialEligibility = null,
       deleteUpiCredentialMembershipCredentials = null,
       deleteUpiCredentialMembershipCheckResults = null,
       exportUpiCredentialMembershipCheckResults = null,
@@ -3480,6 +3481,27 @@
             throw new Error('UPI 单账号会员检测能力尚未接入。');
           }
           const result = await checkUpiCredentialMembershipOne(message.payload || {});
+          return { ok: true, ...result };
+        }
+
+        case 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY':
+        case 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH': {
+          clearStopRequest();
+          const state = await getState();
+          if (isAutoRunLockedState(state)) {
+            throw new Error('自动流程运行中，当前不能手动检查 UPI Free 分组试用资格。');
+          }
+          if (typeof checkUpiCredentialMembershipTrialEligibility !== 'function') {
+            throw new Error('UPI Free 分组试用资格手动检查能力尚未接入。');
+          }
+          const payload = message.payload || {};
+          const result = await checkUpiCredentialMembershipTrialEligibility({
+            ...payload,
+            source: payload.source
+              || (message.type === 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH'
+                ? 'manual-trial-eligibility-batch'
+                : 'manual-trial-eligibility-check'),
+          });
           return { ok: true, ...result };
         }
 

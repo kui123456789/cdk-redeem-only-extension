@@ -13985,6 +13985,7 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   exportUpiAccountCredentialBackupTextFile,
   checkUpiCredentialMembershipBatch: (...args) => upiCredentialMembershipChecker.checkUpiCredentialMembershipBatch(...args),
   checkUpiCredentialMembershipOne: (...args) => upiCredentialMembershipChecker.checkUpiCredentialMembershipOne(...args),
+  checkUpiCredentialMembershipTrialEligibility: (...args) => upiCredentialMembershipChecker.checkUpiCredentialMembershipTrialEligibility(...args),
   deleteUpiCredentialMembershipCredentials: (...args) => upiCredentialMembershipChecker.deleteUpiCredentialMembershipCredentials(...args),
   deleteUpiCredentialMembershipCheckResults: (...args) => upiCredentialMembershipChecker.deleteUpiCredentialMembershipCheckResults(...args),
   exportUpiCredentialMembershipCheckResults: (...args) => upiCredentialMembershipChecker.exportUpiCredentialMembershipCheckResults(...args),

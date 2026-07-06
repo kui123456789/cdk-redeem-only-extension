@@ -2678,6 +2678,8 @@
       const refreshEmailStatusTitle = missingAtCount
         ? `按已保存 AT 检测 Free/失败组邮箱会员状态；当前可刷新 ${refreshEmailStatusCount} 个，${missingAtCount} 个缺少 AT。`
         : '按已保存 AT 检测 Free/失败组邮箱会员状态';
+      const trialEligibilityCheckRows = getTrialEligibilityCheckableFreeUpiCredentialMembershipRows();
+      const trialEligibilityCheckCount = trialEligibilityCheckRows.length;
       const previousFreeScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="free"]')?.scrollTop || 0;
       const previousUpiPaidScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-upi"]')?.scrollTop || 0;
       const previousIdealPaidScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-ideal"]')?.scrollTop || 0;
@@ -2697,7 +2699,6 @@
             const email = normalizeUpiCredentialMembershipEmail(row.email);
             const isRowChecking = upiCredentialMembershipCheckingEmail === email;
             const isRowLoggingIn = upiCredentialMembershipLoginEmail === email;
-            const disableSingleCheck = mutatingBusy || isRowChecking || row.enabled === false;
             const disableLogin = mutatingBusy || isRowLoggingIn || row.enabled === false || !hasUpiCredentialMembershipLoginMaterial(row);
             const isFreeGroup = group === 'free';
             const deleteChannel = group === 'paid-ideal'
@@ -2714,6 +2715,10 @@
               : '删除';
             const cancelRedeemControl = getUpiCredentialMembershipRedeemCancelControl(row, results);
             const redeemProgress = getUpiCredentialMembershipRedeemProgressMeta(row, results);
+            const singleCheckDataAttribute = isFreeGroup ? 'data-upi-membership-check-trial-one' : 'data-upi-membership-check-one';
+            const disableSingleCheck = isFreeGroup
+              ? (mutatingBusy || isRowChecking || row.enabled === false || !isTrialEligibilityCheckableFreeUpiCredentialMembershipRow(row))
+              : (mutatingBusy || isRowChecking || row.enabled === false);
             const singleActionTitle = isFreeGroup
               ? '点击重新核验该账号资格'
               : '点击检测该账号是否已开通 Plus/Pro/Team';
@@ -2732,8 +2737,8 @@
                   <input type="checkbox" data-upi-membership-toggle="${escapeHtml(email)}" ${row.enabled === false ? '' : 'checked'} ${mutatingBusy ? 'disabled' : ''} aria-label="启用核验 ${escapeHtml(email)}" />
                   <span class="toggle-switch-track"><span class="toggle-switch-thumb"></span></span>
                 </label>
-                <button class="upi-membership-check-email upi-membership-check-email-action mono" type="button" data-upi-membership-check-one="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} title="${escapeHtml(singleActionTitle)}">${escapeHtml(email)}</button>
-                <button class="icloud-tag upi-membership-check-status-action ${escapeHtml(meta.className)}" type="button" data-upi-membership-check-one="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} aria-label="${escapeHtml(singleActionAria)}" title="${escapeHtml(singleActionTitle)}">${escapeHtml(meta.label)}</button>
+                <button class="upi-membership-check-email upi-membership-check-email-action mono" type="button" ${singleCheckDataAttribute}="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} title="${escapeHtml(singleActionTitle)}">${escapeHtml(email)}</button>
+                <button class="icloud-tag upi-membership-check-status-action ${escapeHtml(meta.className)}" type="button" ${singleCheckDataAttribute}="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} aria-label="${escapeHtml(singleActionAria)}" title="${escapeHtml(singleActionTitle)}">${escapeHtml(meta.label)}</button>
                 <button class="icloud-tag upi-membership-check-login-action" type="button" data-upi-membership-login="${escapeHtml(email)}" ${disableLogin ? 'disabled' : ''} title="登录">登录</button>
                 <button class="icloud-tag upi-membership-check-move-action" type="button" data-upi-membership-move-group="${escapeHtml(email)}" data-upi-membership-move-target="${escapeHtml(targetMoveStatus)}" ${mutatingBusy ? 'disabled' : ''}>${escapeHtml(moveLabel)}</button>
                 ${renderUpiCredentialMembershipRedeemProgress(row, redeemProgress, cancelRedeemControl)}
@@ -2773,6 +2778,7 @@
             <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-fill-free-at ${missingAtCount && !mutatingBusy ? '' : 'disabled'}>一键补充 AT(${escapeHtml(String(missingAtCount))})</button>
             <button class="btn btn-primary btn-xs" type="button" data-upi-membership-identify-free-plus ${identifyPlusCount && !mutatingBusy ? '' : 'disabled'}>一键识别 Plus(${escapeHtml(String(identifyPlusCount))})</button>
             <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-refresh-all-email-statuses ${refreshEmailStatusCount && !membershipBusy ? '' : 'disabled'} title="${escapeHtml(refreshEmailStatusTitle)}">一键刷新所有邮箱状态(${escapeHtml(String(refreshEmailStatusCount))})</button>
+            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-check-trial-all ${trialEligibilityCheckCount && !mutatingBusy ? '' : 'disabled'} title="手动调用后端 /api/v1/check 复查 Free 账号试用资格；网络波动会保留为可重试。">检查试用资格(${escapeHtml(String(trialEligibilityCheckCount))})</button>
             <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-redeem-free data-upi-membership-redeem-channel="upi" ${redeemUpiNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemUpiTitle)}">一键兑换 UPI(${escapeHtml(String(redeemUpiNowCount))}/${escapeHtml(String(redeemableUpiFreeCount))})</button>
             <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-redeem-free data-upi-membership-redeem-channel="ideal" ${redeemIdealNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemIdealTitle)}">一键兑换 IDEAL(${escapeHtml(String(redeemIdealNowCount))}/${escapeHtml(String(redeemableIdealFreeCount))})</button>
             <button class="btn btn-primary btn-xs" type="button" data-upi-membership-redeem-all ${redeemAllNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemAllTitle)}">一键兑换全部(${escapeHtml(String(redeemAllNowCount))}/${escapeHtml(String(redeemableFreeCount))})</button>
@@ -4871,6 +4877,101 @@
       }
     }
 
+    async function checkAllUpiCredentialMembershipTrialEligibility() {
+      const credentials = getTrialEligibilityCheckableFreeUpiCredentialMembershipRows();
+      if (!credentials.length) {
+        helpers.showToast?.('没有可检查的 Free 账号；需要账号有 AT、GPT 密码、Passkey 或免 2FA 取件链接。', 'warn', 2400);
+        return;
+      }
+      try {
+        upiCredentialMembershipCheckBusy = true;
+        setExportButtonsBusy(false);
+        render();
+        const response = await runtime.sendMessage({
+          type: 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH',
+          source: 'sidepanel',
+          payload: {
+            source: 'manual-trial-eligibility-batch',
+            credentials,
+            settings: getMembershipCheckSettingsPayload(),
+          },
+        });
+        if (response?.error) {
+          throw new Error(response.error);
+        }
+        if (response?.results) {
+          state.syncLatestState({
+            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
+          });
+        }
+        helpers.showToast?.(
+          `试用资格检查完成：有资格 ${response?.eligible?.length || 0}，无资格 ${response?.ineligible?.length || 0}，可重试 ${response?.retryable?.length || 0}，失败 ${response?.failed?.length || 0}，跳过 ${response?.skipped?.length || 0}。`,
+          'success',
+          3200
+        );
+      } catch (error) {
+        helpers.showToast?.(`试用资格检查失败：${error.message}`, 'error');
+      } finally {
+        upiCredentialMembershipCheckBusy = false;
+        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
+        setExportButtonsBusy(false);
+        render();
+      }
+    }
+
+    async function checkSingleUpiCredentialMembershipTrialEligibility(email = '') {
+      const normalizedEmail = normalizeUpiCredentialMembershipEmail(email);
+      if (!normalizedEmail || upiCredentialMembershipCheckingEmail) {
+        return;
+      }
+      const row = getUpiCredentialMembershipDisplayRowByEmail(normalizedEmail);
+      if (!row) {
+        helpers.showToast?.(`未找到账号 ${normalizedEmail}`, 'warn', 1800);
+        return;
+      }
+      if (!isTrialEligibilityCheckableFreeUpiCredentialMembershipRow(row)) {
+        helpers.showToast?.(`账号 ${normalizedEmail} 当前不可复查试用资格；需要 Free、启用且有 AT/登录材料。`, 'warn', 2600);
+        return;
+      }
+      upiCredentialMembershipCheckingEmail = normalizedEmail;
+      render();
+      try {
+        const response = await runtime.sendMessage({
+          type: 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY',
+          source: 'sidepanel',
+          payload: {
+            source: 'manual-trial-eligibility-check',
+            credentials: [buildUpiCredentialMembershipActionCredential(row)],
+            settings: getMembershipCheckSettingsPayload(),
+          },
+        });
+        if (response?.error) {
+          throw new Error(response.error);
+        }
+        if (response?.results) {
+          state.syncLatestState({
+            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
+          });
+        }
+        const statusText = response?.eligible?.length
+          ? '有资格'
+          : response?.ineligible?.length
+            ? '无资格'
+            : response?.retryable?.length
+              ? '网络/后端波动，可重试'
+              : response?.skipped?.length
+                ? '已跳过'
+                : '检查失败';
+        helpers.showToast?.(`${normalizedEmail} 资格检查完成：${statusText}`, response?.eligible?.length ? 'success' : 'warn', 2600);
+      } catch (error) {
+        helpers.showToast?.(`检查 ${normalizedEmail} 试用资格失败：${error.message}`, 'error');
+      } finally {
+        upiCredentialMembershipCheckingEmail = '';
+        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
+        render();
+      }
+    }
+
     async function stopUpiCredentialMembershipRedeem() {
       try {
         const response = await runtime.sendMessage({
@@ -5369,6 +5470,19 @@
       if (checkOneNode) {
         const email = getDatasetValue(checkOneNode, 'data-upi-membership-check-one');
         checkOneUpiCredentialMembership(email);
+        return;
+      }
+
+      const checkTrialOneNode = findClosest(event?.target, '[data-upi-membership-check-trial-one]');
+      if (checkTrialOneNode) {
+        const email = getDatasetValue(checkTrialOneNode, 'data-upi-membership-check-trial-one');
+        checkSingleUpiCredentialMembershipTrialEligibility(email);
+        return;
+      }
+
+      const checkTrialAllNode = findClosest(event?.target, '[data-upi-membership-check-trial-all]');
+      if (checkTrialAllNode) {
+        checkAllUpiCredentialMembershipTrialEligibility();
         return;
       }
 
