@@ -53,9 +53,9 @@
     }
 
     function syncAutoRunState(source = {}) {
-      const phase = readAutoRunStateValue(source, ['autoRunPhase', 'phase'], state.phase);
+      const phase = source.autoRunPhase ?? source.phase ?? state.phase;
       const hasAutoRunning = hasOwnStateValue(source, 'autoRunning');
-      const hasPhase = hasOwnStateValue(source, 'autoRunPhase') || hasOwnStateValue(source, 'phase');
+      const hasPhase = source.autoRunPhase !== undefined || source.phase !== undefined;
       const autoRunning = hasAutoRunning
         ? Boolean(source.autoRunning)
         : (hasPhase ? isAutoRunSourceSyncPhase(phase) : state.autoRunning);

@@ -34,6 +34,14 @@ test('syncAutoRunState maps background aliases and phase predicates', () => {
   assert.equal(model.isAutoRunWaitingStepPhase(), true);
 });
 
+test('syncAutoRunState keeps current phase when phase aliases are nullish', () => {
+  const model = autoRunState.createAutoRunStateModel();
+
+  model.syncAutoRunState({ autoRunPhase: 'waiting_step' });
+  assert.equal(model.syncAutoRunState({ autoRunPhase: null }).phase, 'waiting_step');
+  assert.equal(model.syncAutoRunState({ phase: undefined }).phase, 'waiting_step');
+});
+
 test('pending start run count gates source run-count sync until matching value arrives', () => {
   const model = autoRunState.createAutoRunStateModel();
 
