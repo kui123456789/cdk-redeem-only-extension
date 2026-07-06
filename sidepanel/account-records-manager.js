@@ -2878,7 +2878,25 @@
       if (typeof accountRecordsViewModel.summarizeAccountRunHistory === 'function') {
         return accountRecordsViewModel.summarizeAccountRunHistory(records);
       }
-      return {
+      return records.reduce((summary, record) => {
+        const retryCount = normalizeRetryCount(record.retryCount);
+        const status = getRecordDisplayStatus(record);
+        summary.total += 1;
+        if (status === 'success') {
+          summary.success += 1;
+        } else if (status === 'running') {
+          summary.running += 1;
+        } else if (status === 'failed') {
+          summary.failed += 1;
+        } else if (status === 'stopped') {
+          summary.stopped += 1;
+        }
+        if (retryCount > 0) {
+          summary.retryRecordCount += 1;
+        }
+        summary.retryTotal += retryCount;
+        return summary;
+      }, {
         total: 0,
         success: 0,
         running: 0,
@@ -2886,7 +2904,7 @@
         stopped: 0,
         retryRecordCount: 0,
         retryTotal: 0,
-      };
+      });
     }
 
     function formatAccountRecordTime(value) {
