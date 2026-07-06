@@ -15,6 +15,7 @@
     const membershipViewModel = globalScope.SidepanelMembershipViewModel || {};
     const membershipRowPolicy = globalScope.SidepanelMembershipRowPolicy || {};
     const membershipRenderer = globalScope.SidepanelMembershipRenderer || {};
+    const membershipRedeemProgress = globalScope.SidepanelMembershipRedeemProgress || {};
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -2063,108 +2064,38 @@
     }
 
     function clampRedeemProgressPercent(value = 0) {
+      if (typeof membershipRedeemProgress.clampRedeemProgressPercent === 'function') {
+        return membershipRedeemProgress.clampRedeemProgressPercent(value);
+      }
       const percent = Math.floor(Number(value) || 0);
       return Math.max(0, Math.min(100, percent));
     }
 
     function getUpiCredentialMembershipRedeemProgressMeta(row = {}, results = getUpiCredentialMembershipCheckResults()) {
-      const rowEmail = normalizeUpiCredentialMembershipEmail(row.email);
-      const currentEmail = normalizeUpiCredentialMembershipEmail(results.flowStageEmail);
-      const status = String(row.status || '').trim().toLowerCase();
-      const redeemStatus = normalizeUpiRedeemRemoteStatus(row.redeemStatus || '');
-      const reason = normalizeUpiCredentialMembershipText(row.redeemReason || row.reason);
-      const isCurrentRedeemRow = Boolean(results.redeeming && rowEmail && currentEmail && rowEmail === currentEmail);
-      const activeRedeemStatus = isActiveUpiRedeemRemoteStatus(redeemStatus) || isCurrentRedeemRow;
-      const channel = normalizeRedeemChannel(row.redeemChannel || row.channel || row.paymentChannel || 'upi');
-      const channelLabel = getRedeemChannelLabel(channel);
-
-      if (row.enabled === false) {
+      if (typeof membershipRedeemProgress.getUpiCredentialMembershipRedeemProgressMeta !== 'function') {
         return {
           percent: 0,
-          label: '停用',
-          className: 'is-muted',
-          title: '当前账号已停用，不参与兑换。',
+          label: '0%',
+          className: 'is-idle',
+          title: '兑换进度',
         };
       }
-      if (status === 'paid') {
-        return {
-          percent: 100,
-          label: '100%',
-          className: 'is-success',
-          title: `${channelLabel} 兑换已完成。`,
-        };
-      }
-      if (isUpiCredentialMembershipRedeemLocked(row)) {
-        return {
-          percent: 100,
-          label: '封存',
-          className: 'is-failed',
-          title: getUpiCredentialMembershipRedeemLockReason(row),
-        };
-      }
-      if (redeemStatus === 'failed' || status === 'failed') {
-        return {
-          percent: 100,
-          label: '失败',
-          className: 'is-failed',
-          title: reason || '兑换失败。',
-        };
-      }
-      if (redeemStatus === 'canceled' || redeemStatus === 'cancelled') {
-        return {
-          percent: 0,
-          label: '取消',
-          className: 'is-muted',
-          title: reason || '兑换已取消。',
-        };
-      }
-      if (activeRedeemStatus) {
-        const statusProgress = {
-          queued: 18,
-          pending: 24,
-          pending_token: 32,
-          pending_dispatch: 44,
-          dispatching: 52,
-          dispatched: 62,
-          submitted: 68,
-          accepted: 70,
-          running: 76,
-          redeeming: 78,
-          processing: 82,
-          in_progress: 82,
-        };
-        const percent = clampRedeemProgressPercent(statusProgress[redeemStatus] || (isCurrentRedeemRow ? 36 : 50));
-        return {
-          percent,
-          label: `${percent}%`,
-          className: 'is-running',
-          running: true,
-          title: reason || `${channelLabel} 兑换处理中。`,
-        };
-      }
-      if (!normalizeUpiCredentialMembershipText(row.accessToken)) {
-        return {
-          percent: 0,
-          label: '缺AT',
-          className: 'is-muted',
-          title: '缺少 AT，无法兑换。',
-        };
-      }
-      return {
-        percent: 0,
-        label: '0%',
-        className: 'is-idle',
-        title: reason || `${channelLabel} 待兑换。`,
-      };
+      return membershipRedeemProgress.getUpiCredentialMembershipRedeemProgressMeta(row, results, {
+        normalizeEmail: normalizeUpiCredentialMembershipEmail,
+        normalizeText: normalizeUpiCredentialMembershipText,
+        normalizeRemoteStatus: normalizeUpiRedeemRemoteStatus,
+        isActiveRemoteStatus: isActiveUpiRedeemRemoteStatus,
+        normalizeChannel: normalizeRedeemChannel,
+        getChannelLabel: getRedeemChannelLabel,
+        isRedeemLocked: isUpiCredentialMembershipRedeemLocked,
+        getRedeemLockReason: getUpiCredentialMembershipRedeemLockReason,
+      });
     }
 
     function renderUpiCredentialMembershipRedeemProgress(row = {}, progress = {}, cancelRedeemControl = {}) {
-      if (typeof membershipRenderer.renderRedeemProgress === 'function') {
-        return membershipRenderer.renderRedeemProgress({
-          row,
-          progress,
-          cancelRedeemControl,
-          email: normalizeUpiCredentialMembershipEmail(row.email),
+      if (typeof membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress === 'function') {
+        return membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress(row, progress, cancelRedeemControl, {
+          normalizeEmail: normalizeUpiCredentialMembershipEmail,
           escapeHtml,
         });
       }

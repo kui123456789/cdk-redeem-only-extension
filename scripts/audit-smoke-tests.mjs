@@ -220,6 +220,7 @@ function checkCoreFiles() {
     'sidepanel/cdk-pool-manager.js',
     'sidepanel/membership-row-policy.js',
     'sidepanel/membership-renderer.js',
+    'sidepanel/membership-redeem-progress.js',
     'sidepanel/account-records-view-model.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
@@ -280,6 +281,7 @@ function checkStaticContracts() {
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
+  const membershipRedeemProgress = readText('sidepanel/membership-redeem-progress.js');
   const router = readText('background/message-router.js');
   const membershipRoutes = readText('background/routes/membership-routes.js');
   const cdkRoutes = readText('background/routes/cdkey-routes.js');
@@ -327,8 +329,11 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
   assertIncludes(sidepanelHtml, 'src="membership-row-policy.js"', 'membership row policy script load');
   assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
+  assertIncludes(sidepanelHtml, 'src="membership-redeem-progress.js"', 'membership redeem progress script load');
   assertIncludes(sidepanelHtml, 'src="account-records-view-model.js"', 'account records view model script load');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
+  assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
+  assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="account-records-manager.js"', 'membership renderer must load before account records manager');
   assertBefore(sidepanelHtml, 'src="account-records-view-model.js"', 'src="account-records-manager.js"', 'account records view model must load before account records manager');
   assertBefore(
@@ -377,10 +382,14 @@ function checkStaticContracts() {
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
   assertIncludes(membershipRenderer, 'SidepanelMembershipRenderer', 'membership renderer global');
   assertIncludes(membershipRenderer, 'renderRedeemProgress', 'membership renderer progress helper');
+  assertIncludes(membershipRedeemProgress, 'SidepanelMembershipRedeemProgress', 'membership redeem progress global');
+  assertIncludes(membershipRedeemProgress, 'getUpiCredentialMembershipRedeemProgressMeta', 'membership redeem progress metadata helper');
+  assertIncludes(membershipRedeemProgress, 'renderUpiCredentialMembershipRedeemProgress', 'membership redeem progress renderer');
   assertIncludes(accountRecordsViewModel, 'SidepanelAccountRecordsViewModel', 'account records view model global');
   assertIncludes(accountRecordsViewModel, 'summarizeAccountRunHistory', 'account records view model summary helper');
   assertIncludes(accountRecordsViewModel, 'matchesFilter', 'account records view model filter helper');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsViewModel', 'account records manager view model dependency');
+  assertIncludes(accountRecords, 'SidepanelMembershipRedeemProgress', 'account records manager redeem progress dependency');
   assertIncludes(settingsTransferManager, 'multipage-settings-', 'settings export filename');
   assertIncludes(background, 'containsSensitiveRuntimeData: true', 'settings export sensitive data marker');
   assertIncludes(background, "'background/settings-normalizers.js'", 'background settings normalizers script load');
