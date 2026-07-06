@@ -1803,6 +1803,39 @@
       return [];
     }
 
+    function getTrialEligibilityApiHelpers() {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      return rootScope.MultiPageTrialEligibilityApi || {};
+    }
+
+    function normalizeTrialEligibilityApiItem(item = {}) {
+      const helper = getTrialEligibilityApiHelpers().normalizeTrialEligibilityApiItem;
+      if (typeof helper === 'function') {
+        return helper(item);
+      }
+      return {
+        trialEligibilityStatus: 'failed',
+        trialEligibilityReason: '资格检查适配器未加载。',
+      };
+    }
+
+    function isTrialEligibilityAccountIneligibleDecision(decision = {}) {
+      const helper = getTrialEligibilityApiHelpers().isTrialEligibilityAccountIneligibleDecision;
+      return typeof helper === 'function'
+        ? helper(decision)
+        : normalizeString(decision.trialEligibilityStatus).toLowerCase() === 'ineligible';
+    }
+
+    function isTrialEligibilityTokenInvalidDecision(decision = {}) {
+      const helper = getTrialEligibilityApiHelpers().isTrialEligibilityTokenInvalidDecision;
+      return typeof helper === 'function' ? helper(decision) : decision.tokenInvalid === true;
+    }
+
+    function buildTrialEligibilityResultPatch(decision = {}) {
+      const helper = getTrialEligibilityApiHelpers().buildTrialEligibilityResultPatch;
+      return typeof helper === 'function' ? helper(decision) : {};
+    }
+
     function isEligibilityResultPayload(value = {}) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return false;
@@ -1834,47 +1867,18 @@
     }
 
     function getEligibilityFailureMessage(item) {
-      if (!item) {
-        return 'UPI 资格检查未返回当前 CDK结果。';
-      }
-      const tokenOk = normalizeBoolean(item.token_ok ?? item.tokenOk ?? item.ok);
-      if (!tokenOk) {
-        return normalizeString(item.message || item.error || item.reason || 'access_token 无效或已过期');
-      }
-      if (!normalizeBoolean(item.eligible)) {
-        return normalizeString(item.message || item.reason || '账号无优惠资格');
-      }
-      const upiEligibleValue = item.upi_eligible ?? item.upiEligible;
-      if (upiEligibleValue !== undefined && !normalizeBoolean(upiEligibleValue)) {
-        return normalizeString(item.message || item.upi_eligible_reason || item.upiEligibleReason || item.reason || '账号不满足 UPI 兑换资格');
-      }
-      return '';
+      const decision = normalizeTrialEligibilityApiItem(item);
+      return decision.trialEligibilityStatus === 'eligible'
+        ? ''
+        : normalizeString(decision.trialEligibilityReason || 'UPI 资格检查失败。');
     }
 
     function isEligibilityTokenInvalidItem(item = {}) {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) {
-        return false;
-      }
-      if (normalizeBoolean(item.token_ok ?? item.tokenOk ?? item.ok)) {
-        return false;
-      }
-      const reason = normalizeString(item.reason || item.error || item.message).toLowerCase();
-      return /token|jwt|session|登录|会话|过期|expired|invalid|401|unauthorized/.test(reason)
-        || item.token_ok === false
-        || item.tokenOk === false;
+      return isTrialEligibilityTokenInvalidDecision(normalizeTrialEligibilityApiItem(item));
     }
 
     function isEligibilityAccountIneligibleItem(item = {}) {
-      if (!item || typeof item !== 'object' || Array.isArray(item)) {
-        return false;
-      }
-      if (!normalizeBoolean(item.token_ok ?? item.tokenOk ?? item.ok)) {
-        return false;
-      }
-      const eligible = normalizeBoolean(item.eligible);
-      const upiEligibleValue = item.upi_eligible ?? item.upiEligible;
-      const upiEligible = upiEligibleValue === undefined ? true : normalizeBoolean(upiEligibleValue);
-      return !eligible || !upiEligible;
+      return isTrialEligibilityAccountIneligibleDecision(normalizeTrialEligibilityApiItem(item));
     }
 
     function isFailureStatus(status) {
@@ -2459,16 +2463,22 @@
         token: accessToken || getChatGptSessionAccessToken(session),
       });
       const item = getEligibilityItem(payload, cdkey);
+      const decision = normalizeTrialEligibilityApiItem(item);
       const failureMessage = getEligibilityFailureMessage(item);
       if (failureMessage) {
-        const accountIneligible = isEligibilityAccountIneligibleItem(item);
-        const tokenInvalid = isEligibilityTokenInvalidItem(item);
+        const accountIneligible = isTrialEligibilityAccountIneligibleDecision(decision);
+        const tokenInvalid = isTrialEligibilityTokenInvalidDecision(decision);
         const prefix = accountIneligible
           ? UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX
           : (tokenInvalid ? UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX : '');
-        throw new Error(`${prefix}UPI 资格检查失败：${failureMessage}`);
+        const error = new Error(`${prefix}UPI 资格检查失败：${failureMessage}`);
+        error.trialEligibilityDecision = decision;
+        throw error;
       }
-      return item;
+      return {
+        ...item,
+        trialEligibilityDecision: decision,
+      };
     }
 
     async function postUpiRedeem({ apiUrl, externalApiKey, clientId, cdkey, session, accessToken, state = {}, channel = 'upi' }) {
@@ -3190,7 +3200,11 @@
         if (!eligibility) {
           throw lastEligibilityError || new Error('UPI 注册后试用资格检查未返回结果。');
         }
-        const reason = normalizeString(eligibility?.item?.message || eligibility?.item?.reason)
+        const eligibilityDecision = eligibility?.item?.trialEligibilityDecision
+          || normalizeTrialEligibilityApiItem(eligibility?.item || {});
+        const eligibilityPatch = buildTrialEligibilityResultPatch(eligibilityDecision);
+        const reason = normalizeString(eligibilityPatch.trialEligibilityReason)
+          || normalizeString(eligibility?.item?.message || eligibility?.item?.reason)
           || '账号有试用资格，已进入 Free 分组';
         if (typeof upsertTrialEligibleFreeCredential !== 'function') {
           throw new Error('资格已通过，但 Free 分组写入能力未接入，无法保存账号。');
@@ -3207,9 +3221,12 @@
           accessTokenMasked: maskAccessToken(accessToken),
           reason,
           checkedAt,
+          ...eligibilityPatch,
           trialEligibilityStatus: 'eligible',
           trialEligibilityReason: reason,
           trialEligibilityCheckedAt: checkedAt,
+          trialEligibilityRetryCount: 0,
+          trialEligibilityLastError: '',
           verificationUrl: normalizeString(patch.verificationUrl || runtimeState.verificationUrl || runtimeState.emailVerificationUrl || ''),
           recordedAt: Math.max(0, Math.floor(Number(patch.recordedAt || runtimeState.recordedAt || runtimeState.no2faFreeRecordedAt) || Date.now())),
           twoFactorEnabled: patch.twoFactorEnabled === true || runtimeState.twoFactorEnabled === true,
@@ -3245,9 +3262,13 @@
         if (isFlowStoppedError(error)) {
           throw error;
         }
-        const message = getErrorMessage(error) || 'UPI 试用资格检测失败。';
+        const decision = error?.trialEligibilityDecision || null;
+        const message = normalizeString(decision?.trialEligibilityReason) || getErrorMessage(error) || 'UPI 试用资格检测失败。';
         const failedAt = toIsoTimestamp();
-        const trialEligibilityStatus = isUpiAccountIneligibleError(error) ? 'ineligible' : 'failed';
+        const trialEligibilityStatus = isTrialEligibilityAccountIneligibleDecision(decision || {})
+          || isUpiAccountIneligibleError(error)
+          ? 'ineligible'
+          : 'failed';
         let emailPoolStatusUpdated = false;
         if (trialEligibilityStatus === 'ineligible' && typeof markCurrentRegistrationAccountTrialIneligible === 'function') {
           const markResult = await markCurrentRegistrationAccountTrialIneligible({
