@@ -23,6 +23,7 @@ importScripts(
   'background/bootstrap/state-store.js',
   'background/bootstrap/legacy-cleanup.js',
   'background/bootstrap/auto-run-session.js',
+  'background/bootstrap/auto-run-timer-plan.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -1267,26 +1268,22 @@ function resolveLegacyAutoStepDelaySeconds(input = {}) {
   return Math.round((minSeconds + maxSeconds) / 2);
 }
 
+const autoRunTimerPlanManager = self.MultiPageBackgroundAutoRunTimerPlan.createAutoRunTimerPlanManager({
+  autoRunMaxRetriesPerRound: AUTO_RUN_MAX_RETRIES_PER_ROUND,
+  kindBeforeRetry: AUTO_RUN_TIMER_KIND_BEFORE_RETRY,
+  kindBetweenRounds: AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS,
+  kindScheduledStart: AUTO_RUN_TIMER_KIND_SCHEDULED_START,
+  formatAutoRunScheduleTime: (timestamp) => formatAutoRunScheduleTime(timestamp),
+  normalizeAutoRunSessionId: (value) => normalizeAutoRunSessionId(value),
+  serializeAutoRunRoundSummaries: (totalRuns, roundSummaries) => serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
+});
+
 function normalizeRunCount(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return 1;
-  }
-  return Math.max(1, Math.floor(numeric));
+  return autoRunTimerPlanManager.normalizeRunCount(value);
 }
 
 function normalizeAutoRunTimerKind(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return AUTO_RUN_TIMER_KIND_SCHEDULED_START;
-  }
-  if (normalized === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
-    return AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS;
-  }
-  if (normalized === AUTO_RUN_TIMER_KIND_BEFORE_RETRY) {
-    return AUTO_RUN_TIMER_KIND_BEFORE_RETRY;
-  }
-  return '';
+  return autoRunTimerPlanManager.normalizeAutoRunTimerKind(value);
 }
 
 function normalizeAutoRunSessionId(value) {
@@ -1318,148 +1315,19 @@ function getCurrentAutoRunSessionId() {
 }
 
 function normalizeAutoRunTimerPlan(plan) {
-  if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
-    return null;
-  }
-
-  const kind = normalizeAutoRunTimerKind(plan.kind);
-  if (!kind) {
-    return null;
-  }
-
-  const fireAt = Number(plan.fireAt);
-  if (!Number.isFinite(fireAt)) {
-    return null;
-  }
-
-  const totalRuns = normalizeRunCount(plan.totalRuns);
-  const autoRunSkipFailures = true;
-  const autoRunRetryNonFreeTrial = Boolean(plan.autoRunRetryNonFreeTrial);
-  const autoRunRetryLegacyWalletCallback = Boolean(plan.autoRunRetryLegacyWalletCallback);
-  const autoRunRetryShortLinkError = plan.autoRunRetryShortLinkError !== undefined
-    ? Boolean(plan.autoRunRetryShortLinkError)
-    : true;
-  const mode = plan.mode === 'continue' ? 'continue' : 'restart';
-  const currentRun = Math.max(0, Math.min(totalRuns, Math.floor(Number(plan.currentRun) || 0)));
-  const attemptRun = Math.max(
-    0,
-    Math.min(AUTO_RUN_MAX_RETRIES_PER_ROUND + 1, Math.floor(Number(plan.attemptRun) || 0))
-  );
-  const autoRunSessionId = normalizeAutoRunSessionId(plan.autoRunSessionId ?? plan.sessionId);
-  const roundSummaries = serializeAutoRunRoundSummaries(totalRuns, plan.roundSummaries);
-  const countdownTitle = String(plan.countdownTitle || '').trim();
-  const countdownNote = String(plan.countdownNote || '').trim();
-
-  if (kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return {
-      kind,
-      fireAt,
-      totalRuns,
-      autoRunSkipFailures,
-      autoRunRetryNonFreeTrial,
-      autoRunRetryLegacyWalletCallback,
-      autoRunRetryShortLinkError,
-      mode,
-      currentRun: 0,
-      attemptRun: 0,
-      autoRunSessionId,
-      roundSummaries: [],
-      countdownTitle: countdownTitle || '已计划自动运行',
-      countdownNote: countdownNote || `计划于 ${formatAutoRunScheduleTime(fireAt)} 开始`,
-    };
-  }
-
-  if (kind === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
-    const normalizedCurrentRun = Math.max(1, Math.min(totalRuns, currentRun));
-    const normalizedAttemptRun = Math.max(1, attemptRun);
-    return {
-      kind,
-      fireAt,
-      totalRuns,
-      autoRunSkipFailures,
-      autoRunRetryNonFreeTrial,
-      autoRunRetryLegacyWalletCallback,
-      autoRunRetryShortLinkError,
-      mode: 'restart',
-      currentRun: normalizedCurrentRun,
-      attemptRun: normalizedAttemptRun,
-      autoRunSessionId,
-      roundSummaries,
-      countdownTitle: countdownTitle || '线程间隔中',
-      countdownNote: countdownNote || `第 ${Math.min(normalizedCurrentRun + 1, totalRuns)}/${totalRuns} 轮即将开始`,
-    };
-  }
-
-  const normalizedCurrentRun = Math.max(1, Math.min(totalRuns, currentRun));
-  const normalizedAttemptRun = Math.max(1, attemptRun);
-  return {
-    kind,
-    fireAt,
-    totalRuns,
-    autoRunSkipFailures,
-    autoRunRetryNonFreeTrial,
-    autoRunRetryLegacyWalletCallback,
-    autoRunRetryShortLinkError,
-    mode: 'restart',
-    currentRun: normalizedCurrentRun,
-    attemptRun: normalizedAttemptRun,
-    autoRunSessionId,
-    roundSummaries,
-    countdownTitle: countdownTitle || '线程间隔中',
-    countdownNote: countdownNote || `第 ${normalizedCurrentRun}/${totalRuns} 轮第 ${normalizedAttemptRun} 次尝试即将开始`,
-  };
+  return autoRunTimerPlanManager.normalizeAutoRunTimerPlan(plan);
 }
 
 function normalizeAutoRunTimerPlanFromState(state = {}) {
-  const directPlan = normalizeAutoRunTimerPlan(state.autoRunTimerPlan);
-  if (directPlan) {
-    return directPlan;
-  }
-
-  if (state.autoRunPhase !== 'scheduled') {
-    return null;
-  }
-
-  const legacyScheduledAt = Number(state.scheduledAutoRunAt);
-  if (!Number.isFinite(legacyScheduledAt)) {
-    return null;
-  }
-
-  return normalizeAutoRunTimerPlan({
-    kind: AUTO_RUN_TIMER_KIND_SCHEDULED_START,
-    fireAt: legacyScheduledAt,
-    totalRuns: state.scheduledAutoRunPlan?.totalRuns ?? state.autoRunTotalRuns,
-    autoRunSkipFailures: true,
-    autoRunRetryNonFreeTrial: state.scheduledAutoRunPlan?.autoRunRetryNonFreeTrial ?? state.autoRunRetryNonFreeTrial,
-    autoRunRetryLegacyWalletCallback: state.scheduledAutoRunPlan?.autoRunRetryLegacyWalletCallback ?? state.autoRunRetryLegacyWalletCallback,
-    autoRunRetryShortLinkError: state.scheduledAutoRunPlan?.autoRunRetryShortLinkError ?? state.autoRunRetryShortLinkError,
-    autoRunSessionId: state.autoRunSessionId,
-    mode: state.scheduledAutoRunPlan?.mode,
-  });
+  return autoRunTimerPlanManager.normalizeAutoRunTimerPlanFromState(state);
 }
 
 function getAutoRunTimerPlanPhase(kind = '') {
-  return kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START ? 'scheduled' : 'waiting_interval';
+  return autoRunTimerPlanManager.getAutoRunTimerPlanPhase(kind);
 }
 
 function getAutoRunTimerStatusPayload(plan) {
-  const normalizedPlan = normalizeAutoRunTimerPlan(plan);
-  if (!normalizedPlan) {
-    return null;
-  }
-
-  const phase = getAutoRunTimerPlanPhase(normalizedPlan.kind);
-  return {
-    phase,
-    currentRun: normalizedPlan.currentRun,
-    totalRuns: normalizedPlan.totalRuns,
-    attemptRun: normalizedPlan.attemptRun,
-    sessionId: normalizedPlan.autoRunSessionId,
-    scheduledAt: phase === 'scheduled' ? normalizedPlan.fireAt : null,
-    countdownAt: normalizedPlan.fireAt,
-    countdownTitle: normalizedPlan.countdownTitle,
-    countdownNote: normalizedPlan.countdownNote,
-  };
+  return autoRunTimerPlanManager.getAutoRunTimerStatusPayload(plan);
 }
 
 function normalizeEmailGenerator(value = '') {
