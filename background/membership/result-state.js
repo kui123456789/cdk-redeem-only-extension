@@ -121,6 +121,12 @@
   }
 
   function normalizeResultsTimestamp(value = '') {
+    if (value !== undefined && value !== null && normalizeString(value) !== '') {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return Math.floor(numeric > 1000000000000 ? numeric : numeric * 1000);
+      }
+    }
     const timestamp = Date.parse(normalizeString(value));
     return Number.isFinite(timestamp) ? timestamp : 0;
   }
@@ -419,9 +425,28 @@
     (Array.isArray(items) ? items : []).forEach((item) => {
       const normalized = normalizeResultItem(item);
       if (!normalized.email) return;
-      byEmail[normalized.email] = normalized;
+      const updatedAt = getResultItemUpdatedAt(item, normalized);
+      const previous = byEmail[normalized.email];
+      if (!previous || updatedAt >= previous.updatedAt) {
+        byEmail[normalized.email] = { item: normalized, updatedAt };
+      }
     });
-    return Object.values(byEmail);
+    return Object.values(byEmail).map((entry) => entry.item);
+  }
+
+  function getResultItemUpdatedAt(...items) {
+    return Math.max(
+      0,
+      ...items.map((item) => Math.max(
+        normalizeResultsTimestamp(item?.updatedAt),
+        normalizeResultsTimestamp(item?.checkedAt),
+        normalizeResultsTimestamp(item?.trialEligibilityCheckedAt),
+        normalizeResultsTimestamp(item?.accessTokenUpdatedAt),
+        normalizeResultsTimestamp(item?.redeemAttemptedAt),
+        normalizeResultsTimestamp(item?.redeemLastFailedAt),
+        normalizeResultsTimestamp(item?.redeemSuccessAt)
+      ))
+    );
   }
 
   function normalizeTrialEligibilitySummaryItem(item = {}) {

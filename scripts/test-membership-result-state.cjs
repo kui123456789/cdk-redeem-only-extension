@@ -60,6 +60,31 @@ test('duplicate emails keep the newest updated result', () => {
   assert.equal(items[0].checkedAt, '2026-07-07T02:00:00.000Z');
 });
 
+test('duplicate emails keep the newest result when newer item appears first', () => {
+  const items = resultState.dedupeResultItemsByEmail([
+    {
+      email: 'dup@example.com',
+      status: 'paid',
+      updatedAt: '2026-07-07T03:00:00.000Z',
+      checkedAt: '2026-07-07T02:00:00.000Z',
+      reason: 'newer-first',
+    },
+    {
+      email: 'DUP@example.com',
+      status: 'free',
+      updatedAt: 1700000000,
+      checkedAt: '2026-07-07T01:00:00.000Z',
+      reason: 'older-later',
+    },
+  ]);
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0].email, 'dup@example.com');
+  assert.equal(items[0].status, 'paid');
+  assert.equal(items[0].reason, 'newer-first');
+  assert.equal(items[0].checkedAt, '2026-07-07T02:00:00.000Z');
+});
+
 test('Free export rows preserve password, 2FA or Passkey marker, URL, AT, and timestamp', () => {
   const rows = resultState.buildResultExportRows({
     items: [
