@@ -18,6 +18,8 @@ importScripts(
   'background/runtime-state.js',
   'background/settings-normalizers.js',
   'background/flow-definition-resolver.js',
+  'background/bootstrap/flow-runtime.js',
+  'background/bootstrap/settings-defaults.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -74,70 +76,42 @@ importScripts(
   'content/activation-utils.js'
 );
 
-const DEFAULT_ACTIVE_FLOW_ID = 'openai';
-const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
-const NORMAL_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: false,
-}) || [];
-const PLUS_UPI_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-}) || NORMAL_STEP_DEFINITIONS;
-const NO_2FA_FREE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-  registrationFreeRoute: 'no-2fa-free',
-}) || PLUS_UPI_STEP_DEFINITIONS;
-const PASSKEY_FREE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-  registrationFreeRoute: 'passkey-free',
-}) || PLUS_UPI_STEP_DEFINITIONS;
-const PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-  upiRedeemStopAfterRedeem: true,
-}) || PLUS_UPI_STEP_DEFINITIONS.slice(0, 7);
-const LOCAL_CPA_JSON_NO_RT_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  panelMode: 'local-cpa-json-no-rt',
-  plusModeEnabled: true,
-}) || PLUS_UPI_STEP_DEFINITIONS.slice(0, 6);
-const PLUS_STEP_DEFINITIONS = PLUS_UPI_STEP_DEFINITIONS;
-const ALL_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getAllSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-}) || [
-  ...NORMAL_STEP_DEFINITIONS,
-  ...PLUS_UPI_STEP_DEFINITIONS,
-];
-const STEP_IDS = Array.from(new Set(ALL_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)))
-  .sort((left, right) => left - right);
-const DEFAULT_STEP_STATUSES = Object.fromEntries(STEP_IDS.map((stepId) => [stepId, 'pending']));
-const DEFAULT_NODE_IDS = Array.from(new Set(ALL_STEP_DEFINITIONS
-  .map((definition) => String(definition?.key || '').trim())
-  .filter(Boolean)));
-const DEFAULT_NODE_STATUSES = Object.fromEntries(DEFAULT_NODE_IDS.map((nodeId) => [nodeId, 'pending']));
-const NORMAL_STEP_IDS = NORMAL_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)
-  .sort((left, right) => left - right);
-const PLUS_UPI_STEP_IDS = PLUS_UPI_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)
-  .sort((left, right) => left - right);
-const PLUS_STEP_IDS = PLUS_UPI_STEP_IDS;
-const LAST_STEP_ID = Math.max(
-  NORMAL_STEP_IDS[NORMAL_STEP_IDS.length - 1] || 10,
-  PLUS_UPI_STEP_IDS[PLUS_UPI_STEP_IDS.length - 1] || 10
-);
-const FINAL_OAUTH_CHAIN_START_STEP = 7;
+const {
+  DEFAULT_ACTIVE_FLOW_ID,
+  PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
+  NORMAL_STEP_DEFINITIONS,
+  PLUS_UPI_STEP_DEFINITIONS,
+  NO_2FA_FREE_STEP_DEFINITIONS,
+  PASSKEY_FREE_STEP_DEFINITIONS,
+  PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS,
+  LOCAL_CPA_JSON_NO_RT_STEP_DEFINITIONS,
+  PLUS_STEP_DEFINITIONS,
+  ALL_STEP_DEFINITIONS,
+  STEP_IDS,
+  DEFAULT_STEP_STATUSES,
+  DEFAULT_NODE_IDS,
+  DEFAULT_NODE_STATUSES,
+  NORMAL_STEP_IDS,
+  PLUS_UPI_STEP_IDS,
+  PLUS_STEP_IDS,
+  LAST_STEP_ID,
+  FINAL_OAUTH_CHAIN_START_STEP,
+  flowDefinitionResolver,
+} = self.MultiPageBackgroundFlowRuntime.create({
+  defaultActiveFlowId: 'openai',
+  getPanelMode: (state) => getPanelMode(state),
+  getRootScope: () => self,
+  getWorkflowEngine: () => {
+    try {
+      return workflowEngine || null;
+    } catch {
+      return null;
+    }
+  },
+  isPlusModeState,
+  normalizePlusAccountAccessStrategyForState,
+  normalizePlusPaymentMethod,
+});
 
 const {
   extractVerificationCodeFromMessage,
@@ -679,29 +653,6 @@ function normalizePlusPaymentMethod(value = '') {
   return PLUS_PAYMENT_METHOD_UPI;
 }
 
-const flowDefinitionResolver = self.MultiPageFlowDefinitionResolver?.createFlowDefinitionResolver?.({
-  defaultActiveFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  finalOauthChainStartStep: FINAL_OAUTH_CHAIN_START_STEP,
-  getPanelMode: (state) => getPanelMode(state),
-  getRootScope: () => self,
-  getWorkflowEngine: () => {
-    try {
-      return workflowEngine || null;
-    } catch {
-      return null;
-    }
-  },
-  isPlusModeState,
-  normalStepDefinitions: NORMAL_STEP_DEFINITIONS,
-  normalStepIds: NORMAL_STEP_IDS,
-  normalizePlusAccountAccessStrategyForState,
-  normalizePlusPaymentMethod,
-  plusStepDefinitions: PLUS_UPI_STEP_DEFINITIONS,
-  plusStepIds: PLUS_UPI_STEP_IDS,
-  plusUpiRedeemOnlyStepDefinitions: PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS,
-  signupMethodEmail: SIGNUP_METHOD_EMAIL,
-});
-
 function requireFlowDefinitionResolver() {
   if (!flowDefinitionResolver) {
     throw new Error('流程定义解析模块未加载。');
@@ -832,186 +783,47 @@ function setupDeclarativeNetRequestRules() {
 // 状态管理（chrome.storage.session + chrome.storage.local）
 // ============================================================
 
-const PERSISTED_SETTING_DEFAULTS = {
-  panelMode: DEFAULT_PANEL_MODE,
-  localCpaJsonPluginDir: '',
-  localCpaJsonRelativeAuthDir: DEFAULT_LOCAL_CPA_JSON_RELATIVE_AUTH_DIR,
-  vpsUrl: '',
-  vpsPassword: '',
-  localCpaStep9Mode: DEFAULT_LOCAL_CPA_STEP9_MODE,
-  sub2apiUrl: DEFAULT_SUB2API_URL,
-  sub2apiEmail: '',
-  sub2apiPassword: '',
-  sub2apiGroupName: DEFAULT_SUB2API_GROUP_NAME,
-  sub2apiGroupNames: DEFAULT_SUB2API_GROUP_NAMES,
-  sub2apiAccountPriority: DEFAULT_SUB2API_ACCOUNT_PRIORITY,
-  codex2apiUrl: DEFAULT_CODEX2API_URL,
-  codex2apiAdminKey: '',
-  customPassword: '',
-  plusModeEnabled: true,
-  plusPaymentMethod: DEFAULT_PLUS_PAYMENT_METHOD,
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-  upiRedeemApiBaseUrl: '',
-  upiSubscriptionApiBaseUrl: 'https://cha.nerver.cc',
-  upiRedeemExternalApiKey: '',
-  upiRedeemClientId: '',
-  upiRedeemStopAfterRedeem: true,
-  upiRedeemContinueAfterRedeem: false,
-  totpMfaAfterProfileEnabled: true,
-  registrationFreeRoute: 'full-2fa',
-  upiCredentialMembershipCheckTotpApiBaseUrl: 'https://cha.nerver.cc',
-  upiCredentialMembershipCheckTotpLookupKey: '',
-  setGptPasswordVerificationWaitSeconds: 10,
-  signupVerificationCodeWaitSeconds: 10,
-  upiRedeemCdkeyPoolText: '',
-  upiRedeemCdkeyUsage: {},
-  idealRedeemCdkeyPoolText: '',
-  idealRedeemCdkeyUsage: {},
-  autoRunSkipFailures: true,
-  autoRunRetryNonFreeTrial: false,
-  autoRunFallbackThreadIntervalMinutes: 0,
-  oauthFlowTimeoutEnabled: true,
-  autoRunDelayEnabled: false,
-  operationDelayEnabled: false,
-  autoRunDelayMinutes: 30,
-  autoStepDelaySeconds: 10,
-  step6CookieCleanupEnabled: false,
-  signupMethod: DEFAULT_SIGNUP_METHOD,
-  verificationResendCount: DEFAULT_VERIFICATION_RESEND_COUNT,
-  mailProvider: HOTMAIL_PROVIDER,
-  mail2925Mode: DEFAULT_MAIL_2925_MODE,
-  mail2925UseAccountPool: false,
-  emailGenerator: CUSTOM_EMAIL_POOL_GENERATOR,
-  customMailProviderPool: [],
-  customEmailPool: [],
-  customEmailPoolEntries: [],
-  selectedCustomEmailPoolEmail: '',
-  autoDeleteUsedIcloudAlias: false,
-  icloudHostPreference: 'auto',
-  icloudTargetMailboxType: 'icloud-inbox',
-  icloudForwardMailProvider: 'qq',
-  icloudApiBaseUrl: '',
-  icloudApiAdminKey: '',
-  icloudFetchMode: 'reuse_existing',
-  accountRunHistoryTextEnabled: true,
-  accountRunHistoryHelperBaseUrl: DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL,
-  gmailBaseEmail: '',
-  mail2925BaseEmail: '',
-  currentMail2925AccountId: '',
-  emailPrefix: '',
-  inbucketHost: '',
-  inbucketMailbox: '',
-  hotmailServiceMode: HOTMAIL_SERVICE_MODE_LOCAL,
-  hotmailRemoteBaseUrl: DEFAULT_HOTMAIL_REMOTE_BASE_URL,
-  hotmailLocalBaseUrl: DEFAULT_HOTMAIL_LOCAL_BASE_URL,
-  luckmailApiKey: '',
-  luckmailBaseUrl: DEFAULT_LUCKMAIL_BASE_URL,
-  luckmailEmailType: DEFAULT_LUCKMAIL_EMAIL_TYPE,
-  luckmailDomain: '',
-  luckmailUsedPurchases: {},
-  luckmailPreserveTagId: 0,
-  luckmailPreserveTagName: DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME,
-  cloudflareDomain: '',
-  cloudflareDomains: [],
-  cloudflareTempEmailBaseUrl: '',
-  cloudflareTempEmailAdminAuth: '',
-  cloudflareTempEmailCustomAuth: '',
-  cloudflareTempEmailLookupMode: DEFAULT_CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE,
-  cloudflareTempEmailReceiveMailbox: '',
-  cloudflareTempEmailUseRandomSubdomain: false,
-  cloudflareTempEmailDomain: '',
-  cloudflareTempEmailDomains: [],
-  cloudMailBaseUrl: '',
-  cloudMailAdminEmail: '',
-  cloudMailAdminPassword: '',
-  cloudMailToken: '',
-  cloudMailReceiveMailbox: '',
-  cloudMailDomain: '',
-  cloudMailDomains: [],
-  freemailBaseUrl: '',
-  freemailAdminUsername: '',
-  freemailAdminPassword: '',
-  freemailDomain: '',
-  freemailDomains: [],
-  moemailBaseUrl: '',
-  moemailApiKey: '',
-  moemailDomain: '',
-  moemailDomains: [],
-  moemailEmailId: '',
-  yydsMailBaseUrl: '',
-  yydsMailApiKey: '',
-  yydsMailDomain: '',
-  outlookEmailPlusBaseUrl: DEFAULT_OUTLOOK_EMAIL_PLUS_BASE_URL,
-  outlookEmailPlusApiKey: '',
-  outlookEmailPlusProvider: 'outlook',
-  outlookEmailPlusProjectKey: 'openai',
-  outlookEmailPlusCallerIdPrefix: 'cdk-redeem',
-  outlookEmailPlusAliasMaxPerMailbox: OUTLOOK_ALIAS_DEFAULT_MAX_PER_ACCOUNT,
-  hotmailAccounts: [],
-  hotmailAliasEnabled: false,
-  outlookAliasMaxPerAccount: OUTLOOK_ALIAS_DEFAULT_MAX_PER_ACCOUNT,
-  hotmailAliasUsage: {},
-  mail2925Accounts: [],
-};
-
-Object.assign(PERSISTED_SETTING_DEFAULTS, {
-  // Keep this in sync with sidepanel collectSettingsPayload(). These newer UI
-  // sections used to live only in session state, so export/import missed them.
-  sub2apiDefaultProxyName: '',
-  chatgptSessionReaderMode: 'us_pp',
-  chatgptSessionReaderProfiles: {},
-  upiRedeemFailedAccountRetryLimit: 3,
-  cdkPoolText: '',
-  upiRedeemCdkPoolText: '',
-  pixRedeemCdkeyPoolText: '',
-  cdkUsage: {},
-  upiRedeemCdkUsage: {},
-  pixRedeemCdkeyUsage: {},
-  legacyWalletEmail: '',
-  legacyWalletPassword: '',
-  currentLegacyWalletAccountId: '',
-  legacyWalletAccounts: [],
-  legacyPayCountryCode: '+86',
-  legacyPayOtp: '',
-  legacyPayPin: '',
-  legacyPayHelperApiUrl: '',
-  legacyPayHelperApiKey: '',
-  legacyPayHelperCardKey: '',
-  legacyPayHelperCountryCode: '+86',
-  legacyPayHelperPin: '',
-  legacyPayHelperOtpChannel: 'whatsapp',
-  autoRunRetryLegacyWalletCallback: false,
-  autoRunRetryShortLinkError: true,
-  plusRemovedContactOauthDelaySeconds: 0,
-  chatgptSessionReaderCloudConversionEnabled: false,
-  chatgptSessionReaderCloudConversionApiUrl: BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_URL,
-  chatgptSessionReaderCloudConversionApiKey: BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_KEY,
-  chatgptSessionReaderConversionProxyUrl: '',
-  removedContactVerificationUrl: '',
-  removedContactCardDeclinedRetryEnabled: true,
-  removedContactFirstDirectResendEnabled: false,
-  removedContactFirstResendWaitSeconds: HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS,
-  removedContactSubsequentResendWaitSeconds: HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS,
-  removedContactVerificationPollAttempts: HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT,
-  removedContactVerificationPollIntervalSeconds: HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS,
-  removedContactVerificationResendMaxAttempts: HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT,
-  removedPaymentWorkerEnabled: true,
-  removedPaymentWorkerBrowserBackend: 'local',
-  removedPaymentWorkerAdsPowerApiBase: 'http://127.0.0.1:50325',
-  removedPaymentWorkerAdsPowerApiKey: '',
-  removedPaymentWorkerAdsPowerProfileId: '',
-  removedPaymentWorkerRoxyBrowserApiBase: 'http://127.0.0.1:50000',
-  removedPaymentWorkerRoxyBrowserApiKey: '',
-  removedPaymentWorkerRoxyBrowserProfileId: '',
-  removedPaymentWorkerStripePublishableKey: '',
-  removedPaymentWorkerDeviceId: '',
-  removedPaymentWorkerUserAgent: '',
-  removedPaymentWorkerMaxAttempts: 10,
-  removedPaymentWorkerPaymentLocale: 'en',
-  removedPaymentWorkerCheckoutRebuildMaxAttempts: 3,
-  removedPaymentWorkerDefaultProxy: '',
-  removedPaymentWorkerProviderProxy: '',
+const {
+  PERSISTED_SETTING_DEFAULTS,
+  LEGACY_UPI_REDEEM_SETTING_KEY_MAP,
+  LEGACY_UPI_REDEEM_SETTING_KEYS,
+  SETTINGS_EXPORT_SCHEMA_VERSION,
+} = self.MultiPageBackgroundSettingsDefaults.create({
+  BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_KEY,
+  BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_URL,
+  CUSTOM_EMAIL_POOL_GENERATOR,
+  DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL,
+  DEFAULT_CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE,
+  DEFAULT_CODEX2API_URL,
+  DEFAULT_HOTMAIL_LOCAL_BASE_URL,
+  DEFAULT_HOTMAIL_REMOTE_BASE_URL,
+  DEFAULT_LOCAL_CPA_JSON_RELATIVE_AUTH_DIR,
+  DEFAULT_LOCAL_CPA_STEP9_MODE,
+  DEFAULT_LUCKMAIL_BASE_URL,
+  DEFAULT_LUCKMAIL_EMAIL_TYPE,
+  DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME,
+  DEFAULT_MAIL_2925_MODE,
+  DEFAULT_OUTLOOK_EMAIL_PLUS_BASE_URL,
+  DEFAULT_PANEL_MODE,
+  DEFAULT_PLUS_PAYMENT_METHOD,
+  DEFAULT_SIGNUP_METHOD,
+  DEFAULT_SUB2API_ACCOUNT_PRIORITY,
+  DEFAULT_SUB2API_GROUP_NAME,
+  DEFAULT_SUB2API_GROUP_NAMES,
+  DEFAULT_SUB2API_PROXY_NAME,
+  DEFAULT_SUB2API_URL,
+  DEFAULT_VERIFICATION_RESEND_COUNT,
+  HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS,
+  HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS,
+  HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT,
+  HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS,
+  HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT,
+  HOTMAIL_SERVICE_MODE_LOCAL,
+  HOTMAIL_PROVIDER,
+  OUTLOOK_ALIAS_DEFAULT_MAX_PER_ACCOUNT,
+  PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
 });
+// Static smoke-audit marker for the extracted persisted default: autoStepDelaySeconds: 10
 
 const persistentSettingsRegistry = self.MultiPagePersistentSettings?.createPersistentSettingsModule?.(PERSISTED_SETTING_DEFAULTS) || {
   defaults: PERSISTED_SETTING_DEFAULTS,
@@ -1022,17 +834,6 @@ const persistentSettingsRegistry = self.MultiPagePersistentSettings?.createPersi
   },
 };
 const PERSISTED_SETTING_KEYS = persistentSettingsRegistry.keys;
-const LEGACY_UPI_REDEEM_SETTING_KEY_MAP = Object.freeze({
-  upiRedeemApiBaseUrl: 'pixRedeemApiBaseUrl',
-  upiRedeemExternalApiKey: 'pixRedeemExternalApiKey',
-  upiRedeemClientId: 'pixRedeemClientId',
-  upiRedeemStopAfterRedeem: 'pixRedeemStopAfterRedeem',
-  upiRedeemContinueAfterRedeem: 'pixRedeemContinueAfterRedeem',
-  upiRedeemCdkeyPoolText: 'pixRedeemCdkeyPoolText',
-  upiRedeemCdkeyUsage: 'pixRedeemCdkeyUsage',
-});
-const LEGACY_UPI_REDEEM_SETTING_KEYS = Object.values(LEGACY_UPI_REDEEM_SETTING_KEY_MAP);
-const SETTINGS_EXPORT_SCHEMA_VERSION = 1;
 const SETTINGS_EXPORT_FILENAME_PREFIX = 'multipage-settings';
 const STEP6_REGISTRATION_SUCCESS_WAIT_MS = 4000;
 
