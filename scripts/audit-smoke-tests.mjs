@@ -716,9 +716,9 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-session-page.js', 220, 'signup session page size guard');
   assertFileLineCountAtMost('content/signup-page-detector.js', 400, 'signup detector size guard');
   assertFileLineCountAtMost('content/signup-page-orchestrator.js', 300, 'signup orchestrator size guard');
-  assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
-  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7500, 'membership checker growth guard');
-  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');
+  assertFileLineCountAtMost('content/signup-page.js', 7000, 'signup content script growth guard');
+  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 6700, 'membership checker growth guard');
+  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
 }
 
 function checkTrackedSourceLineWarnings() {

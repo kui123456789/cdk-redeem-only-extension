@@ -707,7 +707,17 @@ git commit -m "refactor: extract auth page text detectors"
 - Modify: `scripts/audit-smoke-tests.mjs`
 - Modify: `docs/superpowers/plans/2026-07-07-codebase-decomposition-next-steps.md`
 
-- [ ] **Step 1: Measure tracked source sizes**
+**Execution Results:**
+
+| File | Current Lines | Guard |
+| --- | ---: | ---: |
+| `content/signup-page.js` | 6,855 | 7,000 |
+| `background/upi-credential-membership-checker.js` | 6,529 | 6,700 |
+| `sidepanel/account-records-manager.js` | 5,438 | 5,600 |
+
+The two largest files, `background.js` and `sidepanel/sidepanel.js`, remain above the global smoke warning threshold and should be handled in later focused passes.
+
+- [x] **Step 1: Measure tracked source sizes**
 
 Run:
 
@@ -723,19 +733,19 @@ Get-ChildItem -File -Recurse -Include *.js,*.mjs,*.cjs |
   Format-Table -AutoSize
 ```
 
-- [ ] **Step 2: Tighten smoke warning targets only when achieved**
+- [x] **Step 2: Tighten smoke warning targets only when achieved**
 
 If `sidepanel/account-records-manager.js`, `background/upi-credential-membership-checker.js`, or `content/signup-page.js` drop below a meaningful boundary, add warnings in `scripts/audit-smoke-tests.mjs` to prevent those files from growing back above that boundary.
 
-Use only achieved thresholds. Example:
+Applied achieved thresholds:
 
 ```javascript
-warnIfTrackedSourceOverLines('sidepanel/account-records-manager.js', 4500);
-warnIfTrackedSourceOverLines('background/upi-credential-membership-checker.js', 6500);
-warnIfTrackedSourceOverLines('content/signup-page.js', 5500);
+assertFileLineCountAtMost('content/signup-page.js', 7000, 'signup content script growth guard');
+assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 6700, 'membership checker growth guard');
+assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
 ```
 
-- [ ] **Step 3: Run the full verification set**
+- [x] **Step 3: Run the full verification set**
 
 Run:
 
@@ -748,14 +758,11 @@ node --test scripts/test-*.cjs
 
 Expected: all commands exit `0`.
 
-- [ ] **Step 4: Commit the audit boundary**
+- [x] **Step 4: Commit the audit boundary**
 
 Run:
 
-```powershell
-git add scripts/audit-smoke-tests.mjs docs/superpowers/plans/2026-07-07-codebase-decomposition-next-steps.md
-git commit -m "docs: add next codebase decomposition plan"
-```
+Committed as `test: tighten decomposition size guards`.
 
 ---
 
