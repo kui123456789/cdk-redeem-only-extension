@@ -115,3 +115,34 @@ test('unknown and free rows keep the existing idle or missing-AT fallback behavi
   assert.match(html, /aria-valuenow="0"/);
   assert.doesNotMatch(html, /is-running is-running/);
 });
+
+test('cancel progress button escapes row and cancel-control attributes', () => {
+  const html = redeemProgress.renderUpiCredentialMembershipRedeemProgress(
+    { email: 'Victim@Example.com" onclick="alert(1)' },
+    {
+      percent: 150,
+      label: '<done>',
+      className: 'is-running" data-pwn="1',
+      running: true,
+      title: '<progress>',
+    },
+    {
+      visible: true,
+      title: 'Cancel "redeem" <now>',
+      cdkey: 'CDK-"<script>&',
+      channel: 'upi" autofocus="autofocus',
+      disabled: true,
+    }
+  );
+
+  assert.match(html, /^<button /);
+  assert.match(html, /disabled aria-label="Cancel &quot;redeem&quot; &lt;now&gt;"/);
+  assert.match(html, /style="--redeem-progress:100%;"/);
+  assert.match(html, /class="upi-membership-redeem-progress is-running&quot; data-pwn=&quot;1 is-running"/);
+  assert.match(html, /data-upi-membership-cancel-redeem="victim@example.com&quot; onclick=&quot;alert\(1\)"/);
+  assert.match(html, /data-upi-membership-cancel-cdkey="CDK-&quot;&lt;script&gt;&amp;"/);
+  assert.match(html, /data-upi-membership-cancel-channel="upi&quot; autofocus=&quot;autofocus"/);
+  assert.match(html, />&lt;done&gt;<\/span>/);
+  assert.doesNotMatch(html, /onclick="alert\(1\)"/);
+  assert.doesNotMatch(html, /<script>/);
+});

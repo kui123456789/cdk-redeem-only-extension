@@ -16,6 +16,13 @@
     const membershipRowPolicy = globalScope.SidepanelMembershipRowPolicy || {};
     const membershipRenderer = globalScope.SidepanelMembershipRenderer || {};
     const membershipRedeemProgress = globalScope.SidepanelMembershipRedeemProgress || {};
+    if (
+      typeof membershipRedeemProgress.clampRedeemProgressPercent !== 'function'
+      || typeof membershipRedeemProgress.getUpiCredentialMembershipRedeemProgressMeta !== 'function'
+      || typeof membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress !== 'function'
+    ) {
+      throw new Error('Membership redeem progress module is not loaded.');
+    }
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -2064,22 +2071,10 @@
     }
 
     function clampRedeemProgressPercent(value = 0) {
-      if (typeof membershipRedeemProgress.clampRedeemProgressPercent === 'function') {
-        return membershipRedeemProgress.clampRedeemProgressPercent(value);
-      }
-      const percent = Math.floor(Number(value) || 0);
-      return Math.max(0, Math.min(100, percent));
+      return membershipRedeemProgress.clampRedeemProgressPercent(value);
     }
 
     function getUpiCredentialMembershipRedeemProgressMeta(row = {}, results = getUpiCredentialMembershipCheckResults()) {
-      if (typeof membershipRedeemProgress.getUpiCredentialMembershipRedeemProgressMeta !== 'function') {
-        return {
-          percent: 0,
-          label: '0%',
-          className: 'is-idle',
-          title: '兑换进度',
-        };
-      }
       return membershipRedeemProgress.getUpiCredentialMembershipRedeemProgressMeta(row, results, {
         normalizeEmail: normalizeUpiCredentialMembershipEmail,
         normalizeText: normalizeUpiCredentialMembershipText,
@@ -2093,33 +2088,10 @@
     }
 
     function renderUpiCredentialMembershipRedeemProgress(row = {}, progress = {}, cancelRedeemControl = {}) {
-      if (typeof membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress === 'function') {
-        return membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress(row, progress, cancelRedeemControl, {
-          normalizeEmail: normalizeUpiCredentialMembershipEmail,
-          escapeHtml,
-        });
-      }
-      const email = normalizeUpiCredentialMembershipEmail(row.email);
-      const percent = clampRedeemProgressPercent(progress.percent);
-      const className = [
-        'upi-membership-redeem-progress',
-        progress.className || 'is-idle',
-        progress.running ? 'is-running' : '',
-      ].filter(Boolean).join(' ');
-      const title = cancelRedeemControl.visible
-        ? cancelRedeemControl.title
-        : (progress.title || '兑换进度');
-      const content = `
-        <span class="upi-membership-redeem-progress-track" aria-hidden="true">
-          <span class="upi-membership-redeem-progress-bar"></span>
-        </span>
-        <span class="upi-membership-redeem-progress-label">${escapeHtml(progress.label || `${percent}%`)}</span>
-      `;
-      const commonAttrs = `class="${escapeHtml(className)}" style="--redeem-progress:${escapeHtml(String(percent))}%;" title="${escapeHtml(title)}"`;
-      if (cancelRedeemControl.visible) {
-        return `<button ${commonAttrs} type="button" data-upi-membership-cancel-redeem="${escapeHtml(email)}" data-upi-membership-cancel-cdkey="${escapeHtml(cancelRedeemControl.cdkey)}" data-upi-membership-cancel-channel="${escapeHtml(cancelRedeemControl.channel || 'upi')}" ${cancelRedeemControl.disabled ? 'disabled' : ''} aria-label="${escapeHtml(title)}">${content}</button>`;
-      }
-      return `<span ${commonAttrs} role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${escapeHtml(String(percent))}">${content}</span>`;
+      return membershipRedeemProgress.renderUpiCredentialMembershipRedeemProgress(row, progress, cancelRedeemControl, {
+        normalizeEmail: normalizeUpiCredentialMembershipEmail,
+        escapeHtml,
+      });
     }
 
     function normalizeTrialEligibilityStatus(value = '') {

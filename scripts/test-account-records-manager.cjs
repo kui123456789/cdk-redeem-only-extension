@@ -2,12 +2,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 delete globalThis.SidepanelAccountRecordsViewModel;
+delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-manager.js');
 
+test('createAccountRecordsManager fails loudly when redeem progress module is unavailable', () => {
+  assert.throws(
+    () => globalThis.SidepanelAccountRecordsManager.createAccountRecordsManager({}),
+    /Membership redeem progress module is not loaded/
+  );
+});
+
 test('summarizeAccountRunHistory preserves counts when view model global is unavailable', () => {
   assert.equal(globalThis.SidepanelAccountRecordsViewModel, undefined);
+  globalThis.SidepanelMembershipRedeemProgress = {
+    clampRedeemProgressPercent: () => 0,
+    getUpiCredentialMembershipRedeemProgressMeta: () => ({}),
+    renderUpiCredentialMembershipRedeemProgress: () => '',
+  };
   const manager = globalThis.SidepanelAccountRecordsManager.createAccountRecordsManager({});
 
   assert.deepEqual(manager.summarizeAccountRunHistory([

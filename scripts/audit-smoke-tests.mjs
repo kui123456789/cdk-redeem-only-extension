@@ -381,7 +381,8 @@ function checkStaticContracts() {
   assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
   assertIncludes(membershipRenderer, 'SidepanelMembershipRenderer', 'membership renderer global');
-  assertIncludes(membershipRenderer, 'renderRedeemProgress', 'membership renderer progress helper');
+  assertIncludes(membershipRenderer, 'renderFlow', 'membership renderer flow helper');
+  assertNotMatch(membershipRenderer, /\brenderRedeemProgress\b/, 'membership renderer should not duplicate redeem progress rendering');
   assertIncludes(membershipRedeemProgress, 'SidepanelMembershipRedeemProgress', 'membership redeem progress global');
   assertIncludes(membershipRedeemProgress, 'getUpiCredentialMembershipRedeemProgressMeta', 'membership redeem progress metadata helper');
   assertIncludes(membershipRedeemProgress, 'renderUpiCredentialMembershipRedeemProgress', 'membership redeem progress renderer');
