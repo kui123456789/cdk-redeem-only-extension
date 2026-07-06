@@ -1644,6 +1644,41 @@ const parseCustomEmailPoolEntryValueForSidepanel = window.MailProviderUtils?.par
       verificationUrl,
     };
   });
+const settingsNormalization = window.SidepanelSettingsNormalization.createSettingsNormalization({
+  parseCustomEmailPoolEntryValue: parseCustomEmailPoolEntryValueForSidepanel,
+  normalizeCustomEmailVerificationUrl: normalizeCustomEmailVerificationUrlValue,
+  cryptoApi: window.crypto,
+  verificationResendCountMin: VERIFICATION_RESEND_COUNT_MIN,
+  verificationResendCountMax: VERIFICATION_RESEND_COUNT_MAX,
+});
+const {
+  normalizeVerificationResendCount,
+  splitCustomEmailPoolEntrySource,
+  normalizeCustomEmailPoolEntries,
+  normalizeCustomEmailPoolEntryEmail,
+  createCustomEmailPoolEntryId,
+  normalizeCustomEmailPoolTrialEligibilityStatus,
+  isCustomEmailPoolEntryTrialIneligible,
+  isCustomEmailPoolEntryAvailable,
+  normalizeCustomEmailPoolEntryObjects,
+  formatCustomEmailPoolEntryValue,
+  normalizeCustomEmailPoolEntryValues,
+  normalizeCloudflareDomainValue,
+  normalizeCloudflareDomains,
+  normalizeCloudflareTempEmailBaseUrlValue,
+  normalizeCloudflareTempEmailReceiveMailboxValue,
+  normalizeCloudflareTempEmailDomainValue,
+  normalizeCloudflareTempEmailDomains,
+  normalizeCloudMailBaseUrlValue,
+  normalizeCloudMailReceiveMailboxValue,
+  normalizeCloudMailDomainValue,
+  normalizeMoemailBaseUrlValue,
+  normalizeMoemailDomainValue,
+  normalizeYydsMailBaseUrlValue,
+  normalizeYydsMailDomainValue,
+  normalizeFreemailBaseUrlValue,
+  normalizeFreemailDomainValue,
+} = settingsNormalization;
 const ICLOUD_FORWARD_MAIL_PROVIDER_LABELS = Object.fromEntries(
   getIcloudForwardMailProviderOptions().map((option) => [option.value, option.label])
 );
@@ -5634,148 +5669,9 @@ function normalizeOutlookEmailPlusAliasMaxPerMailbox(value) {
   return Math.min(50, Math.max(1, Math.floor(numeric)));
 }
 
-function normalizeVerificationResendCount(value, fallback) {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return fallback;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return fallback;
-  }
-
-  return Math.min(
-    VERIFICATION_RESEND_COUNT_MAX,
-    Math.max(VERIFICATION_RESEND_COUNT_MIN, Math.floor(numeric))
-  );
-}
-
 function formatAutoStepDelayInputValue(value) {
   const normalized = normalizeAutoStepDelaySeconds(value);
   return String(normalized);
-}
-
-function splitCustomEmailPoolEntrySource(value = '') {
-  const source = Array.isArray(value)
-    ? value
-    : String(value || '').split(/[\r\n,，;；]+/);
-
-  return source;
-}
-
-function normalizeCustomEmailPoolEntries(value = '') {
-  const source = splitCustomEmailPoolEntrySource(value);
-
-  return source
-    .map((item) => parseCustomEmailPoolEntryValueForSidepanel(item).email)
-    .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item));
-}
-
-function normalizeCustomEmailPoolEntryEmail(value = '') {
-  return String(value || '').trim().toLowerCase();
-}
-
-function createCustomEmailPoolEntryId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `custom-pool-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function normalizeCustomEmailPoolTrialEligibilityStatus(value = '') {
-  const normalized = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
-  if (['ineligible', 'not_eligible', 'no_trial', 'trial_ineligible', 'rejected'].includes(normalized)) {
-    return 'ineligible';
-  }
-  if (['eligible', 'trial_eligible', 'ok', 'passed'].includes(normalized)) {
-    return 'eligible';
-  }
-  if (['failed', 'error', 'unknown'].includes(normalized)) {
-    return 'failed';
-  }
-  return '';
-}
-
-function isCustomEmailPoolEntryTrialIneligible(entry = {}) {
-  return normalizeCustomEmailPoolTrialEligibilityStatus(entry?.trialEligibilityStatus) === 'ineligible';
-}
-
-function isCustomEmailPoolEntryAvailable(entry = {}) {
-  return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
-}
-
-function normalizeCustomEmailPoolEntryObjects(value = []) {
-  const source = splitCustomEmailPoolEntrySource(value);
-  const seenEmails = new Set();
-  const entries = [];
-
-  for (const rawEntry of source) {
-    const asObject = rawEntry && typeof rawEntry === 'object'
-      ? rawEntry
-      : { email: rawEntry };
-    const parsedEntry = parseCustomEmailPoolEntryValueForSidepanel(asObject.credential || asObject.email || '');
-    const email = normalizeCustomEmailPoolEntryEmail(parsedEntry.email || '');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      continue;
-    }
-    if (seenEmails.has(email)) {
-      continue;
-    }
-    seenEmails.add(email);
-    const accessToken = String(asObject.accessToken || asObject.access_token || asObject.upiRedeemAccessToken || '').trim();
-    const accessTokenMasked = String(asObject.accessTokenMasked || '').trim()
-      || (accessToken
-        ? `${accessToken.slice(0, 8)}****${accessToken.slice(-6)}`
-        : '');
-    entries.push({
-      id: String(asObject.id || createCustomEmailPoolEntryId()),
-      email,
-      credential: parsedEntry.verificationUrl ? '' : (parsedEntry.credential || String(asObject.credential || '').trim()),
-      verificationUrl: normalizeCustomEmailVerificationUrlValue(asObject.verificationUrl || asObject.url || parsedEntry.verificationUrl || ''),
-      enabled: asObject.enabled !== undefined ? Boolean(asObject.enabled) : true,
-      used: Boolean(asObject.used),
-      note: String(asObject.note || '').trim(),
-      lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
-      accessToken,
-      accessTokenMasked,
-      accessTokenUpdatedAt: String(asObject.accessTokenUpdatedAt || asObject.tokenUpdatedAt || asObject.checkedAt || '').trim(),
-      trialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus(asObject.trialEligibilityStatus),
-      trialEligibilityReason: String(asObject.trialEligibilityReason || '').trim(),
-      trialEligibilityReasonCode: String(asObject.trialEligibilityReasonCode || '').trim(),
-      trialEligibilityCheckedAt: String(asObject.trialEligibilityCheckedAt || '').trim(),
-      trialEligibilityRetryable: asObject.trialEligibilityRetryable === true,
-      trialEligibilityTransientFailure: asObject.trialEligibilityTransientFailure === true,
-      trialEligibilityLastError: String(asObject.trialEligibilityLastError || '').trim(),
-    });
-  }
-
-  return entries;
-}
-
-function formatCustomEmailPoolEntryValue(entry = {}) {
-  const asObject = entry && typeof entry === 'object'
-    ? entry
-    : { email: entry };
-  const parsedEntry = parseCustomEmailPoolEntryValueForSidepanel(asObject.credential || asObject.email || '');
-  const email = normalizeCustomEmailPoolEntryEmail(parsedEntry.email || asObject.email || '');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return '';
-  }
-  const verificationUrl = normalizeCustomEmailVerificationUrlValue(
-    asObject.verificationUrl || asObject.url || parsedEntry.verificationUrl || ''
-  );
-  if (verificationUrl) {
-    return `${email}----${verificationUrl}`;
-  }
-  const credential = parsedEntry.credential || String(asObject.credential || '').trim();
-  return credential || email;
-}
-
-function normalizeCustomEmailPoolEntryValues(value = []) {
-  return normalizeCustomEmailPoolEntryObjects(value)
-    .map((entry) => formatCustomEmailPoolEntryValue(entry))
-    .filter(Boolean);
 }
 
 function getNormalizedCustomEmailPoolEntriesState() {
@@ -5929,135 +5825,6 @@ function setDefaultAutoRunButton() {
   btnAutoRun.disabled = false;
   inputRunCount.disabled = false;
   btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> 自动';
-}
-
-function normalizeCloudflareDomainValue(value = '') {
-  let normalized = String(value || '').trim().toLowerCase();
-  if (!normalized) return '';
-  normalized = normalized.replace(/^@+/, '');
-  normalized = normalized.replace(/^https?:\/\//, '');
-  normalized = normalized.replace(/\/.*$/, '');
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(normalized)) {
-    return '';
-  }
-  return normalized;
-}
-
-function normalizeCloudflareDomains(values = []) {
-  const seen = new Set();
-  const domains = [];
-  for (const value of Array.isArray(values) ? values : []) {
-    const normalized = normalizeCloudflareDomainValue(value);
-    if (!normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    domains.push(normalized);
-  }
-  return domains;
-}
-
-function normalizeCloudflareTempEmailBaseUrlValue(value = '') {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  const candidate = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw) ? raw : `https://${raw}`;
-  try {
-    const parsed = new URL(candidate);
-    parsed.hash = '';
-    parsed.search = '';
-    const pathname = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
-    return `${parsed.origin}${pathname}`;
-  } catch {
-    return '';
-  }
-}
-
-function normalizeCloudflareTempEmailReceiveMailboxValue(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (!normalized) return '';
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : '';
-}
-
-function normalizeCloudflareTempEmailDomainValue(value = '') {
-  return normalizeCloudflareDomainValue(value);
-}
-
-function normalizeCloudflareTempEmailDomains(values = []) {
-  const seen = new Set();
-  const domains = [];
-  for (const value of Array.isArray(values) ? values : []) {
-    const normalized = normalizeCloudflareTempEmailDomainValue(value);
-    if (!normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    domains.push(normalized);
-  }
-  return domains;
-}
-
-function normalizeCloudMailBaseUrlValue(value = '') {
-  return normalizeCloudflareTempEmailBaseUrlValue(value);
-}
-
-function normalizeCloudMailReceiveMailboxValue(value = '') {
-  return normalizeCloudflareTempEmailReceiveMailboxValue(value);
-}
-
-function normalizeCloudMailDomainValue(value = '') {
-  return normalizeCloudflareDomainValue(value);
-}
-
-function normalizeMoemailBaseUrlValue(value = '') {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  const candidate = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw) ? raw : `https://${raw}`;
-  try {
-    const parsed = new URL(candidate);
-    parsed.hash = '';
-    parsed.search = '';
-    const pathname = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
-    return `${parsed.origin}${pathname}`;
-  } catch {
-    return '';
-  }
-}
-
-function normalizeMoemailDomainValue(value = '') {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^@+/, '')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/.*$/, '');
-}
-
-function normalizeYydsMailBaseUrlValue(value = '') {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  const candidate = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw) ? raw : `https://${raw}`;
-  try {
-    const parsed = new URL(candidate);
-    parsed.hash = '';
-    parsed.search = '';
-    const pathname = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
-    return `${parsed.origin}${pathname}`;
-  } catch {
-    return '';
-  }
-}
-
-function normalizeYydsMailDomainValue(value = '') {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^@+/, '')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/.*$/, '');
-}
-
-function normalizeFreemailBaseUrlValue(value = '') {
-  return normalizeCloudflareTempEmailBaseUrlValue(value);
-}
-
-function normalizeFreemailDomainValue(value = '') {
-  return normalizeCloudflareDomainValue(value);
 }
 
 function getCloudflareDomainsFromState() {
