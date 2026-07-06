@@ -21,6 +21,7 @@ __pycache__/
 /.audit_tmp/
 /.cmp_upstream/
 /.codex-backups/
+/.superpowers/
 /.tmp_*/
 /backup/
 /.codegraph/
