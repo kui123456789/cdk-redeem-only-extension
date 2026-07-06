@@ -1703,6 +1703,50 @@ const LOG_LEVEL_LABELS = {
   error: '错误',
 };
 
+const logPanelManager = self.SidepanelLogPanelManager.create({
+  logArea,
+  state: {
+    getLatestState: () => latestState,
+    syncLatestState,
+  },
+  sendMessage: (message) => chrome.runtime.sendMessage(message),
+  helpers: {
+    escapeHtml,
+  },
+  constants: {
+    displayTimeZone: DISPLAY_TIMEZONE,
+    logLevelLabels: LOG_LEVEL_LABELS,
+    clearLogMessageType: 'SAVE_SETTING',
+  },
+});
+
+const workflowStateView = self.SidepanelWorkflowStateView.create({
+  dom: {
+    stepsList,
+    stepsProgress,
+  },
+  constants: {
+    statusIcons: STATUS_ICONS,
+    getWorkflowNodes: () => workflowNodes,
+    getNodeIds: () => NODE_IDS,
+  },
+  helpers: {
+    escapeCssValue,
+    escapeHtml,
+    getNodeIdByStepForCurrentMode,
+    getNodeStatuses,
+    getStepIdByNodeIdForCurrentMode,
+    isDoneStatus,
+  },
+  state: {
+    getLatestState: () => latestState,
+  },
+  callbacks: {
+    initializeManualStepActions,
+    updateButtonStates,
+  },
+});
+
 const CLOUDFLARE_TEMP_EMAIL_REPOSITORY_URL = 'https://github.com/QLHazyCoder/cloudflare_temp_email';
 
 let lastLocalHelperStartupAlertAt = 0;
@@ -2459,27 +2503,7 @@ function initializeManualStepActions() {
 }
 
 function renderStepsList() {
-  if (!stepsList) {
-    return;
-  }
-
-  stepsList.innerHTML = (workflowNodes || []).map((node) => {
-    const nodeId = String(node.nodeId || '').trim();
-    const step = getStepIdByNodeIdForCurrentMode(nodeId);
-    const stepLabel = String(node.ui?.stepLabel || step || node.displayOrder || '').trim();
-    const executeKey = String(node.executeKey || nodeId).trim();
-    return `
-      <div class="step-row pending" data-step="${escapeHtml(step)}" data-node-id="${escapeHtml(nodeId)}" data-step-key="${escapeHtml(executeKey)}">
-        <div class="step-indicator" data-step="${escapeHtml(step)}" data-node-id="${escapeHtml(nodeId)}"><span class="step-num">${escapeHtml(stepLabel)}</span></div>
-        <button class="step-btn" data-step="${escapeHtml(step)}" data-node-id="${escapeHtml(nodeId)}" data-step-key="${escapeHtml(executeKey)}">${escapeHtml(node.title || executeKey || `步骤 ${stepLabel}`)}</button>
-        <span class="step-status" data-step="${escapeHtml(step)}" data-node-id="${escapeHtml(nodeId)}"></span>
-      </div>
-    `;
-  }).join('');
-
-  initializeManualStepActions();
-  renderStepStatuses(latestState);
-  updateButtonStates();
+  workflowStateView.renderStepsList();
 }
 
 function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOrOptions = {}, maybeOptions = {}) {
@@ -2535,54 +2559,19 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
 }
 
 function renderSingleNodeStatus(nodeId, status) {
-  const normalizedNodeId = String(nodeId || '').trim();
-  if (!normalizedNodeId) {
-    return;
-  }
-  const normalizedStatus = status || 'pending';
-  const selectorNodeId = escapeCssValue(normalizedNodeId);
-  const statusEl = document.querySelector(`.step-status[data-node-id="${selectorNodeId}"]`);
-  const row = document.querySelector(`.step-row[data-node-id="${selectorNodeId}"]`);
-  if (statusEl) {
-    statusEl.textContent = STATUS_ICONS[normalizedStatus] || '';
-  }
-  if (row) {
-    row.className = `step-row ${normalizedStatus}`;
-  }
+  workflowStateView.renderSingleNodeStatus(nodeId, status);
 }
 
 function renderSingleStepStatus(step, status) {
-  const nodeId = getNodeIdByStepForCurrentMode(step);
-  if (nodeId) {
-    renderSingleNodeStatus(nodeId, status);
-    return;
-  }
-  const normalizedStatus = status || 'pending';
-  const statusEl = document.querySelector(`.step-status[data-step="${escapeCssValue(step)}"]`);
-  const row = document.querySelector(`.step-row[data-step="${escapeCssValue(step)}"]`);
-  if (statusEl) {
-    statusEl.textContent = STATUS_ICONS[normalizedStatus] || '';
-  }
-  if (row) {
-    row.className = `step-row ${normalizedStatus}`;
-  }
+  workflowStateView.renderSingleStepStatus(step, status);
 }
 
 function renderStepStatuses(state = latestState) {
-  const statuses = getNodeStatuses(state);
-  NODE_IDS.forEach((nodeId) => {
-    renderSingleNodeStatus(nodeId, statuses[nodeId]);
-  });
-  updateProgressCounter();
+  workflowStateView.renderStepStatuses(state);
 }
 
 function updateProgressCounter() {
-  if (!stepsProgress) {
-    return;
-  }
-  const statuses = getNodeStatuses(latestState);
-  const completed = Object.values(statuses).filter(isDoneStatus).length;
-  stepsProgress.textContent = `${completed} / ${NODE_IDS.length}`;
+  workflowStateView.updateProgressCounter();
 }
 
 function arePreviousNodesReadyForManualExecute(nodeId = '', statuses = getNodeStatuses()) {
@@ -2748,27 +2737,7 @@ function updateStatusDisplay(state = latestState) {
 }
 
 function appendLog(entry = {}) {
-  if (!logArea) {
-    return;
-  }
-  const timestamp = Number(entry.timestamp) || Date.now();
-  const time = new Date(timestamp).toLocaleTimeString('zh-CN', {
-    hour12: false,
-    timeZone: DISPLAY_TIMEZONE,
-  });
-  const level = String(entry.level || 'info').trim().toLowerCase() || 'info';
-  const levelLabel = LOG_LEVEL_LABELS[level] || level;
-  const line = document.createElement('div');
-  line.className = `log-line log-${level}`;
-  const step = Math.floor(Number(entry.step) || 0);
-  line.innerHTML = [
-    `<span class="log-time">${escapeHtml(time)}</span>`,
-    `<span class="log-level log-level-${escapeHtml(level)}">${escapeHtml(levelLabel)}</span>`,
-    step > 0 ? `<span class="log-step-tag step-${escapeHtml(step)}">步${escapeHtml(step)}</span>` : '',
-    `<span class="log-msg">${escapeHtml(entry.message || '')}</span>`,
-  ].filter(Boolean).join(' ');
-  logArea.appendChild(line);
-  logArea.scrollTop = logArea.scrollHeight;
+  logPanelManager.appendLog(entry);
 }
 
 function syncPasswordField(state = latestState) {
@@ -3040,8 +3009,7 @@ async function restoreState() {
       displayLocalhostUrl.classList.add('has-value');
     }
     if (Array.isArray(state?.logs)) {
-      logArea.innerHTML = '';
-      state.logs.forEach((entry) => appendLog(entry));
+      logPanelManager.renderLogs(state.logs);
     }
     renderContributionMode();
   } catch (err) {
@@ -10819,7 +10787,7 @@ btnReset?.addEventListener('click', async () => {
       lastLoginCode: null,
       localhostUrl: null,
     });
-    logArea.innerHTML = '';
+    await logPanelManager.clearLog();
     renderStepStatuses(latestState);
     updateStatusDisplay(latestState);
     showToast('流程已重置。', 'success', 1800);
@@ -10829,17 +10797,7 @@ btnReset?.addEventListener('click', async () => {
 });
 
 btnClearLog?.addEventListener('click', async () => {
-  logArea.innerHTML = '';
-  syncLatestState({ logs: [] });
-  try {
-    await chrome.runtime.sendMessage({
-      type: 'SAVE_SETTING',
-      source: 'sidepanel',
-      payload: { logs: [] },
-    });
-  } catch {
-    // The visible log is already cleared; background log persistence is best-effort.
-  }
+  await logPanelManager.clearLog({ persist: true });
 });
 
 document.addEventListener('click', (event) => {
