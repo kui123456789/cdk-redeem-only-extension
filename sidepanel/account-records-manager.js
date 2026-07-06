@@ -1500,7 +1500,20 @@
       };
     }
 
+    function getMembershipCredentialFormat() {
+      const rootScope = typeof window !== 'undefined' ? window : globalThis;
+      return rootScope.MultiPageMembershipCredentialFormat || {};
+    }
+
     function parseUpiCredentialMembershipParts(parts = []) {
+      const helper = getMembershipCredentialFormat().parseCredentialParts;
+      if (typeof helper === 'function') {
+        return helper(parts, { source: 'txt', nowMs: Date.now() });
+      }
+      return parseUpiCredentialMembershipPartsFallback(parts);
+    }
+
+    function parseUpiCredentialMembershipPartsFallback(parts = []) {
       if (parts.length === 4 && isLikelyUpiCredentialMembershipVerificationUrl(parts[1])) {
         const recordedAt = Math.max(0, Math.floor(Number(parts[3]) || Date.parse(normalizeUpiCredentialMembershipText(parts[3])) || Date.now()));
         return {

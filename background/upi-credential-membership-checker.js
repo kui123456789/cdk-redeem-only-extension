@@ -1089,7 +1089,10 @@
     return /^https?:\/\//i.test(text);
   }
 
-  function parseCredentialBackupParts(parts = []) {
+  function getMembershipCredentialFormat() { return (typeof self !== 'undefined' ? self : globalThis).MultiPageMembershipCredentialFormat || {}; }
+  function parseCredentialBackupParts(parts = []) { const helper = getMembershipCredentialFormat().parseCredentialParts; return typeof helper === 'function' ? helper(parts, { nowMs: Date.now() }) : parseCredentialBackupPartsFallback(parts); }
+
+  function parseCredentialBackupPartsFallback(parts = []) {
     if (parts.length === 4 && isLikelyVerificationUrl(parts[1])) {
       const recordedAt = normalizeNo2faFreeExportTimestamp(parts[3]);
       return {
@@ -1492,6 +1495,17 @@
     return (deletedByChannel[targetChannel] || []).includes(email);
   }
 
+  function buildResultExportRowsFreeFallback(item = {}) {
+    const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
+    const verificationUrl = item.verificationUrl ? normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl) : '';
+    if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+    if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
+      const passkeyMarker = buildPasskeyExportMarker(item);
+      return verificationUrl ? `${item.email}---${item.password}---${passkeyMarker}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${passkeyMarker}---${item.accessToken || ''}---${timestamp}`;
+    }
+    return verificationUrl ? `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
+  }
+
   function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = []) {
     const normalizedStatus = normalizeString(status);
     const normalizedChannel = normalizeString(channel) ? normalizeRedeemChannel(channel) : '';
@@ -1538,24 +1552,11 @@
           return `${item.email}---${item.reason || '核验失败'}`;
         }
         if (normalizedStatus === 'free') {
-          if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) {
-            const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
-            const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-            return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+          const formatFreeCredentialLine = getMembershipCredentialFormat().formatFreeCredentialLine;
+          if (typeof formatFreeCredentialLine === 'function') {
+            return formatFreeCredentialLine({ ...item, checkedAt: formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item)) });
           }
-          const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
-          if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
-            if (item.verificationUrl) {
-              const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-              return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
-            }
-            return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${item.accessToken || ''}---${timestamp}`;
-          }
-          if (item.verificationUrl) {
-            const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-            return `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
-          }
-          return `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
+          return buildResultExportRowsFreeFallback(item);
         }
         const timestamp = item.redeemSuccessAt || item.upiRedeemSubscriptionCheckedAt || item.checkedAt || '';
         if (item.passkeyEnabled === true && item.password && !item.totpMfaSecret) {
