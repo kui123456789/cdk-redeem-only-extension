@@ -354,7 +354,6 @@
       getState: deps.getState,
       getTabId: deps.getTabId,
       isTabAlive: deps.isTabAlive,
-      markCurrentRegistrationAccountTrialIneligible: deps.markCurrentRegistrationAccountTrialIneligible,
       markCurrentRegistrationAccountUsed: deps.markCurrentRegistrationAccountUsed,
       registerTab: deps.registerTab,
       sendTabMessageUntilStopped: deps.sendTabMessageUntilStopped,

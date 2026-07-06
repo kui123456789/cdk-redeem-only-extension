@@ -422,6 +422,8 @@ function checkStaticContracts() {
   assertIncludes(background, 'MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry()', 'content script registry wiring');
   assertIncludes(background, 'background/bootstrap/signup-executor-registry.js', 'signup executor registry import');
   assertIncludes(background, 'MultiPageBackgroundSignupExecutorRegistry.createSignupExecutorRegistry', 'signup executor registry wiring');
+  assertIncludes(signupExecutorRegistry, 'createSignupExecutorRegistry', 'signup executor registry factory');
+  assertIncludes(signupExecutorRegistry, 'createUpiRedeemExecutor', 'signup executor registry UPI redeem wiring');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
@@ -668,11 +670,6 @@ function checkStaticContracts() {
     background,
     /async function markCurrentCustomEmailPoolEntryTrialIneligible[\s\S]*?if\s*\(!isCustomEmailPoolGenerator\(state\)\)\s*{\s*return\s*{\s*updated:\s*false\s*};\s*}/,
     'custom email pool trial-ineligible marking must not depend on current generator selection'
-  );
-  assertMatch(
-    signupExecutorRegistry,
-    /createUpiRedeemExecutor\?\.\(\{[\s\S]*?markCurrentRegistrationAccountTrialIneligible:/,
-    'UPI redeem executor must receive trial-ineligible custom email pool marker'
   );
   assertMatch(
     sidepanel,

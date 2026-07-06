@@ -2,15 +2,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const moduleApi = require('../background/bootstrap/signup-executor-registry.js');
 
-function createFactory(name, calls) {
-  return {
-    [`create${name}`]: (deps) => {
-      calls.push({ name, deps });
-      return { name, deps };
-    },
-  };
-}
-
 test('creates core signup helpers and step executors with shared inject list', () => {
   const calls = [];
   const root = {
@@ -34,4 +25,43 @@ test('creates core signup helpers and step executors with shared inject list', (
   assert.equal(registry.executors.step1.nodeId, 'open-chatgpt');
   assert.equal(registry.executors.step2.nodeId, 'submit-signup-email');
   assert.deepEqual(calls.find((call) => call.name === 'Step2').deps.SIGNUP_PAGE_INJECT_FILES, ['content/utils.js', 'content/signup-page.js']);
+});
+
+test('keeps trial-ineligible marker out of UPI redeem executor deps', () => {
+  const calls = [];
+  const markCurrentRegistrationAccountTrialIneligible = () => {};
+  const markCurrentRegistrationAccountUsed = () => {};
+  const root = {
+    MultiPageBackgroundEnableTotpMfa: {
+      createEnableTotpMfaExecutor: (deps) => {
+        calls.push({ name: 'EnableTotpMfa', deps });
+        return { nodeId: 'enable-totp-mfa' };
+      },
+    },
+    MultiPageBackgroundUpiRedeem: {
+      createUpiRedeemExecutor: (deps) => {
+        calls.push({ name: 'UpiRedeem', deps });
+        return { checkRegistrationUpiTrialEligibility: () => ({}) };
+      },
+    },
+  };
+
+  const registry = moduleApi.createSignupExecutorRegistry({
+    root,
+    markCurrentRegistrationAccountTrialIneligible,
+    markCurrentRegistrationAccountUsed,
+  });
+
+  const upiCall = calls.find((call) => call.name === 'UpiRedeem');
+  assert.ok(upiCall, 'UPI redeem executor should be created');
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(upiCall.deps, 'markCurrentRegistrationAccountTrialIneligible'),
+    false
+  );
+  assert.equal(upiCall.deps.markCurrentRegistrationAccountUsed, markCurrentRegistrationAccountUsed);
+  assert.equal(typeof registry.executors.upiRedeem.checkRegistrationUpiTrialEligibility, 'function');
+
+  const totpCall = calls.find((call) => call.name === 'EnableTotpMfa');
+  assert.ok(totpCall, 'TOTP/MFA executor should be created');
+  assert.equal(totpCall.deps.markCurrentRegistrationAccountTrialIneligible, markCurrentRegistrationAccountTrialIneligible);
 });
