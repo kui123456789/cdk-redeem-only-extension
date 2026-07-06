@@ -222,6 +222,7 @@ function checkCoreFiles() {
     'sidepanel/auto-run-state.js',
     'sidepanel/config-menu-controller.js',
     'sidepanel/workflow-action-bindings.js',
+    'sidepanel/settings-field-bindings.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
@@ -332,6 +333,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="auto-run-state.js"', 'sidepanel auto-run state script load');
   assertIncludes(sidepanelHtml, 'src="config-menu-controller.js"', 'sidepanel config menu controller script load');
   assertIncludes(sidepanelHtml, 'src="workflow-action-bindings.js"', 'sidepanel workflow action bindings script load');
+  assertIncludes(sidepanelHtml, 'src="settings-field-bindings.js"', 'sidepanel settings field bindings script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
@@ -343,6 +345,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="auto-run-state.js"', 'src="sidepanel.js"', 'sidepanel auto-run state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-action-bindings.js"', 'src="sidepanel.js"', 'sidepanel workflow action bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="settings-field-bindings.js"', 'src="sidepanel.js"', 'sidepanel settings field bindings must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
@@ -717,6 +720,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/auto-run-countdown-view.js', 250, 'sidepanel auto-run countdown view size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-state.js', 280, 'sidepanel auto-run state size guard');
   assertFileLineCountAtMost('sidepanel/config-menu-controller.js', 220, 'sidepanel config menu controller size guard');
+  assertFileLineCountAtMost('sidepanel/settings-field-bindings.js', 120, 'sidepanel settings field bindings size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');

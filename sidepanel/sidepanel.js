@@ -1269,6 +1269,9 @@ const configMenuController = window.SidepanelConfigMenuController.createConfigMe
   onUpdate: () => updateSaveButtonState(),
   onError: (error) => showToast('配置操作失败：' + (error?.message || error), 'error'),
 });
+const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettingsFieldBindings({
+  scheduleSettingsSave,
+});
 let configActionInFlight = false;
 let currentReleaseSnapshot = null;
 let currentContributionContentSnapshot = null;
@@ -7902,6 +7905,11 @@ function scheduleSettingsAutoSave() {
   }, 500);
 }
 
+function scheduleSettingsSave() {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+}
+
 function shouldUseSettingsCardAutosave(target) {
   if (!target || typeof target.matches !== 'function') {
     return false;
@@ -8177,20 +8185,19 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   renderContributionMode();
 }
 
-inputVpsUrl.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputVpsUrl, {
+  key: 'vpsUrl',
+  normalize: (value) => String(value || '').trim(),
 });
-inputVpsUrl.addEventListener('blur', () => {
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputVpsUrl, {
+  afterBlur: () => saveSettings({ silent: true }).catch(() => { }),
 });
 
-inputVpsPassword.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputVpsPassword, {
+  key: 'vpsPassword',
 });
-inputVpsPassword.addEventListener('blur', () => {
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputVpsPassword, {
+  afterBlur: () => saveSettings({ silent: true }).catch(() => { }),
 });
 
 [inputHotmailRemoteBaseUrl, inputHotmailLocalBaseUrl].forEach((input) => {
@@ -8218,16 +8225,19 @@ selectLuckmailEmailType?.addEventListener('change', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
-inputPassword.addEventListener('input', () => {
-  syncLatestState({ customPassword: inputPassword.value });
-  markSettingsDirty(true);
-  updateButtonStates();
-  persistCustomPasswordInput({ silent: true }).catch(() => { });
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputPassword, {
+  key: 'customPassword',
+  afterChange: (value) => {
+    syncLatestState({ customPassword: value });
+    updateButtonStates();
+    persistCustomPasswordInput({ silent: true }).catch(() => { });
+  },
 });
-inputPassword.addEventListener('blur', () => {
-  persistCustomPasswordInput({ silent: true }).catch(() => { });
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputPassword, {
+  afterBlur: () => {
+    persistCustomPasswordInput({ silent: true }).catch(() => { });
+    saveSettings({ silent: true }).catch(() => { });
+  },
 });
 
 inputPlusModeEnabled?.addEventListener('change', () => {
@@ -8825,16 +8835,19 @@ inputCodex2ApiAdminKey.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
-inputEmailPrefix.addEventListener('input', () => {
-  maybeClearGeneratedAliasAfterEmailPrefixChange().catch(() => { });
-  syncManagedAliasBaseEmailDraftFromInput();
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputEmailPrefix, {
+  afterChange: () => {
+    maybeClearGeneratedAliasAfterEmailPrefixChange().catch(() => { });
+    syncManagedAliasBaseEmailDraftFromInput();
+    scheduleSettingsSave();
+  },
 });
-inputEmailPrefix.addEventListener('blur', () => {
-  maybeClearGeneratedAliasAfterEmailPrefixChange().catch(() => { });
-  syncManagedAliasBaseEmailDraftFromInput();
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputEmailPrefix, {
+  afterBlur: () => {
+    maybeClearGeneratedAliasAfterEmailPrefixChange().catch(() => { });
+    syncManagedAliasBaseEmailDraftFromInput();
+    saveSettings({ silent: true }).catch(() => { });
+  },
 });
 
 inputCustomEmailPool?.addEventListener('input', () => {
@@ -8913,29 +8926,33 @@ inputMail2925UseAccountPool?.addEventListener('change', async () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
-inputInbucketMailbox.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputInbucketMailbox, {
+  key: 'inbucketMailbox',
+  normalize: (value) => String(value || '').trim(),
 });
-inputInbucketMailbox.addEventListener('blur', () => {
-  saveSettings({ silent: true }).catch(() => { });
-});
-
-inputInbucketHost.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
-});
-inputInbucketHost.addEventListener('blur', () => {
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputInbucketMailbox, {
+  afterBlur: () => saveSettings({ silent: true }).catch(() => { }),
 });
 
-inputRunCount.addEventListener('input', () => {
-  clearPendingAutoRunStartRunCount();
-  updateFallbackThreadIntervalInputState();
+settingsFieldBindings.bindInput(inputInbucketHost, {
+  key: 'inbucketHost',
+  normalize: (value) => String(value || '').trim(),
 });
-inputRunCount.addEventListener('blur', () => {
-  inputRunCount.value = String(getRunCountValue());
-  updateFallbackThreadIntervalInputState();
+settingsFieldBindings.bindBlur(inputInbucketHost, {
+  afterBlur: () => saveSettings({ silent: true }).catch(() => { }),
+});
+
+settingsFieldBindings.bindInput(inputRunCount, {
+  afterChange: () => {
+    clearPendingAutoRunStartRunCount();
+    updateFallbackThreadIntervalInputState();
+  },
+});
+settingsFieldBindings.bindBlur(inputRunCount, {
+  afterBlur: () => {
+    inputRunCount.value = String(getRunCountValue());
+    updateFallbackThreadIntervalInputState();
+  },
 });
 
 inputAutoSkipFailures.addEventListener('change', async () => {
@@ -9438,13 +9455,15 @@ function handleChatgptSessionReaderModeSelectionChange(nextMode) {
   saveSettings({ silent: true }).catch(() => { });
 }
 
-inputAutoStepDelaySeconds.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
+settingsFieldBindings.bindInput(inputAutoStepDelaySeconds, {
+  key: 'autoStepDelaySeconds',
+  normalize: (value) => normalizeAutoStepDelaySeconds(value),
 });
-inputAutoStepDelaySeconds.addEventListener('blur', () => {
-  syncAutoStepDelayInputs();
-  saveSettings({ silent: true }).catch(() => { });
+settingsFieldBindings.bindBlur(inputAutoStepDelaySeconds, {
+  afterBlur: () => {
+    syncAutoStepDelayInputs();
+    saveSettings({ silent: true }).catch(() => { });
+  },
 });
 
 inputPlusRemovedContactOauthDelaySeconds?.addEventListener('input', () => {
