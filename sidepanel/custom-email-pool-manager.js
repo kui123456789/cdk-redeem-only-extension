@@ -336,7 +336,16 @@
             <div class="luckmail-item-email-row">
               <div class="luckmail-item-email">${helpers.escapeHtml(entry.email || '(未知邮箱)')}</div>
               ${getTrialEligibilityBadgeHtml(entry)}
-              ${accessToken ? `<span class="luckmail-status-badge status-active">AT ${helpers.escapeHtml(accessTokenBadge || '已保存')}</span>` : ''}
+              ${accessToken ? `
+                <span class="luckmail-status-badge status-active">AT ${helpers.escapeHtml(accessTokenBadge || '已保存')}</span>
+                <button
+                  class="hotmail-copy-btn"
+                  type="button"
+                  data-action="copy-at"
+                  title="复制 AT"
+                  aria-label="复制 ${helpers.escapeHtml(entry.email || '')} 的 AT"
+                >${copyIcon}</button>
+              ` : ''}
               ${entry.used ? '<span class="luckmail-status-badge status-used">已用</span>' : ''}
               <button
                 class="hotmail-copy-btn"
@@ -380,6 +389,16 @@
         item.querySelector('[data-action="copy-email"]').addEventListener('click', async () => {
           await helpers.copyTextToClipboard(entry.email || '');
           helpers.showToast('邮箱已复制', 'success', 1600);
+        });
+
+        item.querySelector('[data-action="copy-at"]')?.addEventListener('click', async () => {
+          const token = getEntryAccessToken(entry);
+          if (!token) {
+            helpers.showToast('该邮箱没有可复制的 AT', 'warn', 1600);
+            return;
+          }
+          await helpers.copyTextToClipboard(token);
+          helpers.showToast('AT 已复制', 'success', 1600);
         });
 
         item.querySelector('[data-action="check-trial"]')?.addEventListener('click', async () => {

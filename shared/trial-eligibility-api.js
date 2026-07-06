@@ -9,6 +9,10 @@
     return String(value || '').trim();
   }
 
+  function normalizeEmail(value = '') {
+    return normalizeString(value).toLowerCase();
+  }
+
   function hasOwn(object, key) {
     return Object.prototype.hasOwnProperty.call(object || {}, key);
   }
@@ -108,7 +112,7 @@
       phoneVerified: readOwnBoolean(source, ['phone_verified', 'phoneVerified']).value,
       accountId: normalizeString(source.account_id || source.accountId),
       planType: normalizeString(source.plan_type || source.planType),
-      responseEmail: normalizeString(source.email).toLowerCase(),
+      responseEmail: normalizeEmail(source.email),
       jwtExpired: readOwnBoolean(source, ['jwt_expired', 'jwtExpired']).value,
       jwtExpiresInSeconds: Math.max(0, Math.floor(Number(source.jwt_exp_in_sec || source.jwtExpInSec) || 0)),
       upiChannelEligibilityStatus: upi.status,
@@ -167,6 +171,19 @@
     return decision.tokenInvalid === true;
   }
 
+  function isTrialEligibilityDecisionEmailMismatch(decision = {}, expectedEmail = '') {
+    const expected = normalizeEmail(expectedEmail);
+    const responseEmail = normalizeEmail(decision.responseEmail || decision.email);
+    return Boolean(expected && responseEmail && expected !== responseEmail);
+  }
+
+  function buildTrialEligibilityEmailMismatchReason(decision = {}, expectedEmail = '') {
+    if (!isTrialEligibilityDecisionEmailMismatch(decision, expectedEmail)) {
+      return '';
+    }
+    return `资格检查返回邮箱 ${normalizeEmail(decision.responseEmail || decision.email)}，不是当前目标邮箱 ${normalizeEmail(expectedEmail)}，疑似 AT 串号。`;
+  }
+
   function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
     const normalizedChannel = normalizeString(channel).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
     const field = normalizedChannel === 'ideal'
@@ -189,7 +206,7 @@
       registrationPhone: normalizeString(decision.registrationPhone),
       phoneVerified: decision.phoneVerified === true,
       accountId: normalizeString(decision.accountId),
-      responseEmail: normalizeString(decision.responseEmail).toLowerCase(),
+      responseEmail: normalizeEmail(decision.responseEmail),
       jwtExpired: decision.jwtExpired === true,
       jwtExpiresInSeconds: Math.max(0, Math.floor(Number(decision.jwtExpiresInSeconds) || 0)),
       upiChannelEligibilityStatus: normalizeString(decision.upiChannelEligibilityStatus),
@@ -204,6 +221,8 @@
     isTrialEligibilityEligibleDecision,
     isTrialEligibilityAccountIneligibleDecision,
     isTrialEligibilityTokenInvalidDecision,
+    isTrialEligibilityDecisionEmailMismatch,
+    buildTrialEligibilityEmailMismatchReason,
     isTrialEligibilityChannelAllowed,
     buildTrialEligibilityResultPatch,
   };

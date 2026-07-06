@@ -1961,6 +1961,10 @@
     }
 
     function isUpiTrialIneligibleError(error) {
+      const decisionStatus = normalizeString(error?.trialEligibilityDecision?.trialEligibilityStatus).toLowerCase();
+      if (decisionStatus) {
+        return decisionStatus === 'ineligible';
+      }
       const message = getErrorMessage(error);
       return /^UPI_ACCOUNT_INELIGIBLE::/i.test(normalizeString(error?.message || error))
         || /账号无资格|无试用资格|没有试用资格|无资格|not eligible|ineligible/i.test(message);
@@ -6701,6 +6705,7 @@
               session: session.session || session,
               accessToken: session.accessToken,
               cdkey: input.cdkey,
+              expectedEmail: email,
             });
             const reason = eligibility?.item?.message || eligibility?.item?.reason || '账号有试用资格';
             kept.push({ email, reason });
@@ -7092,6 +7097,7 @@
               session: session?.session || session || {},
               accessToken,
               cdkey: input.cdkey,
+              expectedEmail: email,
             });
             const decision = response?.item?.trialEligibilityDecision
               || response?.trialEligibilityDecision

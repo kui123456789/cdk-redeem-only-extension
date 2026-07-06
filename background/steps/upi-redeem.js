@@ -1841,6 +1841,19 @@
       return typeof helper === 'function' ? helper(decision) : decision.tokenInvalid === true;
     }
 
+    function buildTrialEligibilityEmailMismatchReason(decision = {}, expectedEmail = '') {
+      const helper = getTrialEligibilityApiHelpers().buildTrialEligibilityEmailMismatchReason;
+      if (typeof helper === 'function') {
+        return helper(decision, expectedEmail);
+      }
+      const expected = parsePoolEntryEmail(expectedEmail);
+      const responseEmail = parsePoolEntryEmail(decision?.responseEmail || decision?.email);
+      if (expected && responseEmail && expected !== responseEmail) {
+        return `资格检查返回邮箱 ${responseEmail}，不是当前目标邮箱 ${expected}，疑似 AT 串号。`;
+      }
+      return '';
+    }
+
     function buildTrialEligibilityResultPatch(decision = {}) {
       const helper = getTrialEligibilityApiHelpers().buildTrialEligibilityResultPatch;
       return typeof helper === 'function' ? helper(decision) : {};
@@ -2480,13 +2493,26 @@
       }
     }
 
-    async function checkUPIAccessTokenEligibility({ checkUrl, externalApiKey, clientId, cdkey, session, accessToken }) {
+    async function checkUPIAccessTokenEligibility({ checkUrl, externalApiKey, clientId, cdkey, session, accessToken, expectedEmail = '' }) {
       const payload = await postEligibilityCheckJson({
         apiUrl: checkUrl,
         token: accessToken || getChatGptSessionAccessToken(session),
       });
       const item = getEligibilityItem(payload, cdkey);
       const decision = normalizeTrialEligibilityApiItem(item);
+      const targetEmail = parsePoolEntryEmail(expectedEmail) || resolveSessionAccountEmail(session || {});
+      const emailMismatchReason = buildTrialEligibilityEmailMismatchReason(decision, targetEmail);
+      if (emailMismatchReason) {
+        const error = new Error(`UPI 资格检查失败：${emailMismatchReason}`);
+        error.trialEligibilityDecision = {
+          ...decision,
+          trialEligibilityStatus: 'failed',
+          trialEligibilityReason: emailMismatchReason,
+          trialEligibilityRetryable: true,
+          trialEligibilityTransientFailure: false,
+        };
+        throw error;
+      }
       const failureMessage = getEligibilityFailureMessage(item);
       if (failureMessage) {
         const accountIneligible = isTrialEligibilityAccountIneligibleDecision(decision);
@@ -3125,6 +3151,7 @@
         cdkey: forcedCdkey,
         session: chatGptSession,
         accessToken,
+        expectedEmail: input.expectedEmail || input.email || input.targetEmail || input.credential?.email,
       });
       return {
         cdkey: forcedCdkey,
@@ -3200,6 +3227,7 @@
               state: runtimeState,
               session: chatGptSession,
               accessToken,
+              expectedEmail: email,
             });
             break;
           } catch (eligibilityError) {
@@ -3411,6 +3439,7 @@
             cdkey,
             session: chatGptSession,
             accessToken,
+            expectedEmail: email,
           });
         } catch (error) {
           const message = getErrorMessage(error) || 'UPI 资格检查失败。';
@@ -4612,6 +4641,7 @@
           cdkey,
           session: sessionState,
           accessToken: sessionState.accessToken,
+          expectedEmail: currentEmail,
         });
         await recordTrialEligibleFreeCredential(eligibility);
       } catch (error) {
@@ -4631,6 +4661,7 @@
               cdkey,
               session: sessionState,
               accessToken: sessionState.accessToken,
+              expectedEmail: currentEmail,
             });
             await recordTrialEligibleFreeCredential(retryEligibility);
             await addStepLog(visibleStep, 'UPI ChatGPT session 刷新后资格检查通过，继续兑换。', 'ok');

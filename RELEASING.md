@@ -15,9 +15,9 @@
 
 ## 当前版本建议
 
-- 当前待发布版本：`v1.0.6`
-- 当前扩展版本号：`1.0.6`
-- Release 文案来源：`Release.md` 中的 `CDK Redeem Only V1.0.6` 小节
+- 当前待发布版本：`v1.0.7`
+- 当前扩展版本号：`1.0.7`
+- Release 文案来源：`Release.md` 中的 `CDK Redeem Only V1.0.7` 小节
 - GitHub Release 正文可直接复制该小节内容
 
 ## 首次发布
@@ -45,10 +45,10 @@ git push -u origin main
 ```powershell
 git status
 git add manifest.json sidepanel/sidepanel.html Release.md RELEASING.md
-git commit -m "Prepare v1.0.6 release"
-git tag -a v1.0.6 -m "CDK Redeem Only V1.0.6"
+git commit -m "Prepare v1.0.7 release"
+git tag -a v1.0.7 -m "CDK Redeem Only V1.0.7"
 git push origin main
-git push origin v1.0.6
+git push origin v1.0.7
 ```
 
 ## Release 说明建议

@@ -1,5 +1,28 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.7
+
+本版本修复试用资格检查可能被旧 AT / 串号 AT 误判的问题，并给自定义邮箱池新增独立的 AT 复制按钮，建议已安装 V1.0.6 的用户升级。
+
+### 修复
+
+- 后端资格检查返回 `not-eligible` 前，会先校验返回邮箱是否等于当前目标邮箱；如果返回邮箱不一致，会标记为检查失败/疑似 AT 串号，不再把当前邮箱写成无试用资格。
+- 主流程、Free 资格检测、邮箱池手动资格检查等调用资格检查时都会传入目标邮箱，避免旧 AT 属于其它账号时污染当前邮箱状态。
+- 结构化资格检查结果会优先按 `trialEligibilityStatus` 判断，避免“资格检查失败”这类文案被旧正则误判为“无试用资格”。
+- 自定义邮箱池行新增单独的 `复制 AT` 按钮，和原来的邮箱复制按钮分开；邮箱按钮只复制邮箱，AT 按钮只复制完整 AT。
+
+### 验证
+
+- 已通过 `node --check shared/trial-eligibility-api.js`。
+- 已通过 `node --check background/steps/upi-redeem.js`。
+- 已通过 `node --check background/upi-credential-membership-checker.js`。
+- 已通过 `node --check sidepanel/custom-email-pool-manager.js`。
+- 已通过 `node --check sidepanel/sidepanel.js`。
+- 已通过 `node --test scripts/test-trial-eligibility-api.cjs`。
+- 已通过 `node scripts/audit-smoke-tests.mjs`。
+- 已通过 `git diff --check`。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏和后台 service worker 加载 V1.0.7 新代码。
+
 ## CDK Redeem Only V1.0.6
 
 本版本补齐自定义邮箱池的手动试用资格检查和 AT 保留逻辑，移除 Free 组里容易误用的试用资格复查入口，建议已安装 V1.0.5 的用户升级。

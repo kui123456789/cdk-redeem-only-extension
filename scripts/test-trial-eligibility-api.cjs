@@ -6,6 +6,8 @@ const {
   isTrialEligibilityTokenInvalidDecision,
   isTrialEligibilityEligibleDecision,
   isTrialEligibilityChannelAllowed,
+  isTrialEligibilityDecisionEmailMismatch,
+  buildTrialEligibilityEmailMismatchReason,
 } = require('../shared/trial-eligibility-api.js');
 
 test('eligible coupon enters Free even when UPI channel is denied', () => {
@@ -119,4 +121,18 @@ test('fetch-error is retryable network fluctuation and not account ineligible', 
   assert.equal(isTrialEligibilityAccountIneligibleDecision(decision), false);
   assert.equal(decision.trialEligibilityRetryable, true);
   assert.equal(decision.trialEligibilityTransientFailure, true);
+});
+
+test('response email mismatch is detected before marking target ineligible', () => {
+  const decision = normalizeTrialEligibilityApiItem({
+    token_ok: true,
+    eligible: false,
+    reason: 'not-eligible',
+    email: 'other@icloud.com',
+  });
+
+  assert.equal(isTrialEligibilityAccountIneligibleDecision(decision), true);
+  assert.equal(isTrialEligibilityDecisionEmailMismatch(decision, 'target@icloud.com'), true);
+  assert.match(buildTrialEligibilityEmailMismatchReason(decision, 'target@icloud.com'), /other@icloud\.com.*target@icloud\.com/);
+  assert.equal(isTrialEligibilityDecisionEmailMismatch(decision, 'other@icloud.com'), false);
 });
