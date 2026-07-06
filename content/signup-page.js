@@ -239,6 +239,7 @@ function getSignupVerificationPageHelpers() {
   }
   const rootScope = typeof self !== 'undefined' ? self : window;
   signupVerificationPageHelpers = rootScope.MultiPageSignupVerificationPage?.createSignupVerificationPage?.({
+    authPageDetectors: getAuthPageDetectors(),
     documentRef: document,
     locationRef: location,
     verificationCodeInputSelector: VERIFICATION_CODE_INPUT_SELECTOR,
@@ -262,6 +263,7 @@ function getSignupPageDetector() {
     return signupPageDetector;
   }
   signupPageDetector = requireSignupPageDetectorModule().createSignupPageDetector({
+    authPageDetectors: getAuthPageDetectors(),
     documentRef: document,
     locationRef: location,
     getSignupDomUtils,
@@ -569,6 +571,7 @@ function getSignupEntryPageHelpers() {
   }
   const rootScope = typeof self !== 'undefined' ? self : window;
   signupEntryPageHelpers = rootScope.MultiPageSignupEntryPage?.createSignupEntryPage?.({
+    authPageDetectors: getAuthPageDetectors(),
     documentRef: document,
     windowRef: window,
     isVisibleElement,

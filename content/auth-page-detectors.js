@@ -3,11 +3,11 @@
   const AUTH_HOSTS = ['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'];
   const CHATGPT_HOSTS = ['chatgpt.com', 'www.chatgpt.com', 'chat.openai.com'];
 
-  const SIGNUP_ENTRY_TRIGGER_PATTERN = /免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s*account|create\s+account|get\s*started|(?:無料で)?サインアップ|新規登録|アカウント(?:を)?作成|साइन\s*अप(?:\s*करें)?|(?:मुफ्त|मुफ़्त)(?:\s+में)?\s+साइन\s*अप|(?:खाता|अकाउंट)\s*(?:बनाएं|बनाएँ|बनाये|बनाइए)|शुरू\s*करें/i;
-  const LOGIN_ENTRY_PATTERN = /log\s*in|sign\s*in|登录|登陆|ログイン|サインイン|लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?/i;
+  const SIGNUP_ENTRY_TRIGGER_PATTERN = /^(?:免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s+(?:an?\s+)?account|get\s*started|(?:無料で)?サインアップ|新規登録|アカウント(?:を)?作成|साइन\s*अप(?:\s*करें)?|(?:मुफ्त|मुफ़्त)(?:\s+में)?\s+साइन\s*अप|(?:खाता|अकाउंट)\s*(?:बनाएं|बनाएँ|बनाये|बनाइए)|शुरू\s*करें)$/i;
+  const LOGIN_ENTRY_PATTERN = /^(?:log\s*in|sign\s*in|登录|登陆|登入|ログイン|サインイン|लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?)$/i;
   const SIGNUP_ENTRY_EXCLUDED_ACTION_PATTERN = /plans?|pricing|プラン|料金|प्लान्स?|प्राइसिंग|कीमत|मूल्य/i;
-  const CONTINUE_ACTION_PATTERN = /继续|下一步|続行|続ける|次へ|continue|next|जारी\s+रखें|आगे/i;
-  const RESEND_VERIFICATION_CODE_PATTERN = /重新发送(?:验证码|电子邮件|邮件)?|再次发送(?:验证码|电子邮件|邮件)?|重发(?:验证码)?|未收到(?:验证码|邮件)|メールを再送信|コードを再送信|resend(?:\s+(?:code|email))?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive|(?:कोड|ई-?मेल|मेल)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें|(?:फिर\s+से|दोबारा|पुनः)\s+(?:कोड|ई-?मेल|मेल)\s+भेजें|प्राप्त\s+नहीं\s+हुआ/i;
+  const CONTINUE_ACTION_PATTERN = /^(?:继续|下一步|送信|続行|続ける|次へ|continue|next|submit|send|जारी\s+रखें|आगे|सबमिट|भेजें)$/i;
+  const RESEND_VERIFICATION_CODE_PATTERN = /^(?:重新发送(?:验证码|电子邮件|邮件)?|再次发送(?:验证码|电子邮件|邮件)?|重发(?:验证码)?|未收到(?:验证码|邮件)|メールを再送信|コードを再送信|resend(?:\s+(?:code|email|verification\s+(?:code|email)))?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive(?:\s+(?:the\s+)?(?:code|email))?\??|(?:कोड|ई-?मेल|मेल)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें|(?:फिर\s+से|दोबारा|पुनः)\s+(?:कोड|ई-?मेल|मेल)\s+भेजें|प्राप्त\s+नहीं\s+हुआ)$/i;
   const PASSWORD_PAGE_TEXT_PATTERN = /password|पासवर्ड|パスワード|密码|密碼/i;
   const PASSWORD_PAGE_PATH_PATTERN = /\/(?:create-account|log-in)\/password(?:[/?#]|$)/i;
   const SIGNUP_PROFILE_PAGE_PATH_PATTERN = /\/(?:create-account\/profile|u\/signup\/profile|signup\/profile|about-you)(?:[/?#]|$)/i;

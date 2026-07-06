@@ -15,6 +15,7 @@
       getAssociatedInputText,
       getPageTextSnapshot,
     } = context;
+    const authPageDetectors = context.authPageDetectors || root.MultiPageAuthPageDetectors || {};
 
     function getVisibleSplitVerificationInputs() {
       return Array.from(documentRef.querySelectorAll('input[maxlength="1"]'))
@@ -91,7 +92,10 @@
         if (!allowDisabled && !isActionEnabled(el)) continue;
 
         const text = getActionText(el);
-        if (text && resendVerificationCodePattern.test(text)) {
+        const resendMatched = typeof authPageDetectors.isResendEmailText === 'function'
+          ? authPageDetectors.isResendEmailText(text)
+          : Boolean(text && resendVerificationCodePattern.test(text));
+        if (resendMatched) {
           return el;
         }
       }

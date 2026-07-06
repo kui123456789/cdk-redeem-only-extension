@@ -10,9 +10,7 @@
       getPageTextSnapshot,
     } = context;
 
-    const SIGNUP_ENTRY_TRIGGER_PATTERN = /免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s*account|create\s+account|get\s*started|(?:無料で)?サインアップ|新規登録|アカウント(?:を)?作成|साइन\s*अप(?:\s*करें)?|(?:मुफ्त|मुफ़्त)(?:\s+में)?\s+साइन\s*अप|(?:खाता|अकाउंट)\s*(?:बनाएं|बनाएँ|बनाये|बनाइए)|शुरू\s*करें/i;
-    const SIGNUP_AUTH_ENTRY_TRIGGER_PATTERN = /免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s*account|create\s+account|get\s*started|(?:無料で)?サインアップ|新規登録|アカウント(?:を)?作成|log\s*in|sign\s*in|登录|登陆|ログイン|サインイン|साइन\s*अप(?:\s*करें)?|(?:मुफ्त|मुफ़्त)(?:\s+में)?\s+साइन\s*अप|(?:खाता|अकाउंट)\s*(?:बनाएं|बनाएँ|बनाये|बनाइए)|शुरू\s*करें|लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?/i;
-    const SIGNUP_ENTRY_EXCLUDED_ACTION_PATTERN = /plans?|pricing|プラン|料金|प्लान्स?|प्राइसिंग|कीमत|मूल्य/i;
+    const authPageDetectors = context.authPageDetectors || root.MultiPageAuthPageDetectors || {};
     const SIGNUP_EMAIL_INPUT_SELECTOR = [
       'input[type="email"]',
       'input[autocomplete="email"]',
@@ -115,24 +113,24 @@
       );
       return Array.from(candidates).find((el) => {
         if (!isVisibleElement(el) || (!allowDisabled && !isActionEnabled(el))) return false;
-        return /continue|next|submit|继续|下一步|続行|次へ|送信|जारी\s+रखें|आगे|सबमिट|भेजें/i.test(getActionText(el));
+        return Boolean(authPageDetectors.isContinueText?.(getActionText(el)));
       }) || null;
     }
 
     function isExcludedSignupEntryActionText(text = '') {
-      return Boolean(text && SIGNUP_ENTRY_EXCLUDED_ACTION_PATTERN.test(text));
+      return Boolean(authPageDetectors.isExcludedSignupEntryText?.(text));
     }
 
     function isSignupEntryTriggerText(text = '') {
-      return Boolean(text && !isExcludedSignupEntryActionText(text) && SIGNUP_ENTRY_TRIGGER_PATTERN.test(text));
+      return Boolean(authPageDetectors.isSignupEntryText?.(text));
     }
 
     function isSignupAuthEntryTriggerText(text = '') {
-      return Boolean(text && !isExcludedSignupEntryActionText(text) && SIGNUP_AUTH_ENTRY_TRIGGER_PATTERN.test(text));
+      return Boolean(authPageDetectors.isSignupEntryText?.(text) || authPageDetectors.isLoginEntryText?.(text));
     }
 
     function isHindiLoginEntryText(text = '') {
-      return Boolean(text && /लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?/i.test(text));
+      return Boolean(authPageDetectors.isHindiLoginEntryText?.(text));
     }
 
     function findSignupEntryTrigger(options = {}) {

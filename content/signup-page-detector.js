@@ -5,6 +5,17 @@
     return;
   }
 
+  function createDetectorBackedPattern(detectorName, fallbackPattern) {
+    return Object.freeze({
+      test(text = '') {
+        const detector = root.MultiPageAuthPageDetectors?.[detectorName];
+        return typeof detector === 'function'
+          ? detector(text)
+          : fallbackPattern.test(String(text || ''));
+      },
+    });
+  }
+
   const constants = Object.freeze({
     VERIFICATION_CODE_INPUT_SELECTOR: [
       'input[name="code"]',
@@ -28,14 +39,14 @@
     LOGIN_CODE_ONLY_ACTION_PATTERN: /one[-\s]*time|passcode|use\s+(?:a\s+)?code|验证码|一次性/i,
     LOGIN_TOTP_VERIFICATION_PATTERN: /authenticator|authentication\s+app|one[-\s]*time\s+password\s+application|two[-\s]*factor|2fa|mfa|multi[-\s]*factor|verification\s+app|totp|身份验证器|认证器|双重验证|两步验证|多重验证|动态验证码/i,
     LOGIN_EMAIL_VERIFICATION_PATTERN: /检查您的收件箱|输入我们刚刚向|重新发送电子邮件|email\s+verification|check\s+your\s+inbox|we\s+(?:just\s+)?(?:sent|emailed)|sent\s+(?:a\s+)?code\s+to|emailed\s+(?:a\s+)?code|email\s+(?:address|code)|收件箱|邮箱|电子邮件|(?:अपना\s+)?इनबॉक्स\s+देखें|(?:सत्यापन|वेरिफिकेशन)\s+कोड|(?:ई-?मेल|मेल)\s+(?:कोड|पता)|हमने.*(?:कोड|ई-?मेल)/i,
-    RESEND_VERIFICATION_CODE_PATTERN: /重新发送(?:验证码)?|再次发送(?:验证码)?|重发(?:验证码)?|未收到(?:验证码|邮件)|resend(?:\s+code)?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive|(?:कोड|ई-?मेल|मेल)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें|(?:फिर\s+से|दोबारा|पुनः)\s+(?:कोड|ई-?मेल|मेल)\s+भेजें|प्राप्त\s+नहीं\s+हुआ/i,
+    RESEND_VERIFICATION_CODE_PATTERN: createDetectorBackedPattern('isResendEmailText', /^(?:重新发送(?:验证码|电子邮件|邮件)?|再次发送(?:验证码|电子邮件|邮件)?|重发(?:验证码)?|未收到(?:验证码|邮件)|メールを再送信|コードを再送信|resend(?:\s+(?:code|email|verification\s+(?:code|email)))?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive(?:\s+(?:the\s+)?(?:code|email))?\??|(?:कोड|ई-?मेल|मेल)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें|(?:फिर\s+से|दोबारा|पुनः)\s+(?:कोड|ई-?मेल|मेल)\s+भेजें|प्राप्त\s+नहीं\s+हुआ)$/i),
     CONTACT_VERIFICATION_SERVER_ERROR_PATTERN: /this\s+page\s+isn['’]?t\s+working|currently\s+unable\s+to\s+handle\s+this\s+request|http\s+error\s+500|500\s+internal\s+server\s+error/i,
     INVALID_VERIFICATION_CODE_PATTERN: /代码不正确|验证码不正确|验证码错误|コードが正しくありません|確認コードが正しくありません|認証コードが正しくありません|code\s+(?:is\s+)?incorrect|invalid\s+code|incorrect\s+code|try\s+again|गलत\s+कोड|अमान्य\s+कोड|कोड\s+गलत/i,
     EMAIL_ALREADY_VERIFIED_PATTERN: /email\s+verified|already\s+been\s+verified|邮箱已验证|电子邮件已验证|已经验证|メール(?:アドレス)?は確認済み|確認済み/i,
     VERIFICATION_PAGE_PATTERN: /检查您的收件箱|输入我们刚刚向|重新发送电子邮件|重新发送验证码|代码不正确|受信トレイ|メールを確認|コードを入力|確認コード|認証コード|メールを再送信|コードを再送信|email\s+verification|check\s+your\s+inbox|enter\s+the\s+code|we\s+just\s+sent|we\s+emailed|resend|इनबॉक्स\s+देखें|कोड\s+दर्ज\s+करें|(?:सत्यापन|वेरिफिकेशन)\s+कोड|(?:ई-?मेल|कोड)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें/i,
     OAUTH_CONSENT_PAGE_PATTERN: /使用\s*ChatGPT\s*登录到\s*Codex|sign\s+in\s+to\s+codex(?:\s+with\s+chatgpt)?|login\s+to\s+codex|log\s+in\s+to\s+codex|authorize|授权/i,
     OAUTH_CONSENT_FORM_SELECTOR: 'form[action*="/sign-in-with-chatgpt/" i][action*="/consent" i]',
-    CONTINUE_ACTION_PATTERN: /继续|続行|続ける|continue|जारी\s+रखें|आगे/i,
+    CONTINUE_ACTION_PATTERN: createDetectorBackedPattern('isContinueText', /^(?:继续|下一步|送信|続行|続ける|次へ|continue|next|submit|send|जारी\s+रखें|आगे|सबमिट|भेजें)$/i),
     ADD_EMAIL_PAGE_PATTERN: /add[\s-]*email|添加(?:电子邮件|邮箱)|要求提供(?:电子邮件|邮箱)地址|提供(?:电子邮件|邮箱)地址|provide\s+(?:an?\s+)?email\s+address|email\s+address\s+required/i,
   });
 
@@ -46,11 +57,13 @@
       getSignupDomUtils = () => root.MultiPageSignupDomUtils || {},
       getSignupVerificationPageHelpers = () => ({}),
     } = context;
+    const authPageDetectors = context.authPageDetectors || root.MultiPageAuthPageDetectors || {};
 
     function getPageTextSnapshot() {
-      return (documentRef.body?.innerText || documentRef.body?.textContent || '')
-        .replace(/\s+/g, ' ')
-        .trim();
+      const text = documentRef.body?.innerText || documentRef.body?.textContent || '';
+      return typeof authPageDetectors.normalizePageText === 'function'
+        ? authPageDetectors.normalizePageText(text)
+        : String(text || '').replace(/\s+/g, ' ').trim();
     }
 
     function isVisibleElement(el) {
@@ -178,7 +191,10 @@
       );
       return Array.from(candidates).find((el) => {
         if (!isVisibleElement(el) || (!allowDisabled && !isActionEnabled(el))) return false;
-        return constants.CONTINUE_ACTION_PATTERN.test(getActionText(el));
+        const text = getActionText(el);
+        return typeof authPageDetectors.isContinueText === 'function'
+          ? authPageDetectors.isContinueText(text)
+          : constants.CONTINUE_ACTION_PATTERN.test(text);
       }) || null;
     }
 

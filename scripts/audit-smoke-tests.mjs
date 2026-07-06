@@ -561,7 +561,8 @@ function checkStaticContracts() {
   assertIncludes(signupDomUtils, 'getAssociatedInputText', 'signup DOM associated input helper');
   assertIncludes(signupEntryPage, 'MultiPageSignupEntryPage', 'signup entry page global');
   assertIncludes(signupEntryPage, 'findSignupEntryTrigger', 'signup entry trigger helper');
-  assertIncludes(signupEntryPage, 'प्लान्स?', 'signup entry excludes Hindi plans/pricing');
+  assertIncludes(signupEntryPage, 'isSignupEntryText', 'signup entry uses shared signup detector');
+  assertIncludes(signupEntryPage, 'isLoginEntryText', 'signup entry uses shared login detector');
   assertIncludes(signupVerificationPage, 'MultiPageSignupVerificationPage', 'signup verification page global');
   assertIncludes(signupVerificationPage, 'getVerificationCodeTarget', 'signup verification target helper');
   assertIncludes(signupVerificationPage, 'findResendVerificationCodeTrigger', 'signup verification resend helper');
@@ -581,6 +582,7 @@ function checkStaticContracts() {
   assertIncludes(signupSessionPage, 'detectLoggedInHome', 'signup session logged-in home detector');
   assertIncludes(signupPageDetector, 'MultiPageSignupPageDetector', 'signup detector global');
   assertIncludes(signupPageDetector, 'createSignupPageDetector', 'signup detector factory');
+  assertIncludes(signupPageDetector, 'createDetectorBackedPattern', 'signup detector shared text detector wrapper');
   assertIncludes(signupPageDetector, 'getLoginVerificationKind', 'signup detector login verification classifier');
   assertIncludes(signupPageDetector, 'findResendVerificationCodeTrigger', 'signup detector resend helper');
   assertIncludes(signupPageOrchestrator, 'MultiPageSignupPageOrchestrator', 'signup orchestrator global');
