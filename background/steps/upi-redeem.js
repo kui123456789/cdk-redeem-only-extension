@@ -347,6 +347,14 @@
       return getUpiRedeemStateValue(state, 'upiRedeemCdkeyUsage') || {};
     }
 
+    function getAvailableCdkeysForChannel(state = {}, channel = 'upi') {
+      const helper = getRedeemCdkeyUsageHelpers().getAvailableCdkeys;
+      const poolText = getRedeemChannelPoolText(state, channel);
+      const usage = getRedeemChannelUsage(state, channel);
+      if (typeof helper === 'function') return helper(poolText, usage);
+      return String(poolText || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    }
+
     function buildRedeemChannelUsageUpdates(channel = 'upi', usage = {}) {
       const helper = getRedeemCdkeyUsageHelpers().buildRedeemChannelUsageUpdates;
       if (typeof helper === 'function') {
@@ -1115,12 +1123,7 @@
 
     function getAvailableRedeemCdkeys(state = {}, channel = 'upi') {
       const normalizedChannel = normalizeRedeemChannel(channel);
-      const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(state, normalizedChannel));
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getRedeemChannelPoolText(state, normalizedChannel)),
-        usage
-      );
-      return cdkeys.filter((cdkey) => isCdkeySelectableForRedeem(usage?.[cdkey] || {}));
+      return getAvailableCdkeysForChannel(state, normalizedChannel);
     }
 
     function countAvailableRedeemCdkeys(state = {}, channel = 'upi') {
@@ -3366,10 +3369,8 @@
       }
       const clientId = await resolveUpiRedeemClientId(runtimeState);
       const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(runtimeState, redeemChannel));
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getRedeemChannelPoolText(runtimeState, redeemChannel)),
-        usage
-      );
+      const poolCdkeys = parseCdkeyPoolText(getRedeemChannelPoolText(runtimeState, redeemChannel));
+      const cdkeys = getAvailableCdkeysForChannel(runtimeState, redeemChannel);
       const forceCdkey = normalizeString(input.forceCdkey);
       let cdkey = forceCdkey || pickFirstUnusedCdkey(cdkeys, usage);
       if (!cdkey) {
@@ -3379,7 +3380,7 @@
       }
       if (forceCdkey) {
         const forcedUsage = usage?.[forceCdkey] || {};
-        if (!cdkeys.includes(forceCdkey)) {
+        if (!poolCdkeys.includes(forceCdkey)) {
           throw new Error(`指定 CDK 不在当前 CDK 池中，已停止重试：${forceCdkey}`);
         }
         if (forcedUsage.enabled === false) {
@@ -4549,11 +4550,8 @@
         throw new Error('UPI External API Key 未配置，请先在侧边栏填写 UPI 外部 API Key。');
       }
       const clientId = await resolveUpiRedeemClientId(runtimeState);
-      const usage = normalizeUpiRedeemCdkeyUsage(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyUsage') || {});
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyPoolText')),
-        usage
-      );
+      const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(runtimeState, 'upi'));
+      const cdkeys = getAvailableCdkeysForChannel(runtimeState, 'upi');
       const cdkey = pickFirstUnusedCdkey(cdkeys, usage);
       if (!cdkey) {
         throw new Error('没有可用的 CDK，请在侧边栏导入可用 CDK。');
