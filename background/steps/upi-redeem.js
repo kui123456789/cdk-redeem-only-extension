@@ -53,6 +53,9 @@
       waitForTabCompleteUntilStopped = async () => {},
     } = deps;
 
+    const self = typeof globalThis.self !== 'undefined' ? globalThis.self : globalThis;
+    const upiRedeemApiClient = self.MultiPageUpiRedeemApiClient?.createUpiRedeemApiClient?.({ fetchImpl }) || null;
+
     function normalizeString(value = '') {
       return String(value || '').trim();
     }
@@ -2332,7 +2335,7 @@
     }
 
     async function postUPIJson({ apiUrl, externalApiKey, clientId, body }) {
-      if (typeof fetchImpl !== 'function') {
+      if (typeof fetchImpl !== 'function' || !upiRedeemApiClient?.postJson) {
         throw new Error('当前运行环境不支持 fetch，无法请求 UPI 兑换接口。');
       }
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -2340,8 +2343,8 @@
         ? setTimeout(() => controller.abort(), UPI_REDEEM_TIMEOUT_MS)
         : null;
       try {
-        const response = await fetchImpl(apiUrl, {
-          method: 'POST',
+        const { response, payload } = await upiRedeemApiClient.postJson({
+          apiUrl,
           headers: {
             'X-External-Api-Key': externalApiKey,
             'X-Client-Id': clientId,
@@ -2349,10 +2352,11 @@
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
           },
-          body: JSON.stringify(body),
+          body,
           ...(controller ? { signal: controller.signal } : {}),
+          returnResponse: true,
+          throwOnError: false,
         });
-        const payload = await readResponseBody(response);
         if (!response?.ok) {
           const payloadError = getPayloadErrorDetails(payload);
           const statusCode = Number(response?.status) || 0;
@@ -2433,7 +2437,7 @@
     }
 
     async function postEligibilityCheckJson({ apiUrl, token, promoId = '' }) {
-      if (typeof fetchImpl !== 'function') {
+      if (typeof fetchImpl !== 'function' || !upiRedeemApiClient?.checkEligibility) {
         throw new Error('当前运行环境不支持 fetch，无法请求 UPI 优惠资格验证接口。');
       }
       const normalizedToken = normalizeString(token);
@@ -2445,20 +2449,17 @@
         ? setTimeout(() => controller.abort(), UPI_REDEEM_TIMEOUT_MS)
         : null;
       try {
-        const body = { token: normalizedToken };
-        const normalizedPromoId = normalizeString(promoId);
-        if (normalizedPromoId) {
-          body.promoId = normalizedPromoId;
-        }
-        const response = await fetchImpl(apiUrl, {
-          method: 'POST',
+        const { response, payload } = await upiRedeemApiClient.checkEligibility({
+          apiUrl,
+          token: normalizedToken,
+          promoId,
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
           ...(controller ? { signal: controller.signal } : {}),
+          returnResponse: true,
+          throwOnError: false,
         });
-        const payload = await readResponseBody(response);
         if (!response?.ok) {
           if (isEligibilityResultPayload(payload) || isEligibilityResultPayload(payload?.data)) {
             return payload && typeof payload === 'object' && !Array.isArray(payload)

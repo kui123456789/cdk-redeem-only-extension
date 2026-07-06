@@ -17,6 +17,7 @@ importScripts(
   'background/flow-definition-resolver.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
+  'background/redeem/upi-redeem-api-client.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
   'shared/trial-eligibility-api.js',
