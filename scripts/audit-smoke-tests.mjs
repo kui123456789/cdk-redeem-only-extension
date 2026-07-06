@@ -57,6 +57,22 @@ function assertNotMatch(text, pattern, label) {
   }
 }
 
+function assertBefore(text, firstNeedle, secondNeedle, label) {
+  const firstIndex = text.indexOf(firstNeedle);
+  const secondIndex = text.indexOf(secondNeedle);
+  if (firstIndex === -1) {
+    fail(`${label} missing first text: ${firstNeedle}`);
+    return;
+  }
+  if (secondIndex === -1) {
+    fail(`${label} missing second text: ${secondNeedle}`);
+    return;
+  }
+  if (firstIndex >= secondIndex) {
+    fail(`${label} expected ${firstNeedle} before ${secondNeedle}`);
+  }
+}
+
 function assertFileLineCountAtMost(relativePath, maxLines, label) {
   const text = readText(relativePath);
   if (!text) return;
@@ -172,6 +188,12 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
+  assertBefore(
+    sidepanelHtml,
+    'src="../shared/redeem-channel-state.js"',
+    'src="cdk-pool-manager.js"',
+    'sidepanel redeem channel state must load before CDK pool manager'
+  );
   assertIncludes(sidepanelHtml, 'href="styles/settings.css"', 'settings stylesheet load');
   assertIncludes(sidepanelHtml, 'href="styles/cdk-pools.css"', 'CDK pools stylesheet load');
   assertIncludes(sidepanelHtml, 'href="styles/account-records.css"', 'account records stylesheet load');
