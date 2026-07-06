@@ -411,6 +411,24 @@
     return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
   }
 
+  function getTrialEligibilityApiHelpers() {
+    const rootScope = typeof self !== 'undefined' ? self : globalThis;
+    return rootScope.MultiPageTrialEligibilityApi || {};
+  }
+
+  function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
+    const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
+    if (typeof helper === 'function') {
+      return helper(item, channel);
+    }
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    const field = normalizedChannel === 'ideal'
+      ? 'idealChannelEligibilityStatus'
+      : 'upiChannelEligibilityStatus';
+    const status = normalizeString(item?.[field]).toLowerCase();
+    return !status || status === 'unknown' || status === 'eligible';
+  }
+
   function getRedeemChannelFailureField(channel = 'upi') {
     const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
     if (typeof helper === 'function') {
@@ -588,6 +606,12 @@
       return false;
     }
     if (isRedeemChannelDailyLimitBlocked(item, channel)) {
+      return false;
+    }
+    if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') {
+      return false;
+    }
+    if (!isTrialEligibilityChannelAllowed(item, channel)) {
       return false;
     }
     if (normalizeRedeemChannel(channel) === 'upi') {

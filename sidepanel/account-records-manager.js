@@ -1913,10 +1913,23 @@
           };
         }
         if (trialStatus === 'eligible') {
+          const upiChannelBlockedDetail = getTrialEligibilityChannelBlockedDetail(row, 'upi');
+          const idealChannelBlockedDetail = getTrialEligibilityChannelBlockedDetail(row, 'ideal');
+          if (upiChannelBlockedDetail && idealChannelBlockedDetail) {
+            return {
+              className: 'pending',
+              label: '渠道不可用',
+              detail: `${no2faDetailPrefix}${upiChannelBlockedDetail}；${idealChannelBlockedDetail}。账号有试用资格，但当前没有可用兑换渠道。`,
+            };
+          }
+          const channelDetail = [
+            upiChannelBlockedDetail ? `UPI 不可用：${upiChannelBlockedDetail}` : '',
+            idealChannelBlockedDetail ? `IDEAL 不可用：${idealChannelBlockedDetail}` : '',
+          ].filter(Boolean).join('；');
           return {
             className: 'active',
             label: row.no2faFreeRoute === true ? '免2FA待兑换' : '待兑换',
-            detail: `${no2faDetailPrefix}${trialReason || '试用资格已确认，等待分配 CDK 兑换'}`,
+            detail: `${no2faDetailPrefix}${trialReason || '试用资格已确认，等待分配 CDK 兑换'}${channelDetail ? `；${channelDetail}` : ''}`,
           };
         }
         if (trialStatus === 'ineligible') {
@@ -2107,6 +2120,35 @@
       return '';
     }
 
+    function getTrialEligibilityApiHelpers() {
+      return (typeof window !== 'undefined' ? window.MultiPageTrialEligibilityApi : null) || {};
+    }
+
+    function isTrialEligibilityChannelAllowed(row = {}, channel = 'upi') {
+      const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
+      if (typeof helper === 'function') {
+        return helper(row, channel);
+      }
+      const redeemChannel = normalizeRedeemChannel(channel);
+      const field = redeemChannel === 'ideal'
+        ? 'idealChannelEligibilityStatus'
+        : 'upiChannelEligibilityStatus';
+      const status = normalizeUpiCredentialMembershipText(row[field]).toLowerCase();
+      return !status || status === 'unknown' || status === 'eligible';
+    }
+
+    function getTrialEligibilityChannelBlockedDetail(row = {}, channel = 'upi') {
+      const redeemChannel = normalizeRedeemChannel(channel);
+      if (isTrialEligibilityChannelAllowed(row, redeemChannel)) {
+        return '';
+      }
+      const reasonField = redeemChannel === 'ideal'
+        ? 'idealChannelEligibilityReason'
+        : 'upiChannelEligibilityReason';
+      return normalizeUpiCredentialMembershipText(row[reasonField])
+        || `${getRedeemChannelLabel(redeemChannel)} 渠道当前不可用`;
+    }
+
     function normalizeTrialEligibilitySummaryItem(item = {}) {
       const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
       return {
@@ -2172,6 +2214,9 @@
         return false;
       }
       if (isRedeemChannelDailyLimitBlocked(row, redeemChannel)) {
+        return false;
+      }
+      if (!isTrialEligibilityChannelAllowed(row, redeemChannel)) {
         return false;
       }
       const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();

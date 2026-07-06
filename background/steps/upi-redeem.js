@@ -260,6 +260,9 @@
       if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') {
         return false;
       }
+      if (!isTrialEligibilityChannelAllowed(item, channel)) {
+        return false;
+      }
       if (normalizeRedeemChannel(channel) === 'upi') {
         return true;
       }
@@ -275,6 +278,13 @@
         return normalizeString(item?.[getRedeemChannelDailyLimitReasonField(redeemChannel)])
           || normalizeString(item?.redeemReason || item?.reason)
           || `${getRedeemChannelLabel(redeemChannel)} 今日提交次数已达上限`;
+      }
+      if (!isTrialEligibilityChannelAllowed(item, redeemChannel)) {
+        const reasonField = redeemChannel === 'ideal'
+          ? 'idealChannelEligibilityReason'
+          : 'upiChannelEligibilityReason';
+        return normalizeString(item?.[reasonField])
+          || `${getRedeemChannelLabel(redeemChannel)} 渠道当前不可用`;
       }
       if (redeemChannel === 'ideal' && getRedeemChannelFailureCount(item, redeemChannel) >= REDEEM_CHANNEL_FAILURE_LIMIT) {
         return 'IDEAL 已达到失败上限';
@@ -1834,6 +1844,19 @@
     function buildTrialEligibilityResultPatch(decision = {}) {
       const helper = getTrialEligibilityApiHelpers().buildTrialEligibilityResultPatch;
       return typeof helper === 'function' ? helper(decision) : {};
+    }
+
+    function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
+      const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
+      if (typeof helper === 'function') {
+        return helper(item, channel);
+      }
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      const field = normalizedChannel === 'ideal'
+        ? 'idealChannelEligibilityStatus'
+        : 'upiChannelEligibilityStatus';
+      const status = normalizeString(item?.[field]).toLowerCase();
+      return !status || status === 'unknown' || status === 'eligible';
     }
 
     function isEligibilityResultPayload(value = {}) {
