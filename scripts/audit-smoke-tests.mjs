@@ -57,6 +57,22 @@ function assertNotMatch(text, pattern, label) {
   }
 }
 
+function assertBefore(text, firstNeedle, secondNeedle, label) {
+  const firstIndex = text.indexOf(firstNeedle);
+  const secondIndex = text.indexOf(secondNeedle);
+  if (firstIndex === -1) {
+    fail(`${label} missing first text: ${firstNeedle}`);
+    return;
+  }
+  if (secondIndex === -1) {
+    fail(`${label} missing second text: ${secondNeedle}`);
+    return;
+  }
+  if (firstIndex >= secondIndex) {
+    fail(`${label} expected ${firstNeedle} before ${secondNeedle}`);
+  }
+}
+
 function assertFileLineCountAtMost(relativePath, maxLines, label) {
   const text = readText(relativePath);
   if (!text) return;
@@ -95,6 +111,37 @@ function checkManifest() {
       fail(`manifest is missing permission: ${permission}`);
     }
   }
+
+  const authContentScript = manifest.content_scripts?.find((script) => (
+    Array.isArray(script?.matches)
+    && script.matches.some((pattern) => /auth(?:0)?\.openai\.com|accounts\.openai\.com/i.test(pattern))
+  ));
+  if (!authContentScript) {
+    fail('manifest is missing OpenAI auth content script entry.');
+    return;
+  }
+
+  const expectedSignupOrder = [
+    'content/signup-dom-utils.js',
+    'content/signup-entry-page.js',
+    'content/signup-verification-page.js',
+    'content/signup-password-page.js',
+    'content/signup-profile-page.js',
+    'content/signup-session-page.js',
+    'content/signup-page.js',
+  ];
+  let previousIndex = -1;
+  for (const file of expectedSignupOrder) {
+    const index = authContentScript.js?.indexOf(file) ?? -1;
+    if (index === -1) {
+      fail(`manifest OpenAI auth content script is missing ${file}`);
+      continue;
+    }
+    if (index <= previousIndex) {
+      fail(`manifest OpenAI auth content script has ${file} out of signup helper order`);
+    }
+    previousIndex = index;
+  }
 }
 
 function checkCoreFiles() {
@@ -103,7 +150,11 @@ function checkCoreFiles() {
     'background/message-router.js',
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
-    'background/redeem/redeem-channel-state.js',
+    'background/routes/membership-routes.js',
+    'background/routes/cdkey-routes.js',
+    'background/routes/workflow-routes.js',
+    'shared/redeem-channel-state.js',
+    'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
@@ -111,6 +162,9 @@ function checkCoreFiles() {
     'content/signup-dom-utils.js',
     'content/signup-entry-page.js',
     'content/signup-verification-page.js',
+    'content/signup-password-page.js',
+    'content/signup-profile-page.js',
+    'content/signup-session-page.js',
     'content/signup-page.js',
     'sidepanel/sidepanel.html',
     'sidepanel/styles/settings.css',
@@ -149,7 +203,8 @@ function checkStaticContracts() {
   const background = readText('background.js');
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
-  const redeemChannelState = readText('background/redeem/redeem-channel-state.js');
+  const redeemChannelState = readText('shared/redeem-channel-state.js');
+  const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
@@ -158,11 +213,17 @@ function checkStaticContracts() {
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const router = readText('background/message-router.js');
+  const membershipRoutes = readText('background/routes/membership-routes.js');
+  const cdkRoutes = readText('background/routes/cdkey-routes.js');
+  const workflowRoutes = readText('background/routes/workflow-routes.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
   const signupDomUtils = readText('content/signup-dom-utils.js');
   const signupEntryPage = readText('content/signup-entry-page.js');
   const signupVerificationPage = readText('content/signup-verification-page.js');
+  const signupPasswordPage = readText('content/signup-password-page.js');
+  const signupProfilePage = readText('content/signup-profile-page.js');
+  const signupSessionPage = readText('content/signup-session-page.js');
   const gitignore = readText('.gitignore');
 
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
@@ -170,7 +231,17 @@ function checkStaticContracts() {
   assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
+  assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
+  assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
+  assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
+  assertIncludes(membershipCredentialFormat, 'formatFreeCredentialLine', 'membership Free export formatter');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
+  assertBefore(
+    sidepanelHtml,
+    'src="../shared/redeem-channel-state.js"',
+    'src="cdk-pool-manager.js"',
+    'sidepanel redeem channel state must load before CDK pool manager'
+  );
   assertIncludes(sidepanelHtml, 'href="styles/settings.css"', 'settings stylesheet load');
   assertIncludes(sidepanelHtml, 'href="styles/cdk-pools.css"', 'CDK pools stylesheet load');
   assertIncludes(sidepanelHtml, 'href="styles/account-records.css"', 'account records stylesheet load');
@@ -196,11 +267,49 @@ function checkStaticContracts() {
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
-  assertIncludes(background, "'background/redeem/redeem-channel-state.js'", 'background redeem channel state script load');
+  assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
+  assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
+  assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
+  assertBefore(
+    background,
+    "'background/routes/membership-routes.js'",
+    "'background/message-router.js'",
+    'background membership routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/cdkey-routes.js'",
+    "'background/message-router.js'",
+    'background CDK routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/workflow-routes.js'",
+    "'background/message-router.js'",
+    'background workflow routes must load before message router'
+  );
+  assertIncludes(membershipRoutes, 'createMembershipRoutes', 'membership routes factory');
+  assertIncludes(membershipRoutes, 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH', 'membership trial batch route');
+  assertIncludes(cdkRoutes, 'createCdkeyRoutes', 'CDK routes factory');
+  assertIncludes(cdkRoutes, 'REFRESH_UPI_REDEEM_CDKEY_STATUSES', 'remote CDK status refresh route');
+  assertIncludes(workflowRoutes, 'createWorkflowRoutes', 'workflow routes factory');
+  assertIncludes(workflowRoutes, 'EXECUTE_NODE', 'workflow execute node route');
+  assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
+  assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
+  assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
+  assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
+  assertBefore(
+    background,
+    "'shared/membership-credential-format.js'",
+    "'background/upi-credential-membership-checker.js'",
+    'background membership credential format must load before membership checker'
+  );
   assertIncludes(background, "'background/redeem/redeem-cdkey-usage.js'", 'background redeem CDK usage script load');
   assertIncludes(redeemChannelState, 'createRedeemChannelState', 'redeem channel state factory');
   assertIncludes(redeemChannelState, 'getRedeemChannelFailureField', 'redeem channel failure field helper');
+  assertIncludes(redeemChannelState, 'getRedeemChannelFailureCount', 'redeem channel failure count helper');
   assertIncludes(redeemChannelState, 'isRedeemChannelDailyLimitReason', 'redeem daily-limit helper');
+  assertIncludes(redeemChannelState, 'shouldRedeemItemUseChannel', 'redeem channel use policy helper');
   assertIncludes(redeemCdkeyUsage, 'createRedeemCdkeyUsage', 'redeem CDK usage factory');
   assertIncludes(redeemCdkeyUsage, 'getUpiRedeemStateValue', 'redeem CDK legacy alias helper');
   assertIncludes(redeemCdkeyUsage, 'buildRedeemChannelUsageUpdates', 'redeem CDK usage update helper');
@@ -213,9 +322,15 @@ function checkStaticContracts() {
   assertIncludes(background, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
   assertIncludes(background, "'content/signup-entry-page.js'", 'background signup entry page injection');
   assertIncludes(background, "'content/signup-verification-page.js'", 'background signup verification page injection');
+  assertIncludes(background, "'content/signup-password-page.js'", 'background signup password page injection');
+  assertIncludes(background, "'content/signup-profile-page.js'", 'background signup profile page injection');
+  assertIncludes(background, "'content/signup-session-page.js'", 'background signup session page injection');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-dom-utils.js', 'manifest signup DOM utils load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-entry-page.js', 'manifest signup entry page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-verification-page.js', 'manifest signup verification page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-password-page.js', 'manifest signup password page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-profile-page.js', 'manifest signup profile page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-session-page.js', 'manifest signup session page load');
   assertIncludes(signupDomUtils, 'MultiPageSignupDomUtils', 'signup DOM utils global');
   assertIncludes(signupDomUtils, 'getAssociatedInputText', 'signup DOM associated input helper');
   assertIncludes(signupEntryPage, 'MultiPageSignupEntryPage', 'signup entry page global');
@@ -224,6 +339,20 @@ function checkStaticContracts() {
   assertIncludes(signupVerificationPage, 'MultiPageSignupVerificationPage', 'signup verification page global');
   assertIncludes(signupVerificationPage, 'getVerificationCodeTarget', 'signup verification target helper');
   assertIncludes(signupVerificationPage, 'findResendVerificationCodeTrigger', 'signup verification resend helper');
+  assertIncludes(signupPasswordPage, 'MultiPageSignupPasswordPage', 'signup password page global');
+  assertIncludes(signupPasswordPage, 'createSignupPasswordPage', 'signup password page factory');
+  assertIncludes(signupPasswordPage, 'setPassword', 'signup password set password helper');
+  assertIncludes(signupPasswordPage, 'detectPasswordPage', 'signup password page detector');
+  assertIncludes(signupProfilePage, 'MultiPageSignupProfilePage', 'signup profile page global');
+  assertIncludes(signupProfilePage, 'createSignupProfilePage', 'signup profile page factory');
+  assertIncludes(signupProfilePage, 'detectProfilePage', 'signup profile page detector');
+  assertIncludes(signupProfilePage, 'fillProfileNameAndBirthday', 'signup profile fill helper');
+  assertIncludes(signupProfilePage, 'submitProfilePage', 'signup profile submit helper');
+  assertIncludes(signupSessionPage, 'MultiPageSignupSessionPage', 'signup session page global');
+  assertIncludes(signupSessionPage, 'createSignupSessionPage', 'signup session page factory');
+  assertIncludes(signupSessionPage, 'readChatGptSession', 'signup session reader');
+  assertIncludes(signupSessionPage, 'extractAccessToken', 'signup session access token helper');
+  assertIncludes(signupSessionPage, 'detectLoggedInHome', 'signup session logged-in home detector');
 
   [
     'btn-upi-redeem-cdkey-status-refresh',
@@ -270,17 +399,21 @@ function checkStaticContracts() {
     /await helpers\.downloadTextFile\(/,
     'account record exports must await async download helper'
   );
-  assertIncludes(
+  assertMatch(
     accountRecords,
-    "if (deleteStatus === 'free') {\n            setUpiCredentialMembershipPoolRows",
+    /deletedEmails\.forEach\(\(email\) => disabledUpiCredentialMembershipEmails\.delete\(email\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus delete must not remove local backup pool rows'
+  );
+  assertNotMatch(
+    accountRecords,
+    /else if\s*\(deleteStatus === 'paid' && deleteChannel\)\s*\{[^{}]*?setUpiCredentialMembershipPoolRows\(/,
+    'single Plus paid delete must not mutate local backup pool rows'
   );
   assertNotMatch(
     accountRecords,
     /const credentials = getEnabledFreeUpiCredentialMembershipRows\(\);\s+if \(!credentials\.length\)/,
     'CDK import resume must not use merged UPI/IDEAL candidates'
   );
-  assertIncludes(router, "case 'REFRESH_UPI_REDEEM_CDKEY_STATUSES'", 'remote CDK status refresh route');
   assertIncludes(router, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
 
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
@@ -307,11 +440,15 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background.js', 20000, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
-  assertFileLineCountAtMost('background/redeem/redeem-channel-state.js', 300, 'redeem channel state size guard');
+  assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
+  assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
   assertFileLineCountAtMost('content/signup-verification-page.js', 300, 'signup verification page size guard');
+  assertFileLineCountAtMost('content/signup-password-page.js', 350, 'signup password page size guard');
+  assertFileLineCountAtMost('content/signup-profile-page.js', 550, 'signup profile page size guard');
+  assertFileLineCountAtMost('content/signup-session-page.js', 220, 'signup session page size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7500, 'membership checker growth guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');

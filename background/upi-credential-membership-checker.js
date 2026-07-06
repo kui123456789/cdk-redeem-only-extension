@@ -49,6 +49,8 @@
     return String(value || '').trim();
   }
 
+  const now = Date.now;
+
   function getPasskeyApiLoginHelper() {
     const rootScope = typeof self !== 'undefined' ? self : globalThis;
     return rootScope.MultiPagePasskeyApiLoginExecutor || {};
@@ -416,6 +418,10 @@
     return rootScope.MultiPageTrialEligibilityApi || {};
   }
 
+  function getMembershipResultsStoreHelpers() {
+    return (typeof self !== 'undefined' ? self : globalThis).MultiPageMembershipResultsStore || {};
+  }
+
   function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
     const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
     if (typeof helper === 'function') {
@@ -472,6 +478,10 @@
   }
 
   function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
+    const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+    if (typeof helper === 'function') {
+      return helper(item, channel);
+    }
     const normalizedChannel = normalizeRedeemChannel(channel);
     const field = getRedeemChannelFailureField(normalizedChannel);
     if (Object.prototype.hasOwnProperty.call(item || {}, field)) {
@@ -549,6 +559,10 @@
   }
 
   function isRedeemChannelDailyLimitBlocked(item = {}, channel = 'upi') {
+    const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+    if (typeof helper === 'function') {
+      return helper(item, channel);
+    }
     const normalizedChannel = normalizeRedeemChannel(channel);
     const nowMs = Date.now();
     const blockedUntil = Date.parse(normalizeString(item?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]));
@@ -577,6 +591,10 @@
   }
 
   function isRedeemAccountLocked(item = {}) {
+    const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+    if (typeof helper === 'function') {
+      return helper(item);
+    }
     return item?.redeemLocked === true
       || getRedeemChannelFailureCount(item, 'ideal') >= REDEEM_CHANNEL_FAILURE_LIMIT;
   }
@@ -634,21 +652,18 @@
   }
 
   function shouldRedeemItemUseChannel(item = {}, channel = 'upi') {
-    if (isRedeemAccountLocked(item)) {
-      return false;
+    const helper = getRedeemChannelStateHelpers().shouldRedeemItemUseChannel;
+    if (typeof helper === 'function') {
+      return helper(item, channel, {
+        nowMs: now(),
+        isTrialEligibilityChannelAllowed,
+      });
     }
-    if (isRedeemChannelDailyLimitBlocked(item, channel)) {
-      return false;
-    }
-    if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') {
-      return false;
-    }
-    if (!isTrialEligibilityChannelAllowed(item, channel)) {
-      return false;
-    }
-    if (normalizeRedeemChannel(channel) === 'upi') {
-      return true;
-    }
+    if (isRedeemAccountLocked(item)) return false;
+    if (isRedeemChannelDailyLimitBlocked(item, channel)) return false;
+    if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') return false;
+    if (!isTrialEligibilityChannelAllowed(item, channel)) return false;
+    if (normalizeRedeemChannel(channel) === 'upi') return true;
     return getRedeemChannelFailureCount(item, channel) < REDEEM_CHANNEL_FAILURE_LIMIT;
   }
 
@@ -1078,7 +1093,10 @@
     return /^https?:\/\//i.test(text);
   }
 
-  function parseCredentialBackupParts(parts = []) {
+  function getMembershipCredentialFormat() { return (typeof self !== 'undefined' ? self : globalThis).MultiPageMembershipCredentialFormat || {}; }
+  function parseCredentialBackupParts(parts = []) { const helper = getMembershipCredentialFormat().parseCredentialParts; return typeof helper === 'function' ? helper(parts, { nowMs: Date.now() }) : parseCredentialBackupPartsFallback(parts); }
+
+  function parseCredentialBackupPartsFallback(parts = []) {
     if (parts.length === 4 && isLikelyVerificationUrl(parts[1])) {
       const recordedAt = normalizeNo2faFreeExportTimestamp(parts[3]);
       return {
@@ -1481,6 +1499,17 @@
     return (deletedByChannel[targetChannel] || []).includes(email);
   }
 
+  function buildResultExportRowsFreeFallback(item = {}) {
+    const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
+    const verificationUrl = item.verificationUrl ? normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl) : '';
+    if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+    if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
+      const passkeyMarker = buildPasskeyExportMarker(item);
+      return verificationUrl ? `${item.email}---${item.password}---${passkeyMarker}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${passkeyMarker}---${item.accessToken || ''}---${timestamp}`;
+    }
+    return verificationUrl ? `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
+  }
+
   function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = []) {
     const normalizedStatus = normalizeString(status);
     const normalizedChannel = normalizeString(channel) ? normalizeRedeemChannel(channel) : '';
@@ -1527,24 +1556,11 @@
           return `${item.email}---${item.reason || '核验失败'}`;
         }
         if (normalizedStatus === 'free') {
-          if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) {
-            const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
-            const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-            return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+          const formatFreeCredentialLine = getMembershipCredentialFormat().formatFreeCredentialLine;
+          if (typeof formatFreeCredentialLine === 'function') {
+            return formatFreeCredentialLine({ ...item, checkedAt: formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item)) });
           }
-          const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
-          if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
-            if (item.verificationUrl) {
-              const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-              return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
-            }
-            return `${item.email}---${item.password}---${buildPasskeyExportMarker(item)}---${item.accessToken || ''}---${timestamp}`;
-          }
-          if (item.verificationUrl) {
-            const verificationUrl = normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl);
-            return `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
-          }
-          return `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
+          return buildResultExportRowsFreeFallback(item);
         }
         const timestamp = item.redeemSuccessAt || item.upiRedeemSubscriptionCheckedAt || item.checkedAt || '';
         if (item.passkeyEnabled === true && item.password && !item.totpMfaSecret) {
@@ -1662,6 +1678,12 @@
     let redeemStopRequested = false;
     let redeemRunning = false;
     let cdkeyRetryRunning = false;
+    const membershipResultsStoreFactory = getMembershipResultsStoreHelpers().createMembershipResultsStore;
+    if (typeof membershipResultsStoreFactory !== 'function') throw new Error('Membership results store module is not loaded.');
+    const membershipResultsStore = membershipResultsStoreFactory({
+      broadcastDataUpdate, chromeApi, mergeRedeemDeletionStateForSave, normalizeResultsPayload, setState,
+      storageKey: RESULTS_STORAGE_KEY,
+    });
 
     function throwIfMembershipStopRequested(kind = 'check') {
       throwIfStopped();
@@ -1728,8 +1750,7 @@
     }
 
     async function getStoredResults() {
-      const stored = await chromeApi.storage.local.get([RESULTS_STORAGE_KEY]).catch(() => ({}));
-      const payload = normalizeResultsPayload(stored?.[RESULTS_STORAGE_KEY]);
+      const payload = await membershipResultsStore.getStoredResults();
       if (payload.running === true && !batchRunning) {
         const fixedAt = new Date().toISOString();
         const fixed = normalizeResultsPayload({
@@ -1768,18 +1789,7 @@
     }
 
     async function saveResults(results = {}) {
-      const stored = await chromeApi.storage.local.get([RESULTS_STORAGE_KEY]).catch(() => ({}));
-      const previousPayload = normalizeResultsPayload(stored?.[RESULTS_STORAGE_KEY]);
-      const payload = normalizeResultsPayload({
-        ...results,
-        ...mergeRedeemDeletionStateForSave(previousPayload, results),
-      });
-      await chromeApi.storage.local.set({ [RESULTS_STORAGE_KEY]: payload });
-      if (typeof setState === 'function') {
-        await setState({ [RESULTS_STORAGE_KEY]: payload }).catch(() => {});
-      }
-      broadcastDataUpdate({ [RESULTS_STORAGE_KEY]: payload });
-      return payload;
+      return membershipResultsStore.saveResults(results);
     }
 
     async function updateUpiRedeemCdkeyRetryUsage(cdkey = '', updater = () => ({})) {

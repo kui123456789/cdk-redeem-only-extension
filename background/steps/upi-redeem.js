@@ -53,6 +53,9 @@
       waitForTabCompleteUntilStopped = async () => {},
     } = deps;
 
+    const self = typeof globalThis.self !== 'undefined' ? globalThis.self : globalThis;
+    const upiRedeemApiClient = self.MultiPageUpiRedeemApiClient?.createUpiRedeemApiClient?.({ fetchImpl }) || null;
+
     function normalizeString(value = '') {
       return String(value || '').trim();
     }
@@ -93,6 +96,10 @@
     }
 
     function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+      if (typeof helper === 'function') {
+        return helper(item, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = getRedeemChannelFailureField(normalizedChannel);
       if (Object.prototype.hasOwnProperty.call(item || {}, field)) {
@@ -172,6 +179,12 @@
     }
 
     function isRedeemChannelDailyLimitBlocked(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+      if (typeof helper === 'function') {
+        return helper(item, channel, {
+          nowMs: now(),
+        });
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const nowMs = Math.max(1, Math.floor(Number(now()) || Date.now()));
       const blockedUntil = Date.parse(normalizeString(item?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]));
@@ -200,6 +213,10 @@
     }
 
     function isRedeemAccountLocked(item = {}) {
+      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+      if (typeof helper === 'function') {
+        return helper(item);
+      }
       return item?.redeemLocked === true
         || getRedeemChannelFailureCount(item, 'ideal') >= REDEEM_CHANNEL_FAILURE_LIMIT;
     }
@@ -251,21 +268,18 @@
     }
 
     function shouldRedeemItemUseChannel(item = {}, channel = 'upi') {
-      if (isRedeemAccountLocked(item)) {
-        return false;
+      const helper = getRedeemChannelStateHelpers().shouldRedeemItemUseChannel;
+      if (typeof helper === 'function') {
+        return helper(item, channel, {
+          nowMs: now(),
+          isTrialEligibilityChannelAllowed,
+        });
       }
-      if (isRedeemChannelDailyLimitBlocked(item, channel)) {
-        return false;
-      }
-      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') {
-        return false;
-      }
-      if (!isTrialEligibilityChannelAllowed(item, channel)) {
-        return false;
-      }
-      if (normalizeRedeemChannel(channel) === 'upi') {
-        return true;
-      }
+      if (isRedeemAccountLocked(item)) return false;
+      if (isRedeemChannelDailyLimitBlocked(item, channel)) return false;
+      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') return false;
+      if (!isTrialEligibilityChannelAllowed(item, channel)) return false;
+      if (normalizeRedeemChannel(channel) === 'upi') return true;
       return getRedeemChannelFailureCount(item, channel) < REDEEM_CHANNEL_FAILURE_LIMIT;
     }
 
@@ -334,6 +348,14 @@
         return state?.idealRedeemCdkeyUsage || {};
       }
       return getUpiRedeemStateValue(state, 'upiRedeemCdkeyUsage') || {};
+    }
+
+    function getAvailableCdkeysForChannel(state = {}, channel = 'upi') {
+      const helper = getRedeemCdkeyUsageHelpers().getAvailableCdkeys;
+      const poolText = getRedeemChannelPoolText(state, channel);
+      const usage = getRedeemChannelUsage(state, channel);
+      if (typeof helper === 'function') return helper(poolText, usage);
+      return String(poolText || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     }
 
     function buildRedeemChannelUsageUpdates(channel = 'upi', usage = {}) {
@@ -1104,12 +1126,7 @@
 
     function getAvailableRedeemCdkeys(state = {}, channel = 'upi') {
       const normalizedChannel = normalizeRedeemChannel(channel);
-      const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(state, normalizedChannel));
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getRedeemChannelPoolText(state, normalizedChannel)),
-        usage
-      );
-      return cdkeys.filter((cdkey) => isCdkeySelectableForRedeem(usage?.[cdkey] || {}));
+      return getAvailableCdkeysForChannel(state, normalizedChannel);
     }
 
     function countAvailableRedeemCdkeys(state = {}, channel = 'upi') {
@@ -2331,7 +2348,7 @@
     }
 
     async function postUPIJson({ apiUrl, externalApiKey, clientId, body }) {
-      if (typeof fetchImpl !== 'function') {
+      if (typeof fetchImpl !== 'function' || !upiRedeemApiClient?.postJson) {
         throw new Error('当前运行环境不支持 fetch，无法请求 UPI 兑换接口。');
       }
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -2339,8 +2356,8 @@
         ? setTimeout(() => controller.abort(), UPI_REDEEM_TIMEOUT_MS)
         : null;
       try {
-        const response = await fetchImpl(apiUrl, {
-          method: 'POST',
+        const { response, payload } = await upiRedeemApiClient.postJson({
+          apiUrl,
           headers: {
             'X-External-Api-Key': externalApiKey,
             'X-Client-Id': clientId,
@@ -2348,10 +2365,11 @@
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
           },
-          body: JSON.stringify(body),
+          body,
           ...(controller ? { signal: controller.signal } : {}),
+          returnResponse: true,
+          throwOnError: false,
         });
-        const payload = await readResponseBody(response);
         if (!response?.ok) {
           const payloadError = getPayloadErrorDetails(payload);
           const statusCode = Number(response?.status) || 0;
@@ -2432,7 +2450,7 @@
     }
 
     async function postEligibilityCheckJson({ apiUrl, token, promoId = '' }) {
-      if (typeof fetchImpl !== 'function') {
+      if (typeof fetchImpl !== 'function' || !upiRedeemApiClient?.checkEligibility) {
         throw new Error('当前运行环境不支持 fetch，无法请求 UPI 优惠资格验证接口。');
       }
       const normalizedToken = normalizeString(token);
@@ -2444,20 +2462,17 @@
         ? setTimeout(() => controller.abort(), UPI_REDEEM_TIMEOUT_MS)
         : null;
       try {
-        const body = { token: normalizedToken };
-        const normalizedPromoId = normalizeString(promoId);
-        if (normalizedPromoId) {
-          body.promoId = normalizedPromoId;
-        }
-        const response = await fetchImpl(apiUrl, {
-          method: 'POST',
+        const { response, payload } = await upiRedeemApiClient.checkEligibility({
+          apiUrl,
+          token: normalizedToken,
+          promoId,
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
           ...(controller ? { signal: controller.signal } : {}),
+          returnResponse: true,
+          throwOnError: false,
         });
-        const payload = await readResponseBody(response);
         if (!response?.ok) {
           if (isEligibilityResultPayload(payload) || isEligibilityResultPayload(payload?.data)) {
             return payload && typeof payload === 'object' && !Array.isArray(payload)
@@ -3383,10 +3398,8 @@
       }
       const clientId = await resolveUpiRedeemClientId(runtimeState);
       const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(runtimeState, redeemChannel));
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getRedeemChannelPoolText(runtimeState, redeemChannel)),
-        usage
-      );
+      const poolCdkeys = parseCdkeyPoolText(getRedeemChannelPoolText(runtimeState, redeemChannel));
+      const cdkeys = getAvailableCdkeysForChannel(runtimeState, redeemChannel);
       const forceCdkey = normalizeString(input.forceCdkey);
       let cdkey = forceCdkey || pickFirstUnusedCdkey(cdkeys, usage);
       if (!cdkey) {
@@ -3396,7 +3409,7 @@
       }
       if (forceCdkey) {
         const forcedUsage = usage?.[forceCdkey] || {};
-        if (!cdkeys.includes(forceCdkey)) {
+        if (!poolCdkeys.includes(forceCdkey)) {
           throw new Error(`指定 CDK 不在当前 CDK 池中，已停止重试：${forceCdkey}`);
         }
         if (forcedUsage.enabled === false) {
@@ -4567,11 +4580,8 @@
         throw new Error('UPI External API Key 未配置，请先在侧边栏填写 UPI 外部 API Key。');
       }
       const clientId = await resolveUpiRedeemClientId(runtimeState);
-      const usage = normalizeUpiRedeemCdkeyUsage(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyUsage') || {});
-      const cdkeys = mergeCdkeysWithRecoverableUsage(
-        parseCdkeyPoolText(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyPoolText')),
-        usage
-      );
+      const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(runtimeState, 'upi'));
+      const cdkeys = getAvailableCdkeysForChannel(runtimeState, 'upi');
       const cdkey = pickFirstUnusedCdkey(cdkeys, usage);
       if (!cdkey) {
         throw new Error('没有可用的 CDK，请在侧边栏导入可用 CDK。');

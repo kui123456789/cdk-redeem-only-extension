@@ -10,8 +10,14 @@
 
     const displayTimeZone = constants.displayTimeZone || 'Asia/Shanghai';
     const pageSize = Math.max(1, Math.floor(Number(constants.pageSize) || 10));
+    const membershipViewModel = globalScope.SidepanelMembershipViewModel || {};
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
+
+    function getRedeemChannelStateHelpers() {
+      const rootScope = typeof window !== 'undefined' ? window : globalThis;
+      return rootScope.MultiPageRedeemChannelState || {};
+    }
 
     const FILTER_CONFIG = {
       all: {
@@ -94,12 +100,20 @@
     }
 
     function getRedeemChannelFailureField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemFailureCount'
         : 'upiRedeemFailureCount';
     }
 
     function getRedeemChannelFailureCount(row = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+      if (typeof helper === 'function') {
+        return helper(row, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = getRedeemChannelFailureField(normalizedChannel);
       if (Object.prototype.hasOwnProperty.call(row || {}, field)) {
@@ -112,24 +126,40 @@
     }
 
     function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedAtField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedAt'
         : 'upiRedeemDailyLimitBlockedAt';
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedUntilField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedUntil'
         : 'upiRedeemDailyLimitBlockedUntil';
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitReasonField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitReason'
         : 'upiRedeemDailyLimitReason';
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitReason;
+      if (typeof helper === 'function') {
+        return helper(message);
+      }
       const text = normalizeUpiCredentialMembershipText(message);
       return /该邮箱/.test(text)
         && /在该渠道今日提交次数已达上限/.test(text)
@@ -138,6 +168,10 @@
     }
 
     function isRedeemChannelDailyLimitBlocked(row = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+      if (typeof helper === 'function') {
+        return helper(row, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const nowMs = Date.now();
       const blockedUntil = normalizeTimestamp(row?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]);
@@ -166,6 +200,10 @@
     }
 
     function isUpiCredentialMembershipRedeemLocked(row = {}) {
+      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+      if (typeof helper === 'function') {
+        return helper(row);
+      }
       return row?.redeemLocked === true
         || getRedeemChannelFailureCount(row, 'ideal') >= REDEEM_CHANNEL_FAILURE_LIMIT;
     }
@@ -547,7 +585,75 @@
     }
 
     function normalizeRedeemChannel(value = '') {
+      const helper = getRedeemChannelStateHelpers().normalizeRedeemChannel;
+      if (typeof helper === 'function') {
+        return helper(value);
+      }
       return normalizeUpiCredentialMembershipText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    }
+
+    const MEMBERSHIP_VIEW_MODEL_GROUP_TO_UI_GROUP = {
+      free: 'free',
+      'upi-plus': 'paid-upi',
+      'ideal-plus': 'paid-ideal',
+    };
+
+    function getMembershipViewModelGroup(row = {}) {
+      if (typeof membershipViewModel.getGroup === 'function') {
+        return membershipViewModel.getGroup(row);
+      }
+      if (String(row?.status || '').trim().toLowerCase() !== 'paid') {
+        return 'free';
+      }
+      return normalizeRedeemChannel(row?.redeemChannel || row?.channel || row?.paymentChannel) === 'ideal'
+        ? 'ideal-plus'
+        : 'upi-plus';
+    }
+
+    function getUpiCredentialMembershipUiGroup(row = {}) {
+      const group = getMembershipViewModelGroup(row);
+      return MEMBERSHIP_VIEW_MODEL_GROUP_TO_UI_GROUP[group] || 'free';
+    }
+
+    function buildMembershipViewModelRows(rows = []) {
+      if (typeof membershipViewModel.buildRows === 'function') {
+        return membershipViewModel.buildRows({ items: rows });
+      }
+      return (Array.isArray(rows) ? rows : [])
+        .map((row) => {
+          const source = row && typeof row === 'object' && !Array.isArray(row) ? row : {};
+          const email = normalizeUpiCredentialMembershipEmail(source.email || source.accountIdentifier);
+          return email ? { ...source, email } : null;
+        })
+        .filter(Boolean);
+    }
+
+    function summarizeMembershipViewModelRows(rows = []) {
+      if (typeof membershipViewModel.summarize === 'function') {
+        return membershipViewModel.summarize(rows);
+      }
+      return (Array.isArray(rows) ? rows : []).reduce((summary, row) => {
+        const group = getMembershipViewModelGroup(row);
+        summary.total += 1;
+        if (normalizeUpiCredentialMembershipText(
+          row?.accessToken
+          || row?.access_token
+          || row?.token
+          || row?.upiRedeemAccessToken
+        )) {
+          summary.withAt += 1;
+        }
+        if (Object.prototype.hasOwnProperty.call(summary, group)) {
+          summary[group] += 1;
+        }
+        return summary;
+      }, {
+        total: 0,
+        withAt: 0,
+        free: 0,
+        'upi-plus': 0,
+        'ideal-plus': 0,
+      });
     }
 
     function buildUpiCredentialMembershipDisplayRowKey(row = {}, fallbackEmail = '') {
@@ -1459,7 +1565,20 @@
       };
     }
 
+    function getMembershipCredentialFormat() {
+      const rootScope = typeof window !== 'undefined' ? window : globalThis;
+      return rootScope.MultiPageMembershipCredentialFormat || {};
+    }
+
     function parseUpiCredentialMembershipParts(parts = []) {
+      const helper = getMembershipCredentialFormat().parseCredentialParts;
+      if (typeof helper === 'function') {
+        return helper(parts, { source: 'txt', nowMs: Date.now() });
+      }
+      return parseUpiCredentialMembershipPartsFallback(parts);
+    }
+
+    function parseUpiCredentialMembershipPartsFallback(parts = []) {
       if (parts.length === 4 && isLikelyUpiCredentialMembershipVerificationUrl(parts[1])) {
         const recordedAt = Math.max(0, Math.floor(Number(parts[3]) || Date.parse(normalizeUpiCredentialMembershipText(parts[3])) || Date.now()));
         return {
@@ -1796,7 +1915,7 @@
         }
         rows.push(row);
       });
-      return rows;
+      return buildMembershipViewModelRows(rows);
     }
 
     function getUpiCredentialMembershipRowStatusMeta(row = {}, results = getUpiCredentialMembershipCheckResults()) {
@@ -2342,12 +2461,33 @@
     }
 
     function getUpiCredentialMembershipGroup(row = {}) {
-      return String(row.status || '').trim().toLowerCase() === 'paid' ? 'paid' : 'free';
+      return getMembershipViewModelGroup(row) === 'free' ? 'free' : 'paid';
     }
 
     function filterUpiCredentialMembershipRowsByGroup(rows = [], group = upiCredentialMembershipGroup) {
       const normalizedGroup = String(group || '').trim().toLowerCase() === 'paid' ? 'paid' : 'free';
       return (Array.isArray(rows) ? rows : []).filter((row) => getUpiCredentialMembershipGroup(row) === normalizedGroup);
+    }
+
+    function isUpiCredentialMembershipRowInResultGroup(row = {}, normalizedStatus = 'paid', targetChannel = '') {
+      const status = String(row?.status || '').trim().toLowerCase();
+      const uiGroup = getUpiCredentialMembershipUiGroup(row);
+      if (normalizedStatus === 'free') {
+        return uiGroup === 'free';
+      }
+      if (normalizedStatus === 'paid') {
+        if (targetChannel === 'ideal') {
+          return uiGroup === 'paid-ideal';
+        }
+        if (targetChannel === 'upi') {
+          return uiGroup === 'paid-upi';
+        }
+        return uiGroup !== 'free';
+      }
+      if (status !== normalizedStatus) {
+        return false;
+      }
+      return !targetChannel || normalizeRedeemChannel(row.redeemChannel || row.channel) === targetChannel;
     }
 
     function getUpiCredentialMembershipGroupLabel(group = upiCredentialMembershipGroup) {
@@ -2576,13 +2716,11 @@
       const redeemActionBusy = membershipBusy;
       const importActionBusy = membershipBusy;
       const deleteActionBusy = membershipBusy;
-      const freeSectionRows = rows.filter((row) => {
-        const status = String(row.status || '').trim().toLowerCase();
-        return status === 'free' || status === 'failed';
-      });
-      const paidRows = rows.filter((row) => String(row.status || '').trim().toLowerCase() === 'paid');
-      const upiPaidRows = paidRows.filter((row) => normalizeRedeemChannel(row.redeemChannel || row.channel) === 'upi');
-      const idealPaidRows = paidRows.filter((row) => normalizeRedeemChannel(row.redeemChannel || row.channel) === 'ideal');
+      const membershipSummary = summarizeMembershipViewModelRows(rows);
+      const freeSectionRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'free');
+      const paidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) !== 'free');
+      const upiPaidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'paid-upi');
+      const idealPaidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'paid-ideal');
       const deletableFreeRows = freeSectionRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
       const deletableUpiPaidRows = upiPaidRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
       const deletableIdealPaidRows = idealPaidRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
@@ -2596,10 +2734,10 @@
         return status === 'failed' || redeemStatus === 'failed';
       });
       const freeRows = allFreeRows.filter((row) => String(row.redeemStatus || '').trim().toLowerCase() !== 'failed');
-      const paidCount = paidRows.length;
+      const paidCount = membershipSummary['upi-plus'] + membershipSummary['ideal-plus'];
       const freeCount = freeRows.length;
       const failedCount = failedRows.length;
-      const freeSectionCount = freeSectionRows.length;
+      const freeSectionCount = membershipSummary.free;
       const missingAtCount = freeSectionRows.filter((row) => row.enabled !== false && !normalizeUpiCredentialMembershipText(row.accessToken)).length;
       const identifyPlusCount = freeSectionRows.filter((row) => row.enabled !== false && normalizeUpiCredentialMembershipText(row.accessToken)).length;
       const redeemableFreeRows = allFreeRows.filter(isRedeemableFreeUpiCredentialMembershipRow);
@@ -4883,16 +5021,7 @@
         await refreshUpiCredentialMembershipCheckResults().catch(() => null);
         const visibleResults = getUpiCredentialMembershipCheckResults();
         const visibleRows = buildUpiCredentialMembershipDisplayRows(visibleResults)
-          .filter((item) => {
-            const itemStatus = String(item?.status || '').trim().toLowerCase();
-            const statusMatches = normalizedStatus === 'free'
-              ? itemStatus === 'free' || itemStatus === 'failed'
-              : itemStatus === normalizedStatus;
-            if (!statusMatches) {
-              return false;
-            }
-            return !targetChannel || normalizeRedeemChannel(item.redeemChannel || item.channel) === targetChannel;
-          });
+          .filter((item) => isUpiCredentialMembershipRowInResultGroup(item, normalizedStatus, targetChannel));
         const exportEmails = visibleRows
           .map((item) => normalizeUpiCredentialMembershipEmail(item?.email))
           .filter(Boolean);
@@ -4943,16 +5072,7 @@
           : '';
       const results = getUpiCredentialMembershipCheckResults();
       const targetItems = buildUpiCredentialMembershipDisplayRows(results)
-        .filter((item) => {
-          const itemStatus = String(item?.status || '').trim().toLowerCase();
-          const statusMatches = normalizedStatus === 'free'
-            ? itemStatus === 'free' || itemStatus === 'failed'
-            : itemStatus === normalizedStatus;
-          if (!statusMatches) {
-            return false;
-          }
-          return !targetChannel || normalizeRedeemChannel(item.redeemChannel || item.channel) === targetChannel;
-        });
+        .filter((item) => isUpiCredentialMembershipRowInResultGroup(item, normalizedStatus, targetChannel));
       const blockedItems = targetItems.filter((item) => isActiveUpiCredentialMembershipRedeemRowOrUsage(item, results));
       const safeItems = targetItems.filter((item) => !isActiveUpiCredentialMembershipRedeemRowOrUsage(item, results));
       const safeEmails = safeItems

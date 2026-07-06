@@ -11,12 +11,16 @@ importScripts(
   'background/mail-2925-session.js',
   'background/panel-bridge.js',
   'background/registration-email-state.js',
+  'background/persistent-settings.js',
+  'background/custom-email-pool-state.js',
+  'background/registration-account-state.js',
   'background/workflow-engine.js',
   'background/runtime-state.js',
   'background/settings-normalizers.js',
   'background/flow-definition-resolver.js',
-  'background/redeem/redeem-channel-state.js',
+  'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
+  'background/redeem/upi-redeem-api-client.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
   'shared/trial-eligibility-api.js',
@@ -24,7 +28,12 @@ importScripts(
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
   'flows/openai/mail-rules.js',
+  'background/routes/membership-routes.js',
+  'background/routes/cdkey-routes.js',
+  'background/routes/workflow-routes.js',
   'background/message-router.js',
+  'shared/membership-credential-format.js',
+  'background/membership/results-store.js',
   'background/upi-credential-membership-checker.js',
   'background/verification-flow.js',
   'background/auto-run-controller.js',
@@ -1004,7 +1013,15 @@ Object.assign(PERSISTED_SETTING_DEFAULTS, {
   removedPaymentWorkerProviderProxy: '',
 });
 
-const PERSISTED_SETTING_KEYS = Object.keys(PERSISTED_SETTING_DEFAULTS);
+const persistentSettingsRegistry = self.MultiPagePersistentSettings?.createPersistentSettingsModule?.(PERSISTED_SETTING_DEFAULTS) || {
+  defaults: PERSISTED_SETTING_DEFAULTS,
+  keys: Object.keys(PERSISTED_SETTING_DEFAULTS),
+  pickPersistedSettings: (source = {}) => {
+    const values = source && typeof source === 'object' ? source : {};
+    return Object.fromEntries(Object.keys(PERSISTED_SETTING_DEFAULTS).map((key) => [key, values[key] ?? PERSISTED_SETTING_DEFAULTS[key]]));
+  },
+};
+const PERSISTED_SETTING_KEYS = persistentSettingsRegistry.keys;
 const LEGACY_UPI_REDEEM_SETTING_KEY_MAP = Object.freeze({
   upiRedeemApiBaseUrl: 'pixRedeemApiBaseUrl',
   upiRedeemExternalApiKey: 'pixRedeemExternalApiKey',
@@ -2093,6 +2110,18 @@ async function markCurrentCustomEmailPoolEntryTrialIneligible(state = {}, option
   };
 }
 
+const customEmailPoolStateRegistry = self.MultiPageCustomEmailPoolState?.createCustomEmailPoolState?.({
+  getCustomEmailPoolEntries,
+  markCustomEmailPoolEntryTrialEligibility,
+  markCurrentCustomEmailPoolEntryUsed,
+  markCurrentCustomEmailPoolEntryTrialIneligible,
+}) || {
+  getCustomEmailPoolEntries,
+  markCustomEmailPoolEntryTrialEligibility,
+  markCurrentCustomEmailPoolEntryUsed,
+  markCurrentCustomEmailPoolEntryTrialIneligible,
+};
+
 async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   const providedState = state && typeof state === 'object' ? state : {};
   const currentState = await getState();
@@ -2183,8 +2212,8 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   });
   updated = Boolean(outlookEmailPlusResult?.handled) || updated;
 
-  if (typeof markCurrentCustomEmailPoolEntryUsed === 'function') {
-    const result = await markCurrentCustomEmailPoolEntryUsed(latestState, {
+  if (typeof customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryUsed === 'function') {
+    const result = await customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryUsed(latestState, {
       logPrefix: `${reasonPrefix}：自定义邮箱池`,
       level: options.level || 'warn',
     });
@@ -2211,7 +2240,7 @@ async function markCurrentRegistrationAccountTrialIneligible(state = {}, options
   const reason = String(options.reason || '账号无试用资格').trim();
   const checkedAt = String(options.checkedAt || new Date().toISOString()).trim();
 
-  const result = await markCurrentCustomEmailPoolEntryTrialIneligible(latestState, {
+  const result = await customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryTrialIneligible(latestState, {
     email,
     reason,
     checkedAt,
@@ -2233,6 +2262,20 @@ async function markCurrentRegistrationAccountTrialIneligible(state = {}, options
     checkedAt,
   };
 }
+
+const registrationAccountStateRegistry = self.MultiPageRegistrationAccountState?.createRegistrationAccountState?.({
+  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountTrialIneligible,
+  recordStep7AccountCheckpoint: typeof recordStep7AccountCheckpoint === 'function'
+    ? recordStep7AccountCheckpoint
+    : undefined,
+}) || {
+  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountTrialIneligible,
+  recordStep7AccountCheckpoint: typeof recordStep7AccountCheckpoint === 'function'
+    ? recordStep7AccountCheckpoint
+    : undefined,
+};
 
 async function markCurrentRegistrationAccountUnavailable(state = {}, options = {}) {
   const providedState = state && typeof state === 'object' ? state : {};
@@ -2334,8 +2377,8 @@ async function markCurrentRegistrationAccountUnavailable(state = {}, options = {
   });
   updated = Boolean(outlookEmailPlusResult?.handled) || updated;
 
-  if (typeof markCurrentCustomEmailPoolEntryUsed === 'function') {
-    const result = await markCurrentCustomEmailPoolEntryUsed(latestState, {
+  if (typeof customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryUsed === 'function') {
+    const result = await customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryUsed(latestState, {
       logPrefix: `${reasonPrefix}：自定义邮箱池`,
       level: options.level || 'warn',
     });
@@ -13506,7 +13549,18 @@ async function resumeAutoRun() {
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
 const SIGNUP_AUTH_ENTRY_URL = 'https://chatgpt.com/auth/login';
-const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/signup-dom-utils.js', 'content/signup-entry-page.js', 'content/signup-verification-page.js', 'content/signup-page.js'];
+const SIGNUP_PAGE_INJECT_FILES = [
+  'content/utils.js',
+  'content/operation-delay.js',
+  'content/auth-page-recovery.js',
+  'content/signup-dom-utils.js',
+  'content/signup-entry-page.js',
+  'content/signup-verification-page.js',
+  'content/signup-password-page.js',
+  'content/signup-profile-page.js',
+  'content/signup-session-page.js',
+  'content/signup-page.js',
+];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -13785,7 +13839,7 @@ const chatgptSessionReaderCreateExecutor = self.MultiPageBackgroundChatgptSessio
   getState,
   requestStop,
   getLastNodeIdForState,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   registerTab,
   sendTabMessageUntilStopped,
   setNodeStatus,
@@ -13808,7 +13862,7 @@ const chatgptSessionReaderBillingExecutor = self.MultiPageBackgroundChatgptSessi
   getState,
   getTabId,
   isTabAlive,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   queryTabsInAutomationWindow,
   requestStop,
   sendTabMessageUntilStopped,
@@ -13918,8 +13972,8 @@ const totpMfaExecutor = self.MultiPageBackgroundEnableTotpMfa?.createEnableTotpM
   getState,
   getTabId,
   isTabAlive,
-  markCurrentRegistrationAccountTrialIneligible,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountTrialIneligible: registrationAccountStateRegistry.markCurrentRegistrationAccountTrialIneligible,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   registerTab,
   sendTabMessageUntilStopped,
   setState,
@@ -13938,7 +13992,7 @@ const passkeyExecutor = self.MultiPageBackgroundEnablePasskey?.createEnablePassk
   getState,
   getTabId,
   isTabAlive,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   registerTab,
   setState,
   sleepWithStop,
@@ -13960,7 +14014,7 @@ const upiRedeemExecutor = self.MultiPageBackgroundUpiRedeem?.createUpiRedeemExec
   getState,
   getTabId,
   isTabAlive,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   registerTab,
   sendTabMessageUntilStopped,
   setPersistentSettings,
@@ -13977,9 +14031,9 @@ const no2faFreeRouteExecutor = self.MultiPageBackgroundNo2faFreeRoute?.createNo2
   addLog,
   checkRegistrationUpiTrialEligibility: (...args) => upiRedeemExecutor.checkRegistrationUpiTrialEligibility(...args),
   completeNodeFromBackground,
-  getCustomEmailPoolEntries,
+  getCustomEmailPoolEntries: customEmailPoolStateRegistry.getCustomEmailPoolEntries,
   getState,
-  markCurrentRegistrationAccountUsed,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   readCurrentChatGptSessionForExport,
   setState,
   throwIfStopped,
@@ -13995,8 +14049,8 @@ upiCredentialMembershipChecker = self.MultiPageBackgroundUpiCredentialMembership
   fetchVerificationCodeOnly: (...args) => verificationFlowHelpers.fetchVerificationCodeOnly(...args),
   getState,
   isTabAlive,
-  markCustomEmailPoolEntryTrialEligibility,
-  markRegistrationEmailTrialIneligible: markCurrentRegistrationAccountTrialIneligible,
+  markCustomEmailPoolEntryTrialEligibility: customEmailPoolStateRegistry.markCustomEmailPoolEntryTrialEligibility,
+  markRegistrationEmailTrialIneligible: registrationAccountStateRegistry.markCurrentRegistrationAccountTrialIneligible,
   registerTab,
   redeemUpiCredentialWithAccessToken: (...args) => upiRedeemExecutor.redeemUpiCredentialWithAccessToken(...args),
   refreshPendingUpiCredentialMembershipRedeemStatuses: (...args) => messageRouter?.refreshPendingUpiCredentialMembershipRedeemStatuses?.(...args),
@@ -14155,9 +14209,9 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   launchAutoRunTimerPlan,
   listIcloudAliases,
   listLuckmailPurchasesForManagement,
-  markCurrentCustomEmailPoolEntryUsed,
-  markCurrentRegistrationAccountTrialIneligible,
-  markCurrentRegistrationAccountUsed,
+  markCurrentCustomEmailPoolEntryUsed: customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryUsed,
+  markCurrentRegistrationAccountTrialIneligible: registrationAccountStateRegistry.markCurrentRegistrationAccountTrialIneligible,
+  markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
   getCurrentMail2925Account,
   normalizeHotmailAccounts,
   normalizeMail2925Accounts,

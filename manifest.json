@@ -56,6 +56,9 @@
         "content/signup-dom-utils.js",
         "content/signup-entry-page.js",
         "content/signup-verification-page.js",
+        "content/signup-password-page.js",
+        "content/signup-profile-page.js",
+        "content/signup-session-page.js",
         "content/signup-page.js"
       ],
       "run_at": "document_idle"

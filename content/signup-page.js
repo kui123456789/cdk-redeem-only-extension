@@ -518,6 +518,11 @@ async function resendVerificationCode(step, timeout = 45000, options = {}) {
 }
 
 async function readChatGptSessionExportData() {
+  const helper = getSignupSessionPageHelpers().readChatGptSessionExportData;
+  if (typeof helper === 'function') {
+    return await helper();
+  }
+
   const sessionResponse = await fetch(CHATGPT_SESSION_API_URL, {
     credentials: 'include',
     cache: 'no-store',
@@ -713,7 +718,92 @@ function findSignupEntryTrigger(options = {}) {
   return getSignupEntryPageHelpers().findSignupEntryTrigger?.(options) || null;
 }
 
+let signupPasswordPageHelpers = null;
+
+function getSignupPasswordPageHelpers() {
+  if (signupPasswordPageHelpers) {
+    return signupPasswordPageHelpers;
+  }
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  signupPasswordPageHelpers = rootScope.MultiPageSignupPasswordPage?.createSignupPasswordPage?.({
+    documentRef: document,
+    locationRef: location,
+    windowRef: window,
+    isVisibleElement,
+    isActionEnabled,
+    getActionText,
+    getVisibleFieldErrorText,
+    inspectSignupEntryState,
+    logSignupPasswordDiagnostics,
+    findOneTimeCodeLoginTrigger,
+    waitForElementByText,
+    fillInput,
+    getOperationDelayRunner,
+    humanPause,
+    simulateClick,
+    sleep,
+    throwIfStopped,
+    isStopError,
+    log,
+  }) || {};
+  return signupPasswordPageHelpers;
+}
+
+let signupProfilePageHelpers = null;
+
+function getSignupProfilePageHelpers() {
+  if (signupProfilePageHelpers) {
+    return signupProfilePageHelpers;
+  }
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  signupProfilePageHelpers = rootScope.MultiPageSignupProfilePage?.createSignupProfilePage?.({
+    documentRef: document,
+    locationRef: location,
+    windowRef: window,
+    step5SubmitErrorPattern: STEP5_SUBMIT_ERROR_PATTERN,
+    isVisibleElement,
+    isActionEnabled,
+    getActionText,
+    getStep5AuthRetryPageState,
+    isAuthMaxCheckAttemptsPage,
+    getStep5PostSubmitSuccessState,
+    getCreateAccountEnrollPasskeyPageState,
+    fillProfileNameAndBirthday: fillStep5NameBirthdayLocally,
+    humanPause,
+    simulateClick,
+    sleep,
+    throwIfStopped,
+    log,
+  }) || {};
+  return signupProfilePageHelpers;
+}
+
+let signupSessionPageHelpers = null;
+
+function getSignupSessionPageHelpers() {
+  if (signupSessionPageHelpers) {
+    return signupSessionPageHelpers;
+  }
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  signupSessionPageHelpers = rootScope.MultiPageSignupSessionPage?.createSignupSessionPage?.({
+    documentRef: document,
+    locationRef: location,
+    fetchRef: typeof fetch === 'function' ? fetch.bind(rootScope) : null,
+    sessionApiUrl: CHATGPT_SESSION_API_URL,
+    findSignupEntryTrigger,
+    getActionText,
+    isVisibleElement,
+    isActionEnabled,
+  }) || {};
+  return signupSessionPageHelpers;
+}
+
 function getSignupPasswordDisplayedEmail() {
+  const helper = getSignupPasswordPageHelpers().getSignupPasswordDisplayedEmail;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   const text = (document.body?.innerText || document.body?.textContent || '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -1250,6 +1340,11 @@ async function ensureSignupEntryReady(timeout = 25000) {
 }
 
 async function ensureSignupPasswordPageReady(timeout = 20000) {
+  const helper = getSignupPasswordPageHelpers().ensureSignupPasswordPageReady;
+  if (typeof helper === 'function') {
+    return await helper(timeout);
+  }
+
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
@@ -1351,6 +1446,11 @@ async function step2_clickRegister(payload = {}) {
 // ============================================================
 
 async function fillSignupPasswordPageAndSubmit(snapshot, password, options = {}) {
+  const helper = getSignupPasswordPageHelpers().fillSignupPasswordPageAndSubmit;
+  if (typeof helper === 'function') {
+    return await helper(snapshot, password, options);
+  }
+
   const {
     contextLabel = '步骤 3',
     deferredSubmit = true,
@@ -1605,10 +1705,20 @@ function getVisibleFieldErrorText() {
 }
 
 function getSignupPasswordFieldErrorText() {
+  const helper = getSignupPasswordPageHelpers().getSignupPasswordFieldErrorText;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   return getVisibleFieldErrorText();
 }
 
 function isStep5Ready() {
+  const helper = getSignupProfilePageHelpers().isStep5Ready;
+  if (typeof helper === 'function') {
+    return Boolean(helper());
+  }
+
   return Boolean(
     document.querySelector([
       'input[name="name"]',
@@ -1635,6 +1745,11 @@ function isStep5Ready() {
 }
 
 function isSignupProfilePageUrl(rawUrl = location.href) {
+  const helper = getSignupProfilePageHelpers().detectProfilePage;
+  if (typeof helper === 'function') {
+    return Boolean(helper(rawUrl));
+  }
+
   const url = String(rawUrl || '').trim();
   if (!url) {
     return false;
@@ -1690,6 +1805,11 @@ function isPasskeyEnrollmentPage() {
 }
 
 function isLikelyLoggedInChatgptHomeUrl(rawUrl = location.href) {
+  const helper = getSignupSessionPageHelpers().detectLoggedInHome;
+  if (typeof helper === 'function') {
+    return Boolean(helper(rawUrl));
+  }
+
   const url = String(rawUrl || '').trim();
   if (!url) {
     return false;
@@ -2181,6 +2301,11 @@ async function setReactAriaBirthdaySelect(control, value) {
 }
 
 function getStep5ErrorText() {
+  const helper = getSignupProfilePageHelpers().getStep5ErrorText;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   const messages = [];
   const selectors = [
     '.react-aria-FieldError',
@@ -2220,15 +2345,30 @@ function getStep5ErrorText() {
 
 
 function isSignupPasswordPage() {
+  const helper = getSignupPasswordPageHelpers().detectPasswordPage;
+  if (typeof helper === 'function') {
+    return Boolean(helper());
+  }
+
   return /\/(?:create-account|log-in)\/password(?:[/?#]|$)/i.test(location.pathname || '');
 }
 
 function getSignupPasswordInput() {
+  const helper = getSignupPasswordPageHelpers().getSignupPasswordInput;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   const input = document.querySelector('input[type="password"]');
   return input && isVisibleElement(input) ? input : null;
 }
 
 function getSignupPasswordSubmitButton({ allowDisabled = false } = {}) {
+  const helper = getSignupPasswordPageHelpers().getSignupPasswordSubmitButton;
+  if (typeof helper === 'function') {
+    return helper({ allowDisabled });
+  }
+
   const direct = document.querySelector('button[type="submit"]');
   if (direct && isVisibleElement(direct) && (allowDisabled || isActionEnabled(direct))) {
     return direct;
@@ -5853,6 +5993,11 @@ async function waitForCombinedSignupVerificationProfilePage(timeout = 2500) {
 }
 
 function getStep5ProfilePathPatterns() {
+  const helper = getSignupProfilePageHelpers().getStep5ProfilePathPatterns;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   return [
     /\/create-account\/profile(?:[/?#]|$)/i,
     /\/u\/signup\/profile(?:[/?#]|$)/i,
@@ -5872,6 +6017,11 @@ function getStep5AuthRetryPathPatterns() {
 }
 
 function isStep5ProfilePageUrl(rawUrl = location.href) {
+  const helper = getSignupProfilePageHelpers().isStep5ProfilePageUrl;
+  if (typeof helper === 'function') {
+    return Boolean(helper(rawUrl));
+  }
+
   return isSignupProfilePageUrl(rawUrl);
 }
 
@@ -5890,6 +6040,11 @@ function getStep5AuthRetryPageState() {
 }
 
 function getStep5SubmitButton() {
+  const helper = getSignupProfilePageHelpers().getStep5SubmitButton;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   const direct = document.querySelector('button[type="submit"], input[type="submit"]');
   if (direct && isVisibleElement(direct)) {
     return direct;
@@ -5915,6 +6070,11 @@ function getStep5SubmitButton() {
 }
 
 async function waitForStep5SubmitButton(timeout = 5000) {
+  const helper = getSignupProfilePageHelpers().waitForStep5SubmitButton;
+  if (typeof helper === 'function') {
+    return await helper(timeout);
+  }
+
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
@@ -5930,6 +6090,11 @@ async function waitForStep5SubmitButton(timeout = 5000) {
 }
 
 function isStep5SubmitButtonClickable(button) {
+  const helper = getSignupProfilePageHelpers().isStep5SubmitButtonClickable;
+  if (typeof helper === 'function') {
+    return Boolean(helper(button));
+  }
+
   if (
     !button
     || !isVisibleElement(button)
@@ -5992,6 +6157,11 @@ function isStep5SubmitButtonClickable(button) {
 }
 
 function isStep5ProfileStillVisible() {
+  const helper = getSignupProfilePageHelpers().isStep5ProfileStillVisible;
+  if (typeof helper === 'function') {
+    return Boolean(helper());
+  }
+
   if (isStep5ProfilePageUrl()) {
     return true;
   }
@@ -6042,6 +6212,11 @@ function getStep5PostSubmitSuccessState() {
 }
 
 function getStep5SubmitState() {
+  const helper = getSignupProfilePageHelpers().getStep5SubmitState;
+  if (typeof helper === 'function') {
+    return helper();
+  }
+
   const retryState = getStep5AuthRetryPageState();
   const maxCheckAttemptsBlocked = Boolean(retryState?.maxCheckAttemptsBlocked || isAuthMaxCheckAttemptsPage());
   const successState = getStep5PostSubmitSuccessState();
@@ -6082,6 +6257,11 @@ function getStep5SubmitState() {
 }
 
 async function triggerStep5ProfileSubmit(payload = {}) {
+  const helper = getSignupProfilePageHelpers().submitProfilePage;
+  if (typeof helper === 'function') {
+    return await helper(payload);
+  }
+
   const state = getStep5SubmitState();
   if (!state.profileVisible) {
     return {
@@ -6411,6 +6591,15 @@ async function waitForStep5ProfileReadyBeforeFill(timeout = 60000) {
 }
 
 async function step5_fillNameBirthday(payload) {
+  const helper = getSignupProfilePageHelpers().fillProfileNameAndBirthday;
+  if (typeof helper === 'function') {
+    return await helper(payload);
+  }
+
+  return await fillStep5NameBirthdayLocally(payload);
+}
+
+async function fillStep5NameBirthdayLocally(payload) {
   const readyState = await waitForStep5ProfileReadyBeforeFill(60000);
   if (readyState.state === 'logged_in_home') {
     return {
