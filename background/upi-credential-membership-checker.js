@@ -640,7 +640,7 @@
     if (isRedeemChannelDailyLimitBlocked(item, channel)) {
       return false;
     }
-    if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') {
+    if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') {
       return false;
     }
     if (!isTrialEligibilityChannelAllowed(item, channel)) {
@@ -1384,16 +1384,21 @@
     const deletedEmails = Array.isArray(source.deletedEmails)
       ? source.deletedEmails.map(normalizeEmail).filter(Boolean)
       : [];
+    const ineligibleEmails = Array.isArray(source.ineligibleEmails)
+      ? source.ineligibleEmails.map(normalizeEmail).filter(Boolean)
+      : [];
     return {
       checkedAt: normalizeString(source.checkedAt),
       kept,
       skipped,
       failed,
       deletedEmails,
+      ineligibleEmails,
       eligibleCount: Math.max(0, Math.floor(Number(source.eligibleCount) || kept.length || 0)),
       skippedCount: Math.max(0, Math.floor(Number(source.skippedCount) || skipped.length || 0)),
       failedCount: Math.max(0, Math.floor(Number(source.failedCount) || failed.length || 0)),
       deletedCount: Math.max(0, Math.floor(Number(source.deletedCount) || deletedEmails.length || 0)),
+      ineligibleCount: Math.max(0, Math.floor(Number(source.ineligibleCount) || ineligibleEmails.length || 0)),
     };
   }
 

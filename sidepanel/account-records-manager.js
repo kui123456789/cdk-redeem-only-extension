@@ -2204,7 +2204,7 @@
       if (!row?.email || row.enabled === false || status !== 'free') {
         return false;
       }
-      if (normalizeTrialEligibilityStatus(row.trialEligibilityStatus) === 'ineligible') {
+      if (normalizeTrialEligibilityStatus(row.trialEligibilityStatus) !== 'eligible') {
         return false;
       }
       if (!normalizeUpiCredentialMembershipText(row.accessToken)) {

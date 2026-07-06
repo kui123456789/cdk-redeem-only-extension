@@ -257,7 +257,7 @@
       if (isRedeemChannelDailyLimitBlocked(item, channel)) {
         return false;
       }
-      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() === 'ineligible') {
+      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') {
         return false;
       }
       if (!isTrialEligibilityChannelAllowed(item, channel)) {
