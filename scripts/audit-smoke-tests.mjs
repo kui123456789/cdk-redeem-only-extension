@@ -207,6 +207,7 @@ function checkCoreFiles() {
     'sidepanel/toast-service.js',
     'sidepanel/log-panel-manager.js',
     'sidepanel/workflow-state-view.js',
+    'sidepanel/auto-run-normalizers.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
@@ -260,6 +261,7 @@ function checkStaticContracts() {
   const toastService = readText('sidepanel/toast-service.js');
   const logPanelManager = readText('sidepanel/log-panel-manager.js');
   const workflowStateView = readText('sidepanel/workflow-state-view.js');
+  const autoRunNormalizers = readText('sidepanel/auto-run-normalizers.js');
   const downloadService = readText('sidepanel/download-service.js');
   const settingsTransferManager = readText('sidepanel/settings-transfer-manager.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
@@ -291,10 +293,12 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
   assertIncludes(sidepanelHtml, 'src="workflow-state-view.js"', 'sidepanel workflow state view script load');
+  assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-state-view.js"', 'src="sidepanel.js"', 'sidepanel workflow view must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
@@ -325,6 +329,9 @@ function checkStaticContracts() {
   assertIncludes(logPanelManager, 'create', 'sidepanel log panel manager factory');
   assertIncludes(workflowStateView, 'SidepanelWorkflowStateView', 'sidepanel workflow state view global');
   assertIncludes(workflowStateView, 'renderStepStatuses', 'sidepanel workflow state renderer');
+  assertIncludes(autoRunNormalizers, 'SidepanelAutoRunNormalizers', 'sidepanel auto-run normalizers global');
+  assertIncludes(autoRunNormalizers, 'createAutoRunNormalizers', 'sidepanel auto-run normalizers factory');
+  assertIncludes(autoRunNormalizers, 'normalizeAutoStepDelaySeconds', 'sidepanel auto-run step delay normalizer');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
@@ -600,6 +607,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/styles/account-records.css', 1200, 'account records stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-ui-helpers.js', 200, 'sidepanel UI helpers size guard');
   assertFileLineCountAtMost('sidepanel/action-modal-service.js', 300, 'action modal service size guard');
+  assertFileLineCountAtMost('sidepanel/auto-run-normalizers.js', 200, 'sidepanel auto-run normalizers size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');

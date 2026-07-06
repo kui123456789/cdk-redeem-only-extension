@@ -639,6 +639,17 @@ const NEW_USER_GUIDE_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-new-user-guide-pr
 const AUTO_SKIP_FAILURES_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-auto-skip-failures-prompt-dismissed';
 const AUTO_RUN_FALLBACK_RISK_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-auto-run-fallback-risk-prompt-dismissed';
 const CLOUDFLARE_TEMP_EMAIL_REGISTRATION_LOOKUP_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-cloudflare-temp-email-registration-lookup-prompt-dismissed';
+const autoRunNormalizers = window.SidepanelAutoRunNormalizers.createAutoRunNormalizers({
+  autoDelayDefaultMinutes: AUTO_DELAY_DEFAULT_MINUTES,
+  autoDelayMaxMinutes: AUTO_DELAY_MAX_MINUTES,
+  autoDelayMinMinutes: AUTO_DELAY_MIN_MINUTES,
+  autoRunThreadIntervalDefaultMinutes: AUTO_FALLBACK_THREAD_INTERVAL_DEFAULT_MINUTES,
+  autoRunThreadIntervalMaxMinutes: AUTO_FALLBACK_THREAD_INTERVAL_MAX_MINUTES,
+  autoRunThreadIntervalMinMinutes: AUTO_FALLBACK_THREAD_INTERVAL_MIN_MINUTES,
+  autoStepDelayDefaultSeconds: AUTO_STEP_DELAY_DEFAULT_SECONDS,
+  autoStepDelayMaxSeconds: AUTO_STEP_DELAY_MAX_SECONDS,
+  autoStepDelayMinSeconds: AUTO_STEP_DELAY_MIN_SECONDS,
+});
 function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID !== 'undefined' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
   const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : 'legacyWallet';
@@ -5914,116 +5925,35 @@ function getAutoRunLabel(payload = currentAutoRun) {
 }
 
 function normalizeAutoDelayMinutes(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return AUTO_DELAY_DEFAULT_MINUTES;
-  }
-  return Math.min(AUTO_DELAY_MAX_MINUTES, Math.max(AUTO_DELAY_MIN_MINUTES, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeAutoDelayMinutes(value);
 }
 
 function normalizeAutoRunThreadIntervalMinutes(value) {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return AUTO_FALLBACK_THREAD_INTERVAL_DEFAULT_MINUTES;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return AUTO_FALLBACK_THREAD_INTERVAL_DEFAULT_MINUTES;
-  }
-
-  return Math.min(
-    AUTO_FALLBACK_THREAD_INTERVAL_MAX_MINUTES,
-    Math.max(AUTO_FALLBACK_THREAD_INTERVAL_MIN_MINUTES, Math.floor(numeric))
-  );
+  return autoRunNormalizers.normalizeAutoRunThreadIntervalMinutes(value);
 }
 
 function normalizeAutoStepDelaySeconds(value) {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return AUTO_STEP_DELAY_DEFAULT_SECONDS;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return AUTO_STEP_DELAY_DEFAULT_SECONDS;
-  }
-
-  return Math.min(AUTO_STEP_DELAY_MAX_SECONDS, Math.max(AUTO_STEP_DELAY_MIN_SECONDS, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeAutoStepDelaySeconds(value);
 }
 
 function normalizePlusRemovedContactOauthDelaySeconds(value) {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) {
-    return 10;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return 10;
-  }
-
-  return Math.min(3600, Math.max(0, Math.floor(numeric)));
+  return autoRunNormalizers.normalizePlusRemovedContactOauthDelaySeconds(value);
 }
 
 function normalizeRemovedContactResendWaitSeconds(value, fallback = 20) {
-  const rawValue = String(value ?? '').trim();
-  const fallbackValue = Math.min(300, Math.max(0, Math.floor(Number(fallback) || 0)));
-  if (!rawValue) {
-    return fallbackValue;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return fallbackValue;
-  }
-
-  return Math.min(300, Math.max(0, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeRemovedContactResendWaitSeconds(value, fallback);
 }
 
 function normalizeRemovedContactVerificationResendMaxAttempts(value, fallback = 1) {
-  const rawValue = String(value ?? '').trim();
-  const fallbackValue = Math.min(10, Math.max(0, Math.floor(Number(fallback) || 0)));
-  if (!rawValue) {
-    return fallbackValue;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return fallbackValue;
-  }
-
-  return Math.min(10, Math.max(0, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeRemovedContactVerificationResendMaxAttempts(value, fallback);
 }
 
 function normalizeRemovedContactVerificationPollAttempts(value, fallback = 6) {
-  const rawValue = String(value ?? '').trim();
-  const fallbackValue = Math.min(60, Math.max(1, Math.floor(Number(fallback) || 6)));
-  if (!rawValue) {
-    return fallbackValue;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return fallbackValue;
-  }
-
-  return Math.min(60, Math.max(1, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeRemovedContactVerificationPollAttempts(value, fallback);
 }
 
 function normalizeRemovedContactVerificationPollIntervalSeconds(value, fallback = 5) {
-  const rawValue = String(value ?? '').trim();
-  const fallbackValue = Math.min(60, Math.max(1, Math.floor(Number(fallback) || 5)));
-  if (!rawValue) {
-    return fallbackValue;
-  }
-
-  const numeric = Number(rawValue);
-  if (!Number.isFinite(numeric)) {
-    return fallbackValue;
-  }
-
-  return Math.min(60, Math.max(1, Math.floor(numeric)));
+  return autoRunNormalizers.normalizeRemovedContactVerificationPollIntervalSeconds(value, fallback);
 }
 
 function normalizeChatgptSessionReaderConversionProxyUrlValue(value = '') {
