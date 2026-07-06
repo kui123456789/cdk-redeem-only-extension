@@ -3676,10 +3676,6 @@
         batchRunning = false;
         throw new Error(`${email} 缺少 GPT 密码，无法登录。`);
       }
-      if (!baseItem.totpMfaSecret && !hasPasskeyCredential(baseItem)) {
-        batchRunning = false;
-        throw new Error(`${email} 缺少 2FA，无法登录。`);
-      }
 
       const source = normalizeString(input.source || 'row-login') || 'row-login';
       const readAccessToken = input.readAccessToken !== false && input.refreshAccessToken !== false;
