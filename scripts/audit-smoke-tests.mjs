@@ -10,6 +10,15 @@ const root = path.resolve(__dirname, '..');
 
 const failures = [];
 const warnings = [];
+const trackedSourcePatterns = ['*.js', '*.mjs', '*.html', '*.css'];
+const trackedSourceWarningLineLimit = 8000;
+const ignoredTrackedSourceTopLevelDirs = new Set([
+  '.git',
+  '.codegraph',
+  '.codex-backups',
+  '_metadata',
+  'release-artifacts',
+]);
 
 function fail(message) {
   failures.push(message);
@@ -76,10 +85,16 @@ function assertBefore(text, firstNeedle, secondNeedle, label) {
 function assertFileLineCountAtMost(relativePath, maxLines, label) {
   const text = readText(relativePath);
   if (!text) return;
-  const lines = text.split(/\r?\n/).length;
+  const lines = countLines(text);
   if (lines > maxLines) {
     fail(`${label}: ${relativePath} has ${lines} lines, expected <= ${maxLines}`);
   }
+}
+
+function countLines(text) {
+  if (text.length === 0) return 0;
+  const newlineCount = text.match(/\n/g)?.length || 0;
+  return newlineCount + (text.endsWith('\n') ? 0 : 1);
 }
 
 function gitLines(args) {
@@ -92,6 +107,11 @@ function gitLines(args) {
     fail(`git ${args.join(' ')} failed: ${error.message}`);
     return [];
   }
+}
+
+function isTrackedSourceFile(relativePath) {
+  const [topLevel] = relativePath.split(/[\\/]/);
+  return !ignoredTrackedSourceTopLevelDirs.has(topLevel);
 }
 
 function checkManifest() {
@@ -474,6 +494,25 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');
 }
 
+function checkTrackedSourceLineWarnings() {
+  const oversized = gitLines(['ls-files', ...trackedSourcePatterns])
+    .filter(isTrackedSourceFile)
+    .map((relativePath) => {
+      const text = readText(relativePath);
+      if (!text) return null;
+      return {
+        relativePath,
+        lines: countLines(text),
+      };
+    })
+    .filter((row) => row && row.lines > trackedSourceWarningLineLimit)
+    .sort((left, right) => right.lines - left.lines || left.relativePath.localeCompare(right.relativePath));
+
+  for (const row of oversized) {
+    warn(`tracked source over ${trackedSourceWarningLineLimit} lines: ${row.relativePath} has ${row.lines} lines`);
+  }
+}
+
 function checkSensitiveTrackedFiles() {
   const trackedSensitive = gitLines([
     'ls-files',
@@ -529,6 +568,7 @@ checkCoreFiles();
 checkSyntax();
 checkStaticContracts();
 checkModuleSizeGuard();
+checkTrackedSourceLineWarnings();
 checkSensitiveTrackedFiles();
 checkLegacyNetworkAudit();
 checkPhoneSmsAudit();
