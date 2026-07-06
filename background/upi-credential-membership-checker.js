@@ -1245,6 +1245,24 @@
       trialEligibilityStatus: normalizeString(item.trialEligibilityStatus),
       trialEligibilityReason: normalizeString(item.trialEligibilityReason),
       trialEligibilityCheckedAt: normalizeString(item.trialEligibilityCheckedAt),
+      trialEligibilityReasonCode: normalizeString(item.trialEligibilityReasonCode),
+      trialEligibilityCheckedByApi: item.trialEligibilityCheckedByApi === true,
+      trialEligibilityTransientFailure: item.trialEligibilityTransientFailure === true,
+      trialEligibilityRetryable: item.trialEligibilityRetryable === true,
+      trialEligibilityRetryCount: Math.max(0, Math.floor(Number(item.trialEligibilityRetryCount) || 0)),
+      trialEligibilityLastError: normalizeString(item.trialEligibilityLastError),
+      couponState: normalizeString(item.couponState || item.coupon_state),
+      registrationType: normalizeString(item.registrationType || item.reg_type),
+      phoneNumber: normalizeString(item.phoneNumber || item.phone_number),
+      phoneVerified: item.phoneVerified === true,
+      accountId: normalizeString(item.accountId || item.account_id),
+      responseEmail: normalizeEmail(item.responseEmail || item.emailFromApi || item.apiEmail),
+      jwtExpired: item.jwtExpired === true,
+      jwtExpiresInSeconds: Math.max(0, Math.floor(Number(item.jwtExpiresInSeconds || item.jwt_exp_in_sec) || 0)),
+      upiChannelEligibilityStatus: normalizeString(item.upiChannelEligibilityStatus || item.upiEligibilityStatus),
+      upiChannelEligibilityReason: normalizeString(item.upiChannelEligibilityReason || item.upi_eligible_reason || item.upiEligibleReason),
+      idealChannelEligibilityStatus: normalizeString(item.idealChannelEligibilityStatus || item.idealEligibilityStatus),
+      idealChannelEligibilityReason: normalizeString(item.idealChannelEligibilityReason || item.ideal_eligible_reason || item.idealEligibleReason),
       accessToken,
       accessTokenMasked: accessToken ? (normalizeString(item.accessTokenMasked) || maskAccessToken(accessToken)) : '',
       accessTokenUpdatedAt,
@@ -2316,6 +2334,23 @@
         || credential.trialEligibilityCheckedAt
         || checkedAt
       );
+      const trialEligibilityReasonCode = normalizeString(input.trialEligibilityReasonCode || credential.trialEligibilityReasonCode || existingItem.trialEligibilityReasonCode);
+      const trialEligibilityTransientFailure = input.trialEligibilityTransientFailure === true || credential.trialEligibilityTransientFailure === true;
+      const trialEligibilityRetryable = input.trialEligibilityRetryable === true || credential.trialEligibilityRetryable === true || trialEligibilityTransientFailure;
+      const trialEligibilityRetryCount = Math.max(0, Math.floor(Number(input.trialEligibilityRetryCount || credential.trialEligibilityRetryCount || existingItem.trialEligibilityRetryCount) || 0));
+      const trialEligibilityLastError = normalizeString(input.trialEligibilityLastError || credential.trialEligibilityLastError || existingItem.trialEligibilityLastError);
+      const couponState = normalizeString(input.couponState || credential.couponState || existingItem.couponState);
+      const registrationType = normalizeString(input.registrationType || credential.registrationType || existingItem.registrationType);
+      const phoneNumber = normalizeString(input.phoneNumber || credential.phoneNumber || existingItem.phoneNumber);
+      const phoneVerified = input.phoneVerified === true || credential.phoneVerified === true || existingItem.phoneVerified === true;
+      const accountId = normalizeString(input.accountId || credential.accountId || existingItem.accountId);
+      const responseEmail = normalizeEmail(input.responseEmail || credential.responseEmail || existingItem.responseEmail);
+      const jwtExpired = input.jwtExpired === true || credential.jwtExpired === true || existingItem.jwtExpired === true;
+      const jwtExpiresInSeconds = Math.max(0, Math.floor(Number(input.jwtExpiresInSeconds || credential.jwtExpiresInSeconds || existingItem.jwtExpiresInSeconds) || 0));
+      const upiChannelEligibilityStatus = normalizeString(input.upiChannelEligibilityStatus || credential.upiChannelEligibilityStatus || existingItem.upiChannelEligibilityStatus);
+      const upiChannelEligibilityReason = normalizeString(input.upiChannelEligibilityReason || credential.upiChannelEligibilityReason || existingItem.upiChannelEligibilityReason);
+      const idealChannelEligibilityStatus = normalizeString(input.idealChannelEligibilityStatus || credential.idealChannelEligibilityStatus || existingItem.idealChannelEligibilityStatus);
+      const idealChannelEligibilityReason = normalizeString(input.idealChannelEligibilityReason || credential.idealChannelEligibilityReason || existingItem.idealChannelEligibilityReason);
       const accessToken = normalizeString(input.accessToken || input.token || input.access_token || credential.accessToken || existingItem.accessToken);
       const accessTokenUpdatedAt = accessToken
         ? normalizeString(input.accessTokenUpdatedAt || credential.accessTokenUpdatedAt || checkedAt)
@@ -2444,6 +2479,24 @@
         trialEligibilityStatus,
         trialEligibilityReason,
         trialEligibilityCheckedAt,
+        trialEligibilityReasonCode,
+        trialEligibilityCheckedByApi: input.trialEligibilityCheckedByApi === true || credential.trialEligibilityCheckedByApi === true || existingItem.trialEligibilityCheckedByApi === true,
+        trialEligibilityTransientFailure,
+        trialEligibilityRetryable,
+        trialEligibilityRetryCount,
+        trialEligibilityLastError,
+        couponState,
+        registrationType,
+        phoneNumber,
+        phoneVerified,
+        accountId,
+        responseEmail,
+        jwtExpired,
+        jwtExpiresInSeconds,
+        upiChannelEligibilityStatus,
+        upiChannelEligibilityReason,
+        idealChannelEligibilityStatus,
+        idealChannelEligibilityReason,
         redeemStatus: nextRedeemStatus,
         redeemReason: nextRedeemReason,
         redeemFailureCount: nextRedeemFailureCount,
