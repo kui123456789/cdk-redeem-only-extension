@@ -181,6 +181,7 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
     'background/bootstrap/content-script-registry.js',
+    'background/bootstrap/runtime-listeners.js',
     'background/bootstrap/signup-executor-registry.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
@@ -264,6 +265,7 @@ function checkStaticContracts() {
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
   const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
+  readText('background/bootstrap/runtime-listeners.js');
   const signupExecutorRegistry = readText('background/bootstrap/signup-executor-registry.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
@@ -420,6 +422,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
   assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
   assertIncludes(background, 'MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry()', 'content script registry wiring');
+  assertIncludes(background, 'MultiPageBackgroundRuntimeListeners.createRuntimeListenerRegistrar', 'runtime listener registrar wiring');
   assertIncludes(background, 'background/bootstrap/signup-executor-registry.js', 'signup executor registry import');
   assertIncludes(background, 'MultiPageBackgroundSignupExecutorRegistry.createSignupExecutorRegistry', 'signup executor registry wiring');
   assertIncludes(signupExecutorRegistry, 'createSignupExecutorRegistry', 'signup executor registry factory');

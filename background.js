@@ -26,6 +26,7 @@ importScripts(
   'background/bootstrap/auto-run-timer-plan.js',
   'background/bootstrap/auto-run-status.js',
   'background/bootstrap/content-script-registry.js',
+  'background/bootstrap/runtime-listeners.js',
   'background/bootstrap/signup-executor-registry.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
@@ -10403,7 +10404,7 @@ let stopRequested = false;
 // Message Handler (central router)
 // ============================================================
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+function handleRuntimeMessage(message, sender, sendResponse) {
   console.log(LOG_PREFIX, `Received: ${message.type} from ${message.source || 'sidepanel'}`, message);
 
   handleMessage(message, sender).then(response => {
@@ -10414,7 +10415,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   });
 
   return true; // async response
-});
+}
 
 async function handleMessage(message, sender) {
   return messageRouter.handleMessage(message, sender);
@@ -15640,38 +15641,49 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((err) 
   handleBackgroundStartupError('set side panel behavior', err);
 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+function handleAutoRunTimerAlarm(alarm) {
   if (alarm.name === AUTO_RUN_TIMER_ALARM_NAME) {
     launchAutoRunTimerPlan('alarm').catch((err) => {
       console.error(LOG_PREFIX, 'Failed to resume auto run from timer alarm:', err);
     });
     return;
   }
-});
+}
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+function handleTrackedTabUpdated(tabId, changeInfo, tab) {
   plusSuccessSessionUploadManager?.handleTabUpdated(tabId, changeInfo, tab).catch((err) => {
     console.error(LOG_PREFIX, 'Failed to process ChatGPT payments success continuation:', err);
   });
-});
+}
 
-chrome.runtime.onStartup.addListener(() => {
+function handleServiceWorkerStartup() {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on startup', err);
   });
   purgeFormerNetworkResidue('startup').catch((err) => {
     handleBackgroundStartupError('clean legacy network residue on startup', err);
   });
-});
+}
 
-chrome.runtime.onInstalled.addListener(() => {
+function handleExtensionInstalled() {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on install/update', err);
   });
   purgeFormerNetworkResidue('install').catch((err) => {
     handleBackgroundStartupError('clean legacy network residue on install/update', err);
   });
+}
+
+const runtimeListenerRegistrar = self.MultiPageBackgroundRuntimeListeners.createRuntimeListenerRegistrar({
+  chromeApi: chrome,
+  handleMessage: (message, sender, sendResponse) => handleRuntimeMessage(message, sender, sendResponse),
+  handleAlarm: (alarm) => handleAutoRunTimerAlarm(alarm),
+  handleTabUpdated: (tabId, changeInfo, tab) => handleTrackedTabUpdated(tabId, changeInfo, tab),
+  handleStartup: () => handleServiceWorkerStartup(),
+  handleInstalled: (details) => handleExtensionInstalled(details),
+  handleError: handleBackgroundStartupError,
 });
+runtimeListenerRegistrar.registerRuntimeListeners();
 
 restoreAutoRunTimerIfNeeded().catch((err) => {
   handleBackgroundStartupError('restore auto run timer', err);
