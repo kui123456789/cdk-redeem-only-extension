@@ -181,6 +181,7 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
     'background/bootstrap/content-script-registry.js',
+    'background/bootstrap/signup-executor-registry.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
     'background/membership/login-session-executor.js',
@@ -263,6 +264,7 @@ function checkStaticContracts() {
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
   const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
+  const signupExecutorRegistry = readText('background/bootstrap/signup-executor-registry.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
   const membershipLoginSessionExecutor = readText('background/membership/login-session-executor.js');
@@ -418,6 +420,8 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
   assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
   assertIncludes(background, 'MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry()', 'content script registry wiring');
+  assertIncludes(background, 'background/bootstrap/signup-executor-registry.js', 'signup executor registry import');
+  assertIncludes(background, 'MultiPageBackgroundSignupExecutorRegistry.createSignupExecutorRegistry', 'signup executor registry wiring');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
@@ -666,8 +670,8 @@ function checkStaticContracts() {
     'custom email pool trial-ineligible marking must not depend on current generator selection'
   );
   assertMatch(
-    background,
-    /const upiRedeemExecutor\s*=\s*self\.MultiPageBackgroundUpiRedeem\?\.createUpiRedeemExecutor\(\{[\s\S]*?markCurrentRegistrationAccountTrialIneligible,/,
+    signupExecutorRegistry,
+    /createUpiRedeemExecutor\?\.\(\{[\s\S]*?markCurrentRegistrationAccountTrialIneligible:/,
     'UPI redeem executor must receive trial-ineligible custom email pool marker'
   );
   assertMatch(
