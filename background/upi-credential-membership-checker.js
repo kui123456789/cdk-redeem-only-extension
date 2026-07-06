@@ -418,6 +418,10 @@
     return rootScope.MultiPageTrialEligibilityApi || {};
   }
 
+  function getMembershipResultsStoreHelpers() {
+    return (typeof self !== 'undefined' ? self : globalThis).MultiPageMembershipResultsStore || {};
+  }
+
   function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
     const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
     if (typeof helper === 'function') {
@@ -1674,6 +1678,12 @@
     let redeemStopRequested = false;
     let redeemRunning = false;
     let cdkeyRetryRunning = false;
+    const membershipResultsStoreFactory = getMembershipResultsStoreHelpers().createMembershipResultsStore;
+    if (typeof membershipResultsStoreFactory !== 'function') throw new Error('Membership results store module is not loaded.');
+    const membershipResultsStore = membershipResultsStoreFactory({
+      broadcastDataUpdate, chromeApi, mergeRedeemDeletionStateForSave, normalizeResultsPayload, setState,
+      storageKey: RESULTS_STORAGE_KEY,
+    });
 
     function throwIfMembershipStopRequested(kind = 'check') {
       throwIfStopped();
@@ -1740,8 +1750,7 @@
     }
 
     async function getStoredResults() {
-      const stored = await chromeApi.storage.local.get([RESULTS_STORAGE_KEY]).catch(() => ({}));
-      const payload = normalizeResultsPayload(stored?.[RESULTS_STORAGE_KEY]);
+      const payload = await membershipResultsStore.getStoredResults();
       if (payload.running === true && !batchRunning) {
         const fixedAt = new Date().toISOString();
         const fixed = normalizeResultsPayload({
@@ -1780,18 +1789,7 @@
     }
 
     async function saveResults(results = {}) {
-      const stored = await chromeApi.storage.local.get([RESULTS_STORAGE_KEY]).catch(() => ({}));
-      const previousPayload = normalizeResultsPayload(stored?.[RESULTS_STORAGE_KEY]);
-      const payload = normalizeResultsPayload({
-        ...results,
-        ...mergeRedeemDeletionStateForSave(previousPayload, results),
-      });
-      await chromeApi.storage.local.set({ [RESULTS_STORAGE_KEY]: payload });
-      if (typeof setState === 'function') {
-        await setState({ [RESULTS_STORAGE_KEY]: payload }).catch(() => {});
-      }
-      broadcastDataUpdate({ [RESULTS_STORAGE_KEY]: payload });
-      return payload;
+      return membershipResultsStore.saveResults(results);
     }
 
     async function updateUpiRedeemCdkeyRetryUsage(cdkey = '', updater = () => ({})) {
