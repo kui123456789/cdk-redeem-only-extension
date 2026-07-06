@@ -13,6 +13,11 @@
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
+    function getRedeemChannelStateHelpers() {
+      const rootScope = typeof window !== 'undefined' ? window : globalThis;
+      return rootScope.MultiPageRedeemChannelState || {};
+    }
+
     const FILTER_CONFIG = {
       all: {
         label: '总',
@@ -94,12 +99,20 @@
     }
 
     function getRedeemChannelFailureField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemFailureCount'
         : 'upiRedeemFailureCount';
     }
 
     function getRedeemChannelFailureCount(row = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+      if (typeof helper === 'function') {
+        return helper(row, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = getRedeemChannelFailureField(normalizedChannel);
       if (Object.prototype.hasOwnProperty.call(row || {}, field)) {
@@ -112,24 +125,40 @@
     }
 
     function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedAtField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedAt'
         : 'upiRedeemDailyLimitBlockedAt';
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedUntilField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitBlockedUntil'
         : 'upiRedeemDailyLimitBlockedUntil';
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitReasonField;
+      if (typeof helper === 'function') {
+        return helper(channel);
+      }
       return normalizeRedeemChannel(channel) === 'ideal'
         ? 'idealRedeemDailyLimitReason'
         : 'upiRedeemDailyLimitReason';
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitReason;
+      if (typeof helper === 'function') {
+        return helper(message);
+      }
       const text = normalizeUpiCredentialMembershipText(message);
       return /该邮箱/.test(text)
         && /在该渠道今日提交次数已达上限/.test(text)
@@ -138,6 +167,10 @@
     }
 
     function isRedeemChannelDailyLimitBlocked(row = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+      if (typeof helper === 'function') {
+        return helper(row, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const nowMs = Date.now();
       const blockedUntil = normalizeTimestamp(row?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]);
@@ -166,6 +199,10 @@
     }
 
     function isUpiCredentialMembershipRedeemLocked(row = {}) {
+      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+      if (typeof helper === 'function') {
+        return helper(row);
+      }
       return row?.redeemLocked === true
         || getRedeemChannelFailureCount(row, 'ideal') >= REDEEM_CHANNEL_FAILURE_LIMIT;
     }
@@ -547,6 +584,10 @@
     }
 
     function normalizeRedeemChannel(value = '') {
+      const helper = getRedeemChannelStateHelpers().normalizeRedeemChannel;
+      if (typeof helper === 'function') {
+        return helper(value);
+      }
       return normalizeUpiCredentialMembershipText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
     }
 

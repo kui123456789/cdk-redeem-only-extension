@@ -93,6 +93,10 @@
     }
 
     function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+      if (typeof helper === 'function') {
+        return helper(item, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = getRedeemChannelFailureField(normalizedChannel);
       if (Object.prototype.hasOwnProperty.call(item || {}, field)) {
@@ -172,6 +176,12 @@
     }
 
     function isRedeemChannelDailyLimitBlocked(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+      if (typeof helper === 'function') {
+        return helper(item, channel, {
+          nowMs: now(),
+        });
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const nowMs = Math.max(1, Math.floor(Number(now()) || Date.now()));
       const blockedUntil = Date.parse(normalizeString(item?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]));
@@ -200,6 +210,10 @@
     }
 
     function isRedeemAccountLocked(item = {}) {
+      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+      if (typeof helper === 'function') {
+        return helper(item);
+      }
       return item?.redeemLocked === true
         || getRedeemChannelFailureCount(item, 'ideal') >= REDEEM_CHANNEL_FAILURE_LIMIT;
     }
@@ -251,21 +265,18 @@
     }
 
     function shouldRedeemItemUseChannel(item = {}, channel = 'upi') {
-      if (isRedeemAccountLocked(item)) {
-        return false;
+      const helper = getRedeemChannelStateHelpers().shouldRedeemItemUseChannel;
+      if (typeof helper === 'function') {
+        return helper(item, channel, {
+          nowMs: now(),
+          isTrialEligibilityChannelAllowed,
+        });
       }
-      if (isRedeemChannelDailyLimitBlocked(item, channel)) {
-        return false;
-      }
-      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') {
-        return false;
-      }
-      if (!isTrialEligibilityChannelAllowed(item, channel)) {
-        return false;
-      }
-      if (normalizeRedeemChannel(channel) === 'upi') {
-        return true;
-      }
+      if (isRedeemAccountLocked(item)) return false;
+      if (isRedeemChannelDailyLimitBlocked(item, channel)) return false;
+      if (normalizeString(item?.trialEligibilityStatus).toLowerCase() !== 'eligible') return false;
+      if (!isTrialEligibilityChannelAllowed(item, channel)) return false;
+      if (normalizeRedeemChannel(channel) === 'upi') return true;
       return getRedeemChannelFailureCount(item, channel) < REDEEM_CHANNEL_FAILURE_LIMIT;
     }
 

@@ -1,6 +1,12 @@
 (function attachSidepanelCdkPoolManager(globalScope) {
-  function normalizeRedeemChannel(channel = 'upi') {
-    return String(channel || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+  function normalizeText(value = '') {
+    return String(value || '').trim();
+  }
+
+  function normalizeRedeemChannel(value = '') {
+    const helper = globalScope.MultiPageRedeemChannelState?.normalizeRedeemChannel;
+    if (typeof helper === 'function') return helper(value);
+    return normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
   }
 
   function createCdkPoolManager(context = {}) {

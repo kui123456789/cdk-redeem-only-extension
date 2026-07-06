@@ -458,6 +458,10 @@
     }
 
     function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
+      if (typeof helper === 'function') {
+        return helper(item, channel);
+      }
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = getRedeemChannelFailureField(normalizedChannel);
       if (Object.prototype.hasOwnProperty.call(item || {}, field)) {
@@ -517,6 +521,47 @@
         return helper(message);
       }
       return /\bpm-unavailable\b/i.test(normalizeString(message));
+    }
+
+    function isRedeemChannelDailyLimitBlocked(item = {}, channel = 'upi') {
+      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
+      if (typeof helper === 'function') {
+        return helper(item, channel);
+      }
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      const nowMs = Date.now();
+      const blockedUntil = Date.parse(normalizeString(item?.[getRedeemChannelDailyLimitBlockedUntilField(normalizedChannel)]));
+      if (Number.isFinite(blockedUntil) && blockedUntil > nowMs) {
+        return true;
+      }
+      const blockedAt = Date.parse(normalizeString(item?.[getRedeemChannelDailyLimitBlockedAtField(normalizedChannel)]));
+      const storedReason = item?.[getRedeemChannelDailyLimitReasonField(normalizedChannel)];
+      if (
+        Number.isFinite(blockedAt)
+        && blockedAt + REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS > nowMs
+        && isRedeemChannelDailyLimitReason(storedReason || item?.redeemReason || item?.reason)
+      ) {
+        return true;
+      }
+      const itemChannel = normalizeRedeemChannel(item?.redeemChannel || item?.channel || item?.paymentChannel);
+      if (itemChannel !== normalizedChannel) {
+        return false;
+      }
+      const legacyReason = item?.redeemReason || item?.reason || item?.remoteMessage;
+      if (!isRedeemChannelDailyLimitReason(legacyReason)) {
+        return false;
+      }
+      const legacyBlockedAt = Date.parse(normalizeString(item?.redeemLastFailedAt || item?.redeemAttemptedAt || item?.checkedAt || item?.updatedAt));
+      return !Number.isFinite(legacyBlockedAt) || legacyBlockedAt + REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS > nowMs;
+    }
+
+    function isRedeemAccountLocked(item = {}) {
+      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
+      if (typeof helper === 'function') {
+        return helper(item);
+      }
+      return item?.redeemLocked === true
+        || getRedeemChannelFailureCount(item, 'ideal') >= getUpiRedeemTotalRoundLimit(DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT);
     }
 
     function buildRedeemChannelDailyLimitPatch(channel = 'upi', reason = '', failedAt = '') {
