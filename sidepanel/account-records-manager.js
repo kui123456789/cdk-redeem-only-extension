@@ -2344,12 +2344,25 @@
     function isTrialEligibilityCheckableFreeUpiCredentialMembershipRow(row = {}) {
       const status = String(row.status || '').trim().toLowerCase();
       const trialStatus = normalizeTrialEligibilityStatus(row.trialEligibilityStatus);
+      const hasAccessToken = Boolean(normalizeUpiCredentialMembershipText(row.accessToken));
+      const hasPassword = Boolean(normalizeUpiCredentialMembershipText(row.password || row.gptPassword));
+      const hasTotp = Boolean(normalizeUpiCredentialMembershipTotpSecret(row.totpMfaSecret || row.totpSecret));
+      const passkeyCredentialId = normalizeUpiCredentialMembershipText(row.passkeyCredentialId || row.credentialId || row.credential_id);
+      const hasPasskey = row.passkeyEnabled === true || Boolean(passkeyCredentialId);
+      const hasNo2faVerificationUrl = row.no2faFreeRoute === true
+        && Boolean(normalizeUpiCredentialMembershipText(row.verificationUrl || row.emailVerificationUrl || row.url));
       return row?.email
         && row.enabled !== false
         && status === 'free'
         && trialStatus !== 'eligible'
-        && Boolean(normalizeUpiCredentialMembershipText(row.password))
-        && Boolean(normalizeUpiCredentialMembershipTotpSecret(row.totpMfaSecret));
+        && trialStatus !== 'ineligible'
+        && (
+          hasAccessToken
+          || hasPasskey
+          || hasNo2faVerificationUrl
+          || hasPassword
+          || (hasPassword && hasTotp)
+        );
     }
 
     function getUpiCredentialMembershipGroup(row = {}) {
@@ -3678,11 +3691,7 @@
       const results = getUpiCredentialMembershipCheckResults();
       return buildUpiCredentialMembershipDisplayRows(results)
         .filter(isTrialEligibilityCheckableFreeUpiCredentialMembershipRow)
-        .map((row) => ({
-          email: normalizeUpiCredentialMembershipEmail(row.email),
-          password: normalizeUpiCredentialMembershipText(row.password),
-          totpMfaSecret: normalizeUpiCredentialMembershipTotpSecret(row.totpMfaSecret),
-        }))
+        .map((row) => buildUpiCredentialMembershipActionCredential(row))
         .filter((row) => row.email);
     }
 
