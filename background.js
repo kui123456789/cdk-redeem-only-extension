@@ -23,6 +23,8 @@ importScripts(
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
+  'background/membership/redeem-status-sync.js',
+  'background/membership/access-token-refresh.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
   'shared/trial-eligibility-api.js',
