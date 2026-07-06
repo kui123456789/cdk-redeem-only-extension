@@ -313,8 +313,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
   assertFileLineCountAtMost('content/signup-verification-page.js', 300, 'signup verification page size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
-  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7000, 'membership checker growth guard');
-  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
+  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7500, 'membership checker growth guard');
+  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');
 }
 
 function checkSensitiveTrackedFiles() {

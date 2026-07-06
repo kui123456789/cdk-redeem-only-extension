@@ -1309,7 +1309,7 @@
       trialEligibilityLastError: normalizeString(item.trialEligibilityLastError),
       couponState: normalizeString(item.couponState || item.coupon_state),
       registrationType: normalizeString(item.registrationType || item.reg_type),
-      phoneNumber: normalizeString(item.phoneNumber || item.phone_number),
+      registrationPhone: normalizeString(item.registrationPhone || item.phone_number),
       phoneVerified: item.phoneVerified === true,
       accountId: normalizeString(item.accountId || item.account_id),
       responseEmail: normalizeEmail(item.responseEmail || item.emailFromApi || item.apiEmail),
@@ -2397,7 +2397,7 @@
       const trialEligibilityLastError = normalizeString(input.trialEligibilityLastError || credential.trialEligibilityLastError || existingItem.trialEligibilityLastError);
       const couponState = normalizeString(input.couponState || credential.couponState || existingItem.couponState);
       const registrationType = normalizeString(input.registrationType || credential.registrationType || existingItem.registrationType);
-      const phoneNumber = normalizeString(input.phoneNumber || credential.phoneNumber || existingItem.phoneNumber);
+      const registrationPhone = normalizeString(input.registrationPhone || credential.registrationPhone || existingItem.registrationPhone);
       const phoneVerified = input.phoneVerified === true || credential.phoneVerified === true || existingItem.phoneVerified === true;
       const accountId = normalizeString(input.accountId || credential.accountId || existingItem.accountId);
       const responseEmail = normalizeEmail(input.responseEmail || credential.responseEmail || existingItem.responseEmail);
@@ -2543,7 +2543,7 @@
         trialEligibilityLastError,
         couponState,
         registrationType,
-        phoneNumber,
+        registrationPhone,
         phoneVerified,
         accountId,
         responseEmail,
