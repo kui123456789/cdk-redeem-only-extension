@@ -1267,6 +1267,7 @@ const configMenuController = window.SidepanelConfigMenuController.createConfigMe
   exportSettings,
   importSettingsFromFile,
   onUpdate: () => updateSaveButtonState(),
+  onError: (error) => showToast('配置操作失败：' + (error?.message || error), 'error'),
 });
 let configActionInFlight = false;
 let currentReleaseSnapshot = null;

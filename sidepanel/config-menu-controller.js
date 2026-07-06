@@ -22,8 +22,33 @@
     exportSettings = async () => {},
     importSettingsFromFile = async () => {},
     onUpdate = () => {},
+    onError = (error) => console.warn('Config menu action failed:', error?.message || error),
   } = {}) {
     let open = false;
+
+    function reportAsyncError(error) {
+      try {
+        const result = onError(error);
+        if (result && typeof result.catch === 'function') {
+          result.catch((reportError) => {
+            console.warn('Config menu error handler failed:', reportError?.message || reportError);
+          });
+        }
+      } catch (reportError) {
+        console.warn('Config menu error handler failed:', reportError?.message || reportError);
+      }
+    }
+
+    function runAsyncAction(action) {
+      try {
+        const result = action();
+        if (result && typeof result.catch === 'function') {
+          result.catch(reportAsyncError);
+        }
+      } catch (error) {
+        reportAsyncError(error);
+      }
+    }
 
     function setOpen(nextOpen) {
       const previousOpen = open;
@@ -58,7 +83,7 @@
           if (dom.btnExportSettings?.disabled) {
             return;
           }
-          void exportSettings();
+          runAsyncAction(exportSettings);
         });
       }
 
@@ -75,7 +100,7 @@
 
       if (markBound(dom.inputImportSettingsFile, 'configImportFileBound')) {
         dom.inputImportSettingsFile.addEventListener('change', () => {
-          void importSettingsFromFile(dom.inputImportSettingsFile?.files?.[0] || null);
+          runAsyncAction(() => importSettingsFromFile(dom.inputImportSettingsFile?.files?.[0] || null));
         });
       }
     }
