@@ -108,184 +108,118 @@ const SIGNUP_PAGE_NODE_HANDLERS = Object.freeze({
   'confirm-oauth': (_payload) => step8_findAndClick(),
 });
 
+let signupPageOrchestrator = null;
+
+function getSignupPageOrchestrator() {
+  if (signupPageOrchestrator) {
+    return signupPageOrchestrator;
+  }
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  const createSignupPageOrchestrator = rootScope.MultiPageSignupPageOrchestrator?.createSignupPageOrchestrator
+    || rootScope.SignupPageOrchestrator?.createSignupPageOrchestrator
+    || rootScope.SignupPageOrchestrator?.create;
+  if (typeof createSignupPageOrchestrator !== 'function') {
+    throw new Error('signup-page-orchestrator.js 未加载，无法处理认证页命令。');
+  }
+  signupPageOrchestrator = createSignupPageOrchestrator({
+    nodeHandlers: SIGNUP_PAGE_NODE_HANDLERS,
+    fillVerificationCode,
+    serializeLoginAuthState,
+    inspectLoginAuthState,
+    submitAddEmailAndContinue,
+    getStep5SubmitState,
+    getSignupVerificationPostSubmitState,
+    skipCreateAccountEnrollPasskey,
+    prepareSignupVerificationFlow,
+    recoverCurrentAuthRetryPage,
+    recoverStep5SubmitRetryPage,
+    triggerStep5ProfileSubmit,
+    resendVerificationCode,
+    ensureSignupEntryReady,
+    ensureSignupPasswordPageReady,
+    startSetGptPasswordResetFlow,
+    prepareSetGptPasswordFlow,
+    submitSetGptPasswordVerificationCode,
+    setGptPasswordOnResetPage,
+    getSetGptPasswordPageState,
+    recoverSetGptPasswordAuthRetryPage,
+    readChatGptSessionExportData,
+    step8FindAndClick: step8_findAndClick,
+    getStep8State,
+    step8TriggerContinue: step8_triggerContinue,
+    log,
+  });
+  return signupPageOrchestrator;
+}
+
 function resolveCommandNodeId(message = {}) {
-  if (isMembershipCheckAuthPayload(message.payload)) {
-    return 'upi-membership-token';
-  }
-  const directNodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
-  if (directNodeId) {
-    return directNodeId;
-  }
-    if (
-      message.type === 'START_SET_GPT_PASSWORD_RESET'
-      || message.type === 'PREPARE_SET_GPT_PASSWORD'
-      || message.type === 'SUBMIT_SET_GPT_PASSWORD_CODE'
-      || message.type === 'SET_GPT_PASSWORD'
-      || message.type === 'GET_SET_GPT_PASSWORD_STATE'
-      || message.type === 'RECOVER_SET_GPT_PASSWORD_AUTH_RETRY_PAGE'
-      || (
-        message.type === 'RESEND_VERIFICATION_CODE'
-        && Number(message.payload?.visibleStep || message.step) === 6
-      )
-    ) {
-      return 'set-gpt-password';
-    }
-  const visibleStep = Number(message.payload?.visibleStep || message.step) || 0;
-  if (visibleStep === 4) return 'fetch-signup-code';
-  if (visibleStep === 8 || visibleStep === 11) return 'fetch-login-code';
-  if (visibleStep === 9 || visibleStep === 12) return 'confirm-oauth';
-  if (visibleStep === 10 || visibleStep === 13) return 'confirm-oauth';
-  if (visibleStep === 16) return 'confirm-oauth';
-  if (visibleStep === 14 || visibleStep === 15 || visibleStep === 17) return 'platform-verify';
-  if (visibleStep === 7) return 'oauth-login';
-  if (visibleStep === 5) return 'fill-profile';
-  if (visibleStep === 3) return 'fill-password';
-  if (visibleStep === 2) return 'submit-signup-email';
-  return '';
+  return getSignupPageOrchestrator().resolveCommandNodeId(message);
 }
 
 async function handleCommand(message) {
-  switch (message.type) {
-    case 'EXECUTE_NODE': {
-      const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
-      const handler = SIGNUP_PAGE_NODE_HANDLERS[nodeId];
-      if (!handler) {
-        throw new Error(`signup-page.js 不处理节点 ${nodeId}`);
-      }
-      return await handler(message.payload || {});
-    }
-    case 'FILL_CODE':
-      // Step 4 = signup code, Step 7 = login code (same handler)
-      return await fillVerificationCode(message.step, message.payload);
-    case 'GET_LOGIN_AUTH_STATE':
-      return serializeLoginAuthState(inspectLoginAuthState());
-    case 'SUBMIT_ADD_EMAIL':
-      return await submitAddEmailAndContinue(message.payload);
-    case 'GET_STEP5_SUBMIT_STATE':
-      return getStep5SubmitState();
-    case 'GET_SIGNUP_VERIFICATION_POST_SUBMIT_STATE':
-      return getSignupVerificationPostSubmitState();
-    case 'SKIP_CREATE_ACCOUNT_ENROLL_PASSKEY':
-      return await skipCreateAccountEnrollPasskey(message.payload);
-    case 'PREPARE_SIGNUP_VERIFICATION':
-      return await prepareSignupVerificationFlow(message.payload);
-    case 'RECOVER_AUTH_RETRY_PAGE':
-      return await recoverCurrentAuthRetryPage(message.payload);
-    case 'RECOVER_STEP5_SUBMIT_RETRY_PAGE':
-      return await recoverStep5SubmitRetryPage(message.payload);
-    case 'TRIGGER_STEP5_PROFILE_SUBMIT':
-      return await triggerStep5ProfileSubmit(message.payload);
-    case 'RESEND_VERIFICATION_CODE':
-      return await resendVerificationCode(
-        Number(message.step || message.payload?.step || message.payload?.visibleStep) || 4,
-        undefined,
-        message.payload || {}
-      );
-    case 'ENSURE_SIGNUP_ENTRY_READY':
-      return await ensureSignupEntryReady();
-    case 'ENSURE_SIGNUP_PASSWORD_PAGE_READY':
-      return await ensureSignupPasswordPageReady();
-    case 'START_SET_GPT_PASSWORD_RESET':
-      return await startSetGptPasswordResetFlow(message.payload);
-    case 'PREPARE_SET_GPT_PASSWORD':
-      return await prepareSetGptPasswordFlow(message.payload);
-    case 'SUBMIT_SET_GPT_PASSWORD_CODE':
-      return await submitSetGptPasswordVerificationCode(message.payload);
-    case 'SET_GPT_PASSWORD':
-      return await setGptPasswordOnResetPage(message.payload);
-    case 'GET_SET_GPT_PASSWORD_STATE':
-      return getSetGptPasswordPageState();
-    case 'RECOVER_SET_GPT_PASSWORD_AUTH_RETRY_PAGE':
-      return await recoverSetGptPasswordAuthRetryPage(resolveVisibleStep(message.payload, 6), 'GPT 密码提交后');
-    case 'READ_CHATGPT_SESSION_EXPORT_DATA':
-      return await readChatGptSessionExportData();
-    case 'STEP8_FIND_AND_CLICK':
-      return await step8_findAndClick(message.payload);
-    case 'STEP8_GET_STATE':
-      return getStep8State();
-    case 'STEP8_TRIGGER_CONTINUE':
-      return await step8_triggerContinue(message.payload);
-  }
+  return await getSignupPageOrchestrator().handleCommand(message);
 }
 
 function resolveVisibleStep(payload = {}, fallback = 0) {
-  const step = Math.floor(Number(payload?.visibleStep) || 0);
-  return step > 0 ? step : fallback;
+  return getSignupPageOrchestrator().resolveVisibleStep(payload, fallback);
 }
 
 function stepLog(step, message, level = 'info', stepKey = '') {
-  return log(message, level, { step, stepKey });
+  return getSignupPageOrchestrator().stepLog(step, message, level, stepKey);
 }
 
 function isMembershipCheckAuthPayload(payload = {}) {
-  return payload?.membershipCheck === true
-    || payload?.upiMembershipCheck === true
-    || String(payload?.flow || payload?.purpose || '').trim() === 'upi-membership-check';
+  return getSignupPageOrchestrator().isMembershipCheckAuthPayload(payload);
 }
 
 function getMembershipAuthLogLabel(payload = {}) {
-  return String(payload?.membershipLogLabel || '获取/确认 AT').trim() || '获取/确认 AT';
+  return getSignupPageOrchestrator().getMembershipAuthLogLabel(payload);
 }
 
 function formatMembershipAuthLogMessage(payload = {}, message = '') {
-  let text = String(message || '').trim();
-  text = text
-    .replace(/步骤\s*-?\d+\s*[：:]\s*/g, '')
-    .replace(/准备重新执行步骤\s*-?\d+/g, '准备重新执行当前登录')
-    .replace(/重试步骤\s*-?\d+/g, '重试当前登录');
-  const label = getMembershipAuthLogLabel(payload);
-  return text.startsWith(`${label}：`) ? text : `${label}：${text}`;
+  return getSignupPageOrchestrator().formatMembershipAuthLogMessage(payload, message);
 }
 
 function getOAuthLoginLogOptions(payload = {}, visibleStep = 7) {
-  return isMembershipCheckAuthPayload(payload)
-    ? { stepKey: 'upi-membership-token' }
-    : { step: visibleStep, stepKey: 'oauth-login' };
+  return getSignupPageOrchestrator().getOAuthLoginLogOptions(payload, visibleStep);
 }
 
 function logOAuthLogin(payload = {}, visibleStep = 7, message = '', level = 'info') {
-  log(
-    isMembershipCheckAuthPayload(payload) ? formatMembershipAuthLogMessage(payload, message) : message,
-    level,
-    getOAuthLoginLogOptions(payload, visibleStep)
-  );
+  return getSignupPageOrchestrator().logOAuthLogin(payload, visibleStep, message, level);
 }
 
 function logVerificationCode(step, payload = {}, message = '', level = 'info') {
-  if (step === 8 && isMembershipCheckAuthPayload(payload)) {
-    log(formatMembershipAuthLogMessage(payload, message), level, { stepKey: 'upi-membership-token' });
-    return;
-  }
-  log(message, level);
+  return getSignupPageOrchestrator().logVerificationCode(step, payload, message, level);
 }
 
-const VERIFICATION_CODE_INPUT_SELECTOR = [
-  'input[name="code"]',
-  'input[name="otp"]',
-  'input[autocomplete="one-time-code"]',
-  'input[type="text"][maxlength="6"]',
-  'input[type="tel"][maxlength="6"]',
-  'input[aria-label*="code" i]',
-  'input[aria-label*="कोड"]',
-  'input[aria-label*="सत्यापन"]',
-  'input[placeholder*="code" i]',
-  'input[placeholder*="कोड"]',
-  'input[placeholder*="सत्यापन"]',
-  'input[inputmode="numeric"]',
-].join(', ');
+function requireSignupPageDetectorModule() {
+  const rootScope = typeof self !== 'undefined' ? self : window;
+  const detectorModule = rootScope.MultiPageSignupPageDetector || rootScope.SignupPageDetector;
+  if (!detectorModule?.createSignupPageDetector) {
+    throw new Error('signup-page-detector.js 未加载，无法识别认证页状态。');
+  }
+  return detectorModule;
+}
 
-const ONE_TIME_CODE_LOGIN_PATTERN = /使用一次性验证码登录|改用(?:一次性)?验证码(?:登录)?|使用验证码登录|一次性验证码|验证码登录|one[-\s]*time\s*(?:passcode|password|code)|use\s+(?:a\s+)?one[-\s]*time\s*(?:passcode|password|code)(?:\s+instead)?|use\s+(?:a\s+)?code(?:\s+instead)?|sign\s+in\s+with\s+(?:email|code)|email\s+(?:me\s+)?(?:a\s+)?code|(?:एक[-\s]*)?बार(?:\s+का)?\s+(?:कोड|पासकोड)|कोड\s+(?:से|का)\s+(?:लॉग\s*इन|साइन\s*इन)/i;
-const HINDI_LOGIN_ENTRY_PATTERN = /लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?/i;
-const LOGIN_ENTRY_ACTION_PATTERN = /(?:^|\b)(?:log\s*in|sign\s*in|continue\s+(?:with|using)\s+(?:email|chatgpt)|use\s+(?:an?\s+)?email|email\s+address)(?:\b|$)|登录|登陆|邮箱|电子邮件|लॉग\s*इन(?:\s*करें)?|साइन\s*इन(?:\s*करें)?|ई-?मेल(?:\s+पता)?/i;
-const LOGIN_MORE_OPTIONS_PATTERN = /更多(?:选项|登录方式|方式)|其他(?:登录方式|选项|方式)|显示更多|more\s+(?:login\s+|sign[-\s]*in\s+)?options|other\s+(?:login\s+|sign[-\s]*in\s+)?(?:options|ways)|show\s+more|(?:और|अन्य)\s+(?:विकल्प|तरीके)|ज़्यादा\s+दिखाएं/i;
-const LOGIN_EXTERNAL_IDP_PATTERN = /google|microsoft|apple|sso|single\s+sign[-\s]*on|企业|工作区|workspace/i;
-const LOGIN_CODE_ONLY_ACTION_PATTERN = /one[-\s]*time|passcode|use\s+(?:a\s+)?code|验证码|一次性/i;
-const LOGIN_TOTP_VERIFICATION_PATTERN = /authenticator|authentication\s+app|one[-\s]*time\s+password\s+application|two[-\s]*factor|2fa|mfa|multi[-\s]*factor|verification\s+app|totp|身份验证器|认证器|双重验证|两步验证|多重验证|动态验证码/i;
-const LOGIN_EMAIL_VERIFICATION_PATTERN = /检查您的收件箱|输入我们刚刚向|重新发送电子邮件|email\s+verification|check\s+your\s+inbox|we\s+(?:just\s+)?(?:sent|emailed)|sent\s+(?:a\s+)?code\s+to|emailed\s+(?:a\s+)?code|email\s+(?:address|code)|收件箱|邮箱|电子邮件|(?:अपना\s+)?इनबॉक्स\s+देखें|(?:सत्यापन|वेरिफिकेशन)\s+कोड|(?:ई-?मेल|मेल)\s+(?:कोड|पता)|हमने.*(?:कोड|ई-?मेल)/i;
+const SIGNUP_PAGE_DETECTOR_CONSTANTS = requireSignupPageDetectorModule().constants;
+const VERIFICATION_CODE_INPUT_SELECTOR = SIGNUP_PAGE_DETECTOR_CONSTANTS.VERIFICATION_CODE_INPUT_SELECTOR;
+const ONE_TIME_CODE_LOGIN_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.ONE_TIME_CODE_LOGIN_PATTERN;
+const HINDI_LOGIN_ENTRY_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.HINDI_LOGIN_ENTRY_PATTERN;
+const LOGIN_ENTRY_ACTION_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_ENTRY_ACTION_PATTERN;
+const LOGIN_MORE_OPTIONS_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_MORE_OPTIONS_PATTERN;
+const LOGIN_EXTERNAL_IDP_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_EXTERNAL_IDP_PATTERN;
+const LOGIN_CODE_ONLY_ACTION_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_CODE_ONLY_ACTION_PATTERN;
+const LOGIN_TOTP_VERIFICATION_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_TOTP_VERIFICATION_PATTERN;
+const LOGIN_EMAIL_VERIFICATION_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.LOGIN_EMAIL_VERIFICATION_PATTERN;
+const RESEND_VERIFICATION_CODE_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.RESEND_VERIFICATION_CODE_PATTERN;
+const INVALID_VERIFICATION_CODE_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.INVALID_VERIFICATION_CODE_PATTERN;
+const EMAIL_ALREADY_VERIFIED_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.EMAIL_ALREADY_VERIFIED_PATTERN;
+const VERIFICATION_PAGE_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.VERIFICATION_PAGE_PATTERN;
+const OAUTH_CONSENT_PAGE_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.OAUTH_CONSENT_PAGE_PATTERN;
+const OAUTH_CONSENT_FORM_SELECTOR = SIGNUP_PAGE_DETECTOR_CONSTANTS.OAUTH_CONSENT_FORM_SELECTOR;
+const CONTINUE_ACTION_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.CONTINUE_ACTION_PATTERN;
+const ADD_EMAIL_PAGE_PATTERN = SIGNUP_PAGE_DETECTOR_CONSTANTS.ADD_EMAIL_PAGE_PATTERN;
 const STEP6_PASSWORD_SUBMIT_TRANSITION_TIMEOUT_MS = 30000;
-
-const RESEND_VERIFICATION_CODE_PATTERN = /重新发送(?:验证码)?|再次发送(?:验证码)?|重发(?:验证码)?|未收到(?:验证码|邮件)|resend(?:\s+code)?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive|(?:कोड|ई-?मेल|मेल)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें|(?:फिर\s+से|दोबारा|पुनः)\s+(?:कोड|ई-?मेल|मेल)\s+भेजें|प्राप्त\s+नहीं\s+हुआ/i;
-const CONTACT_VERIFICATION_SERVER_ERROR_PATTERN = /this\s+page\s+isn['’]?t\s+working|currently\s+unable\s+to\s+handle\s+this\s+request|http\s+error\s+500|500\s+internal\s+server\s+error/i;
 
 function getSignupDomUtils() {
   const rootScope = typeof self !== 'undefined' ? self : window;
@@ -316,113 +250,71 @@ function getSignupVerificationPageHelpers() {
   return signupVerificationPageHelpers;
 }
 
+let signupPageDetector = null;
+
+function getSignupPageDetector() {
+  if (signupPageDetector) {
+    return signupPageDetector;
+  }
+  signupPageDetector = requireSignupPageDetectorModule().createSignupPageDetector({
+    documentRef: document,
+    locationRef: location,
+    getSignupDomUtils,
+    getSignupVerificationPageHelpers,
+  });
+  return signupPageDetector;
+}
+
 function isVisibleElement(el) {
-  const helper = getSignupDomUtils().isVisibleElement;
-  return typeof helper === 'function' ? helper(el) : false;
+  return getSignupPageDetector().isVisibleElement(el);
 }
 
 function getVisibleSplitVerificationInputs() {
-  return getSignupVerificationPageHelpers().getVisibleSplitVerificationInputs?.() || [];
+  return getSignupPageDetector().getVisibleSplitVerificationInputs();
 }
 
 function getAssociatedInputText(input) {
-  const helper = getSignupDomUtils().getAssociatedInputText;
-  return typeof helper === 'function' ? helper(input) : '';
+  return getSignupPageDetector().getAssociatedInputText(input);
 }
 
 function getFallbackVerificationCodeInput() {
-  return getSignupVerificationPageHelpers().getFallbackVerificationCodeInput?.() || null;
+  return getSignupPageDetector().getFallbackVerificationCodeInput();
 }
 
 function getVerificationCodeTarget() {
-  return getSignupVerificationPageHelpers().getVerificationCodeTarget?.() || null;
+  return getSignupPageDetector().getVerificationCodeTarget();
 }
 
 function getLoginVerificationKind() {
-  const path = `${location.pathname || ''} ${location.href || ''}`;
-  if (/\/(?:mfa|totp|2fa|two-factor)(?:[/?#]|$)/i.test(path)) {
-    return 'totp';
-  }
-  if (isEmailVerificationPage()) {
-    return 'email';
-  }
-
-  const pageText = getPageTextSnapshot();
-  if (LOGIN_TOTP_VERIFICATION_PATTERN.test(pageText)) {
-    return 'totp';
-  }
-  if (LOGIN_EMAIL_VERIFICATION_PATTERN.test(pageText) || getLoginVerificationDisplayedEmail()) {
-    return 'email';
-  }
-
-  return 'unknown';
+  return getSignupPageDetector().getLoginVerificationKind();
 }
 
 function getActionText(el) {
-  const helper = getSignupDomUtils().getActionText;
-  return typeof helper === 'function' ? helper(el) : '';
+  return getSignupPageDetector().getActionText(el);
 }
 
 function isActionEnabled(el) {
-  const helper = getSignupDomUtils().isActionEnabled;
-  return typeof helper === 'function' ? helper(el) : false;
+  return getSignupPageDetector().isActionEnabled(el);
 }
 
 function findOneTimeCodeLoginTrigger() {
-  const candidates = document.querySelectorAll(
-    'button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"]'
-  );
-
-  for (const el of candidates) {
-    if (!isVisibleElement(el)) continue;
-    if (el.disabled || el.getAttribute('aria-disabled') === 'true') continue;
-
-    const text = [
-      el.textContent,
-      el.value,
-      el.getAttribute('aria-label'),
-      el.getAttribute('title'),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (text && ONE_TIME_CODE_LOGIN_PATTERN.test(text)) {
-      return el;
-    }
-  }
-
-  return null;
+  return getSignupPageDetector().findOneTimeCodeLoginTrigger();
 }
 
 function findResendVerificationCodeTrigger({ allowDisabled = false } = {}) {
-  return getSignupVerificationPageHelpers().findResendVerificationCodeTrigger?.({ allowDisabled }) || null;
+  return getSignupPageDetector().findResendVerificationCodeTrigger({ allowDisabled });
 }
 
 function isEmailVerificationPage() {
-  return Boolean(getSignupVerificationPageHelpers().isEmailVerificationPage?.());
+  return getSignupPageDetector().isEmailVerificationPage();
 }
 
 function getContactVerificationServerErrorText() {
-  const path = String(location?.pathname || '');
-  if (!/\/contact-verification(?:[/?#]|$)/i.test(path)) {
-    return '';
-  }
-  const text = String(getPageTextSnapshot?.() || document?.body?.textContent || '').replace(/\s+/g, ' ').trim();
-  const title = String(document?.title || '').replace(/\s+/g, ' ').trim();
-  const combined = `${title} ${text}`.trim();
-  if (!CONTACT_VERIFICATION_SERVER_ERROR_PATTERN.test(combined)) {
-    return '';
-  }
-  return combined || 'OpenAI contact-verification page returned HTTP ERROR 500 after resend.';
+  return getSignupPageDetector().getContactVerificationServerErrorText();
 }
 
 function throwIfContactVerificationServerError() {
-  const serverErrorText = getContactVerificationServerErrorText();
-  if (serverErrorText) {
-    throw new Error(`CONTACT_VERIFICATION_SERVER_ERROR::${serverErrorText}`);
-  }
+  return getSignupPageDetector().throwIfContactVerificationServerError();
 }
 
 async function resendVerificationCode(step, timeout = 45000, options = {}) {
@@ -1602,13 +1494,6 @@ async function step3_fillEmailPassword(payload) {
 // Fill Verification Code (used by step 4 and step 7)
 // ============================================================
 
-const INVALID_VERIFICATION_CODE_PATTERN = /代码不正确|验证码不正确|验证码错误|コードが正しくありません|確認コードが正しくありません|認証コードが正しくありません|code\s+(?:is\s+)?incorrect|invalid\s+code|incorrect\s+code|try\s+again|गलत\s+कोड|अमान्य\s+कोड|कोड\s+गलत/i;
-const EMAIL_ALREADY_VERIFIED_PATTERN = /email\s+verified|already\s+been\s+verified|邮箱已验证|电子邮件已验证|已经验证|メール(?:アドレス)?は確認済み|確認済み/i;
-const VERIFICATION_PAGE_PATTERN = /检查您的收件箱|输入我们刚刚向|重新发送电子邮件|重新发送验证码|代码不正确|受信トレイ|メールを確認|コードを入力|確認コード|認証コード|メールを再送信|コードを再送信|email\s+verification|check\s+your\s+inbox|enter\s+the\s+code|we\s+just\s+sent|we\s+emailed|resend|इनबॉक्स\s+देखें|कोड\s+दर्ज\s+करें|(?:सत्यापन|वेरिफिकेशन)\s+कोड|(?:ई-?मेल|कोड)\s+(?:फिर\s+से|दोबारा|पुनः)\s+भेजें/i;
-const OAUTH_CONSENT_PAGE_PATTERN = /使用\s*ChatGPT\s*登录到\s*Codex|sign\s+in\s+to\s+codex(?:\s+with\s+chatgpt)?|login\s+to\s+codex|log\s+in\s+to\s+codex|authorize|授权/i;
-const OAUTH_CONSENT_FORM_SELECTOR = 'form[action*="/sign-in-with-chatgpt/" i][action*="/consent" i]';
-const CONTINUE_ACTION_PATTERN = /继续|続行|続ける|continue|जारी\s+रखें|आगे/i;
-const ADD_EMAIL_PAGE_PATTERN = /add[\s-]*email|添加(?:电子邮件|邮箱)|要求提供(?:电子邮件|邮箱)地址|提供(?:电子邮件|邮箱)地址|provide\s+(?:an?\s+)?email\s+address|email\s+address\s+required/i;
 const STEP5_SUBMIT_ERROR_PATTERN = /无法根据该信息创建帐户|请重试|アカウントを作成できません|作成できません|やり直してください|もう一度お試しください|エラーが発生しました|生年月日|誕生日|年齢|unable\s+to\s+create\s+(?:your\s+)?account|couldn'?t\s+create\s+(?:your\s+)?account|something\s+went\s+wrong|invalid\s+(?:birthday|birth|date)|生日|出生日期|जन्म(?:दिन|तिथि)|उम्र|आयु|कुछ\s+गलत\s+हो\s+गया/i;
 const AUTH_TIMEOUT_ERROR_TITLE_PATTERN = /糟糕，出错了|エラーが発生しました|問題が発生しました|something\s+went\s+wrong|oops|कुछ\s+गलत\s+हो\s+गया|समस्या\s+हुई/i;
 const AUTH_TIMEOUT_ERROR_DETAIL_PATTERN = /operation\s+timed\s+out|timed\s+out|タイムアウト|時間切れ|请求超时|操作超时|failed\s+to\s+fetch|network\s+error|fetch\s+failed|invalid\s+authorization\s+step|invalid_auth_step/i;
@@ -1636,7 +1521,7 @@ const authPageRecovery = self.MultiPageAuthPageRecovery?.createAuthPageRecovery?
 }) || null;
 
 function getVerificationErrorText() {
-  return getSignupVerificationPageHelpers().getVerificationErrorText?.() || '';
+  return getSignupPageDetector().getVerificationErrorText();
 }
 
 function isEmailAlreadyVerifiedPage() {
@@ -1938,15 +1823,11 @@ function getSignupVerificationPostSubmitState() {
 }
 
 function getPageTextSnapshot() {
-  return (document.body?.innerText || document.body?.textContent || '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return getSignupPageDetector().getPageTextSnapshot();
 }
 
 function getLoginVerificationDisplayedEmail() {
-  const pageText = getPageTextSnapshot();
-  const matches = pageText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig) || [];
-  return matches[0] ? String(matches[0]).trim().toLowerCase() : '';
+  return getSignupPageDetector().getLoginVerificationDisplayedEmail();
 }
 
 function getOAuthConsentForm() {

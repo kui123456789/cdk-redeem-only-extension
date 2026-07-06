@@ -59,6 +59,8 @@
         "content/signup-password-page.js",
         "content/signup-profile-page.js",
         "content/signup-session-page.js",
+        "content/signup-page-detector.js",
+        "content/signup-page-orchestrator.js",
         "content/signup-page.js"
       ],
       "run_at": "document_idle"

@@ -148,6 +148,8 @@ function checkManifest() {
     'content/signup-password-page.js',
     'content/signup-profile-page.js',
     'content/signup-session-page.js',
+    'content/signup-page-detector.js',
+    'content/signup-page-orchestrator.js',
     'content/signup-page.js',
   ];
   let previousIndex = -1;
@@ -185,6 +187,8 @@ function checkCoreFiles() {
     'content/signup-password-page.js',
     'content/signup-profile-page.js',
     'content/signup-session-page.js',
+    'content/signup-page-detector.js',
+    'content/signup-page-orchestrator.js',
     'content/signup-page.js',
     'sidepanel/sidepanel.html',
     'sidepanel/styles/settings.css',
@@ -244,6 +248,8 @@ function checkStaticContracts() {
   const signupPasswordPage = readText('content/signup-password-page.js');
   const signupProfilePage = readText('content/signup-profile-page.js');
   const signupSessionPage = readText('content/signup-session-page.js');
+  const signupPageDetector = readText('content/signup-page-detector.js');
+  const signupPageOrchestrator = readText('content/signup-page-orchestrator.js');
   const gitignore = readText('.gitignore');
 
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
@@ -345,12 +351,37 @@ function checkStaticContracts() {
   assertIncludes(background, "'content/signup-password-page.js'", 'background signup password page injection');
   assertIncludes(background, "'content/signup-profile-page.js'", 'background signup profile page injection');
   assertIncludes(background, "'content/signup-session-page.js'", 'background signup session page injection');
+  assertIncludes(background, "'content/signup-page-detector.js'", 'background signup detector injection');
+  assertIncludes(background, "'content/signup-page-orchestrator.js'", 'background signup orchestrator injection');
+  [
+    'content/signup-dom-utils.js',
+    'content/signup-entry-page.js',
+    'content/signup-verification-page.js',
+    'content/signup-password-page.js',
+    'content/signup-profile-page.js',
+    'content/signup-session-page.js',
+    'content/signup-page-detector.js',
+    'content/signup-page-orchestrator.js',
+    'content/signup-page.js',
+  ].reduce((previousFile, currentFile) => {
+    if (previousFile) {
+      assertBefore(
+        background,
+        `'${previousFile}'`,
+        `'${currentFile}'`,
+        'background signup content injection order'
+      );
+    }
+    return currentFile;
+  }, '');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-dom-utils.js', 'manifest signup DOM utils load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-entry-page.js', 'manifest signup entry page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-verification-page.js', 'manifest signup verification page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-password-page.js', 'manifest signup password page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-profile-page.js', 'manifest signup profile page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-session-page.js', 'manifest signup session page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-page-detector.js', 'manifest signup detector load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-page-orchestrator.js', 'manifest signup orchestrator load');
   assertIncludes(signupDomUtils, 'MultiPageSignupDomUtils', 'signup DOM utils global');
   assertIncludes(signupDomUtils, 'getAssociatedInputText', 'signup DOM associated input helper');
   assertIncludes(signupEntryPage, 'MultiPageSignupEntryPage', 'signup entry page global');
@@ -373,6 +404,14 @@ function checkStaticContracts() {
   assertIncludes(signupSessionPage, 'readChatGptSession', 'signup session reader');
   assertIncludes(signupSessionPage, 'extractAccessToken', 'signup session access token helper');
   assertIncludes(signupSessionPage, 'detectLoggedInHome', 'signup session logged-in home detector');
+  assertIncludes(signupPageDetector, 'MultiPageSignupPageDetector', 'signup detector global');
+  assertIncludes(signupPageDetector, 'createSignupPageDetector', 'signup detector factory');
+  assertIncludes(signupPageDetector, 'getLoginVerificationKind', 'signup detector login verification classifier');
+  assertIncludes(signupPageDetector, 'findResendVerificationCodeTrigger', 'signup detector resend helper');
+  assertIncludes(signupPageOrchestrator, 'MultiPageSignupPageOrchestrator', 'signup orchestrator global');
+  assertIncludes(signupPageOrchestrator, 'createSignupPageOrchestrator', 'signup orchestrator factory');
+  assertIncludes(signupPageOrchestrator, 'resolveCommandNodeId', 'signup orchestrator command resolver');
+  assertIncludes(signupPageOrchestrator, 'formatMembershipAuthLogMessage', 'signup orchestrator membership log formatter');
 
   [
     'btn-upi-redeem-cdkey-status-refresh',
@@ -489,6 +528,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-password-page.js', 350, 'signup password page size guard');
   assertFileLineCountAtMost('content/signup-profile-page.js', 550, 'signup profile page size guard');
   assertFileLineCountAtMost('content/signup-session-page.js', 220, 'signup session page size guard');
+  assertFileLineCountAtMost('content/signup-page-detector.js', 400, 'signup detector size guard');
+  assertFileLineCountAtMost('content/signup-page-orchestrator.js', 300, 'signup orchestrator size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7500, 'membership checker growth guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');

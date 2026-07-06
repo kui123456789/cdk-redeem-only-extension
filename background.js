@@ -13271,6 +13271,8 @@ const SIGNUP_PAGE_INJECT_FILES = [
   'content/signup-password-page.js',
   'content/signup-profile-page.js',
   'content/signup-session-page.js',
+  'content/signup-page-detector.js',
+  'content/signup-page-orchestrator.js',
   'content/signup-page.js',
 ];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
