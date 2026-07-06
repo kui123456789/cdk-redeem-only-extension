@@ -321,6 +321,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
   assertIncludes(membershipCredentialFormat, 'formatFreeCredentialLine', 'membership Free export formatter');
+  assertBefore(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'src="account-records-manager.js"', 'membership credential format must load before account records manager');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
   assertIncludes(sidepanelHtml, 'src="membership-row-policy.js"', 'membership row policy script load');
   assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
