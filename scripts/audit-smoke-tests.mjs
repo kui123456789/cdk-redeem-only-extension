@@ -103,7 +103,7 @@ function checkCoreFiles() {
     'background/message-router.js',
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
-    'background/redeem/redeem-channel-state.js',
+    'shared/redeem-channel-state.js',
     'background/redeem/redeem-cdkey-usage.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
@@ -149,7 +149,7 @@ function checkStaticContracts() {
   const background = readText('background.js');
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
-  const redeemChannelState = readText('background/redeem/redeem-channel-state.js');
+  const redeemChannelState = readText('shared/redeem-channel-state.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
@@ -170,6 +170,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
+  assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
   assertIncludes(sidepanelHtml, 'href="styles/settings.css"', 'settings stylesheet load');
   assertIncludes(sidepanelHtml, 'href="styles/cdk-pools.css"', 'CDK pools stylesheet load');
@@ -196,11 +197,13 @@ function checkStaticContracts() {
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
-  assertIncludes(background, "'background/redeem/redeem-channel-state.js'", 'background redeem channel state script load');
+  assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'background/redeem/redeem-cdkey-usage.js'", 'background redeem CDK usage script load');
   assertIncludes(redeemChannelState, 'createRedeemChannelState', 'redeem channel state factory');
   assertIncludes(redeemChannelState, 'getRedeemChannelFailureField', 'redeem channel failure field helper');
+  assertIncludes(redeemChannelState, 'getRedeemChannelFailureCount', 'redeem channel failure count helper');
   assertIncludes(redeemChannelState, 'isRedeemChannelDailyLimitReason', 'redeem daily-limit helper');
+  assertIncludes(redeemChannelState, 'shouldRedeemItemUseChannel', 'redeem channel use policy helper');
   assertIncludes(redeemCdkeyUsage, 'createRedeemCdkeyUsage', 'redeem CDK usage factory');
   assertIncludes(redeemCdkeyUsage, 'getUpiRedeemStateValue', 'redeem CDK legacy alias helper');
   assertIncludes(redeemCdkeyUsage, 'buildRedeemChannelUsageUpdates', 'redeem CDK usage update helper');
@@ -270,10 +273,15 @@ function checkStaticContracts() {
     /await helpers\.downloadTextFile\(/,
     'account record exports must await async download helper'
   );
-  assertIncludes(
+  assertMatch(
     accountRecords,
-    "if (deleteStatus === 'free') {\n            setUpiCredentialMembershipPoolRows",
+    /deletedEmails\.forEach\(\(email\) => disabledUpiCredentialMembershipEmails\.delete\(email\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus delete must not remove local backup pool rows'
+  );
+  assertNotMatch(
+    accountRecords,
+    /else if\s*\(deleteStatus === 'paid' && deleteChannel\)\s*\{[^{}]*?setUpiCredentialMembershipPoolRows\(/,
+    'single Plus paid delete must not mutate local backup pool rows'
   );
   assertNotMatch(
     accountRecords,
@@ -307,7 +315,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background.js', 20000, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
-  assertFileLineCountAtMost('background/redeem/redeem-channel-state.js', 300, 'redeem channel state size guard');
+  assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');

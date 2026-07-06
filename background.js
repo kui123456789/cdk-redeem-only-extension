@@ -15,7 +15,7 @@ importScripts(
   'background/runtime-state.js',
   'background/settings-normalizers.js',
   'background/flow-definition-resolver.js',
-  'background/redeem/redeem-channel-state.js',
+  'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
