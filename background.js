@@ -22,6 +22,7 @@ importScripts(
   'background/bootstrap/settings-defaults.js',
   'background/bootstrap/state-store.js',
   'background/bootstrap/legacy-cleanup.js',
+  'background/bootstrap/auto-run-session.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -1289,45 +1290,31 @@ function normalizeAutoRunTimerKind(value = '') {
 }
 
 function normalizeAutoRunSessionId(value) {
-  const numeric = Math.floor(Number(value) || 0);
-  return numeric > 0 ? numeric : 0;
+  return autoRunSessionManager.normalizeAutoRunSessionId(value);
 }
 
 function createAutoRunSessionId() {
-  autoRunSessionSeed = Math.max(autoRunSessionSeed + 1, Date.now());
-  autoRunSessionId = autoRunSessionSeed;
-  return autoRunSessionId;
+  return autoRunSessionManager.createAutoRunSessionId();
 }
 
 function setCurrentAutoRunSessionId(value) {
-  autoRunSessionId = normalizeAutoRunSessionId(value);
-  return autoRunSessionId;
+  return autoRunSessionManager.setCurrentAutoRunSessionId(value);
 }
 
 function clearCurrentAutoRunSessionId(expectedSessionId = null) {
-  if (expectedSessionId === null) {
-    autoRunSessionId = 0;
-    return autoRunSessionId;
-  }
-
-  const normalizedExpected = normalizeAutoRunSessionId(expectedSessionId);
-  if (!normalizedExpected || normalizedExpected === autoRunSessionId) {
-    autoRunSessionId = 0;
-  }
-  return autoRunSessionId;
+  return autoRunSessionManager.clearCurrentAutoRunSessionId(expectedSessionId);
 }
 
 function isCurrentAutoRunSessionId(value) {
-  const normalized = normalizeAutoRunSessionId(value);
-  return normalized > 0 && normalized === autoRunSessionId;
+  return autoRunSessionManager.isCurrentAutoRunSessionId(value);
 }
 
 function throwIfAutoRunSessionStopped(sessionId) {
-  const normalizedSessionId = normalizeAutoRunSessionId(sessionId);
-  if (normalizedSessionId && !isCurrentAutoRunSessionId(normalizedSessionId)) {
-    throw new Error(STOP_ERROR_MESSAGE);
-  }
-  throwIfStopped();
+  return autoRunSessionManager.throwIfAutoRunSessionStopped(sessionId);
+}
+
+function getCurrentAutoRunSessionId() {
+  return autoRunSessionManager.getCurrentAutoRunSessionId();
 }
 
 function normalizeAutoRunTimerPlan(plan) {
@@ -9925,7 +9912,7 @@ function getAutoRunStatusPayload(phase, payload = {}) {
     currentRun: payload.currentRun ?? autoRunCurrentRun,
     totalRuns: payload.totalRuns ?? autoRunTotalRuns,
     attemptRun: payload.attemptRun ?? autoRunAttemptRun,
-    sessionId: payload.sessionId ?? payload.autoRunSessionId ?? autoRunSessionId,
+    sessionId: payload.sessionId ?? payload.autoRunSessionId ?? getCurrentAutoRunSessionId(),
   };
   if (typeof loggingStatus !== 'undefined' && loggingStatus?.getAutoRunStatusPayload) {
     return loggingStatus.getAutoRunStatusPayload(phase, normalizedPayload);
@@ -9959,7 +9946,7 @@ async function broadcastAutoRunStatus(phase, payload = {}, extraState = {}) {
     currentRun: payload.currentRun ?? autoRunCurrentRun,
     totalRuns: payload.totalRuns ?? autoRunTotalRuns,
     attemptRun: payload.attemptRun ?? autoRunAttemptRun,
-    sessionId: payload.sessionId ?? payload.autoRunSessionId ?? autoRunSessionId,
+    sessionId: payload.sessionId ?? payload.autoRunSessionId ?? getCurrentAutoRunSessionId(),
     scheduledAt: rawScheduledAt === null ? null : Number(rawScheduledAt),
     countdownAt: rawCountdownAt === null ? null : Number(rawCountdownAt),
     countdownTitle: payload.countdownTitle === undefined ? '' : String(payload.countdownTitle || ''),
@@ -10200,7 +10187,7 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
     autoRunCurrentRun = resumeOptions.statusPayload.currentRun;
     autoRunTotalRuns = plan.totalRuns;
     autoRunAttemptRun = resumeOptions.statusPayload.attemptRun;
-    autoRunSessionId = normalizeAutoRunSessionId(plan.autoRunSessionId);
+    setCurrentAutoRunSessionId(plan.autoRunSessionId);
     if (plan.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START && trigger !== 'manual' && state.autoRunDelayEnabled) {
       await setAutoRunDelayEnabledState(false);
     }
@@ -10272,7 +10259,7 @@ async function scheduleAutoRun(totalRuns, options = {}) {
   autoRunCurrentRun = 0;
   autoRunTotalRuns = timerPlan.totalRuns;
   autoRunAttemptRun = 0;
-  autoRunSessionId = sessionId;
+  setCurrentAutoRunSessionId(sessionId);
 
   await persistAutoRunTimerPlan(timerPlan, {
     autoRunSkipFailures: timerPlan.autoRunSkipFailures,
@@ -11969,8 +11956,10 @@ let autoRunActive = false;
 let autoRunCurrentRun = 0;
 let autoRunTotalRuns = 1;
 let autoRunAttemptRun = 0;
-let autoRunSessionId = 0;
-let autoRunSessionSeed = 0;
+const autoRunSessionManager = self.MultiPageBackgroundAutoRunSession.createAutoRunSessionManager({
+  stopErrorMessage: STOP_ERROR_MESSAGE,
+  throwIfStopped: () => throwIfStopped(),
+});
 const EMAIL_FETCH_MAX_ATTEMPTS = 5;
 const VERIFICATION_POLL_MAX_ROUNDS = 5;
 const STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS = 25000;
@@ -12263,14 +12252,14 @@ const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoR
       autoRunCurrentRun,
       autoRunTotalRuns,
       autoRunAttemptRun,
-      autoRunSessionId,
+      autoRunSessionId: getCurrentAutoRunSessionId(),
     }),
     set: (updates = {}) => {
       if (updates.autoRunActive !== undefined) autoRunActive = Boolean(updates.autoRunActive);
       if (updates.autoRunCurrentRun !== undefined) autoRunCurrentRun = Number(updates.autoRunCurrentRun) || 0;
       if (updates.autoRunTotalRuns !== undefined) autoRunTotalRuns = Number(updates.autoRunTotalRuns) || 0;
       if (updates.autoRunAttemptRun !== undefined) autoRunAttemptRun = Number(updates.autoRunAttemptRun) || 0;
-      if (updates.autoRunSessionId !== undefined) autoRunSessionId = normalizeAutoRunSessionId(updates.autoRunSessionId);
+      if (updates.autoRunSessionId !== undefined) setCurrentAutoRunSessionId(updates.autoRunSessionId);
     },
   },
   setState,
