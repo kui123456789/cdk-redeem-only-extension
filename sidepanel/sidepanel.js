@@ -1241,6 +1241,8 @@ let currentReleaseSnapshot = null;
 let currentContributionContentSnapshot = null;
 let contributionContentSnapshotRequestInFlight = null;
 let accountRecordsManager = null;
+let settingsStateManager = null;
+let workflowControlsManager = null;
 let settingsTransferManager = null;
 
 function normalizeAutomationWindowId(value) {
@@ -2109,6 +2111,41 @@ async function downloadTextFile(content, fileName, mimeType = 'application/json;
 async function reloadUpiCredentialMembershipAfterRuntimeImport() {
   await getAccountRecordsManager()?.reloadUpiCredentialMembershipAfterRuntimeImport?.({ silent: true });
 }
+
+function getSettingsStateManager() {
+  if (settingsStateManager) {
+    return settingsStateManager;
+  }
+
+  settingsStateManager = window.SidepanelSettingsStateManager?.createSettingsStateManager?.({
+    helpers: {
+      collectSettingsPayload,
+      applySettingsState,
+    },
+  }) || null;
+
+  return settingsStateManager;
+}
+
+function getWorkflowControlsManager() {
+  if (workflowControlsManager) {
+    return workflowControlsManager;
+  }
+
+  workflowControlsManager = window.SidepanelWorkflowControlsManager?.createWorkflowControlsManager?.({
+    helpers: {
+      executeNode: executeNodeFromSidepanel,
+      skipNode: handleSkipNode,
+      renderStepsList,
+      renderStepStatuses,
+    },
+  }) || null;
+
+  return workflowControlsManager;
+}
+
+getSettingsStateManager();
+getWorkflowControlsManager();
 
 function getSettingsTransferManager() {
   if (settingsTransferManager) {
