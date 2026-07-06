@@ -1228,19 +1228,8 @@ function validateCurrentRegistrationEmail(email = inputEmail.value.trim(), optio
   return false;
 }
 
-let currentAutoRun = {
-  autoRunning: false,
-  phase: 'idle',
-  currentRun: 0,
-  totalRuns: 1,
-  attemptRun: 0,
-  scheduledAt: null,
-  countdownAt: null,
-  countdownTitle: '',
-  countdownNote: '',
-};
-let pendingAutoRunStartTotalRuns = 0;
-let pendingAutoRunStartExpiresAt = 0;
+const autoRunStateModel = window.SidepanelAutoRunState.createAutoRunStateModel();
+let currentAutoRun = autoRunStateModel.getAutoRunState();
 let settingsDirty = false;
 let settingsSaveInFlight = false;
 let settingsAutoSaveTimer = null;
@@ -5803,66 +5792,33 @@ function normalizeUpiInfoOtpChannelValue(value = '') {
   return 'whatsapp';
 }
 
-function hasOwnStateValue(source, key) {
-  return Object.prototype.hasOwnProperty.call(source, key);
-}
-
 function readAutoRunStateValue(source, keys, fallback) {
-  for (const key of keys) {
-    if (hasOwnStateValue(source, key)) {
-      return source[key];
-    }
-  }
-  return fallback;
+  return autoRunStateModel.readAutoRunStateValue(source, keys, fallback);
 }
 
 function normalizePendingAutoRunStartRunCount(value) {
-  const numeric = Math.floor(Number(value) || 0);
-  return numeric > 0 ? numeric : 0;
+  return autoRunStateModel.normalizePendingAutoRunStartRunCount(value);
 }
 
 function registerPendingAutoRunStartRunCount(totalRuns) {
-  pendingAutoRunStartTotalRuns = normalizePendingAutoRunStartRunCount(totalRuns);
-  pendingAutoRunStartExpiresAt = pendingAutoRunStartTotalRuns > 0
-    ? Date.now() + 30000
-    : 0;
+  autoRunStateModel.registerPendingAutoRunStartRunCount(totalRuns);
 }
 
 function clearPendingAutoRunStartRunCount() {
-  pendingAutoRunStartTotalRuns = 0;
-  pendingAutoRunStartExpiresAt = 0;
+  autoRunStateModel.clearPendingAutoRunStartRunCount();
 }
 
 function getPendingAutoRunStartRunCount() {
-  if (pendingAutoRunStartTotalRuns > 0 && pendingAutoRunStartExpiresAt > 0 && Date.now() > pendingAutoRunStartExpiresAt) {
-    clearPendingAutoRunStartRunCount();
-  }
-  return pendingAutoRunStartTotalRuns;
+  return autoRunStateModel.getPendingAutoRunStartRunCount();
 }
 
 function getAutoRunSourceTotalRuns(source = {}) {
-  return normalizePendingAutoRunStartRunCount(readAutoRunStateValue(source, ['autoRunTotalRuns', 'totalRuns'], 0));
+  return autoRunStateModel.getAutoRunSourceTotalRuns(source);
 }
 
 function syncAutoRunState(source = {}) {
-  const phase = source.autoRunPhase ?? source.phase ?? currentAutoRun.phase;
-  const autoRunning = source.autoRunning !== undefined
-    ? Boolean(source.autoRunning)
-    : (source.autoRunPhase !== undefined || source.phase !== undefined
-      ? ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase)
-      : currentAutoRun.autoRunning);
-
-  currentAutoRun = {
-    autoRunning,
-    phase,
-    currentRun: readAutoRunStateValue(source, ['autoRunCurrentRun', 'currentRun'], currentAutoRun.currentRun),
-    totalRuns: readAutoRunStateValue(source, ['autoRunTotalRuns', 'totalRuns'], currentAutoRun.totalRuns),
-    attemptRun: readAutoRunStateValue(source, ['autoRunAttemptRun', 'attemptRun'], currentAutoRun.attemptRun),
-    scheduledAt: readAutoRunStateValue(source, ['scheduledAutoRunAt', 'scheduledAt'], currentAutoRun.scheduledAt),
-    countdownAt: readAutoRunStateValue(source, ['autoRunCountdownAt', 'countdownAt'], currentAutoRun.countdownAt),
-    countdownTitle: readAutoRunStateValue(source, ['autoRunCountdownTitle', 'countdownTitle'], currentAutoRun.countdownTitle),
-    countdownNote: readAutoRunStateValue(source, ['autoRunCountdownNote', 'countdownNote'], currentAutoRun.countdownNote),
-  };
+  currentAutoRun = autoRunStateModel.syncAutoRunState(source);
+  return currentAutoRun;
 }
 
 function isContributionButtonLocked() {
@@ -5880,60 +5836,31 @@ function isContributionButtonLocked() {
 }
 
 function isAutoRunLockedPhase() {
-  return currentAutoRun.phase === 'running'
-    || currentAutoRun.phase === 'waiting_step'
-    || currentAutoRun.phase === 'retrying'
-    || currentAutoRun.phase === 'waiting_interval';
+  return autoRunStateModel.isAutoRunLockedPhase();
 }
 
 function isAutoRunPausedPhase() {
-  return currentAutoRun.phase === 'waiting_email';
+  return autoRunStateModel.isAutoRunPausedPhase();
 }
 
 function isAutoRunWaitingStepPhase() {
-  return currentAutoRun.phase === 'waiting_step';
+  return autoRunStateModel.isAutoRunWaitingStepPhase();
 }
 
 function isAutoRunScheduledPhase() {
-  return currentAutoRun.phase === 'scheduled';
+  return autoRunStateModel.isAutoRunScheduledPhase();
 }
 
 function isAutoRunSourceSyncPhase(phase) {
-  return ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
+  return autoRunStateModel.isAutoRunSourceSyncPhase(phase);
 }
 
 function shouldSyncRunCountFromAutoRunSource(source = {}) {
-  const phase = source.autoRunPhase ?? source.phase ?? currentAutoRun.phase;
-  const autoRunning = source.autoRunning !== undefined
-    ? Boolean(source.autoRunning)
-    : isAutoRunSourceSyncPhase(phase);
-  const shouldSync = autoRunning || isAutoRunSourceSyncPhase(phase);
-  if (!shouldSync) {
-    return false;
-  }
-
-  const pendingTotalRuns = getPendingAutoRunStartRunCount();
-  if (pendingTotalRuns > 0) {
-    const sourceTotalRuns = getAutoRunSourceTotalRuns(source);
-    if (sourceTotalRuns > 0 && sourceTotalRuns !== pendingTotalRuns) {
-      return false;
-    }
-    if (sourceTotalRuns === pendingTotalRuns) {
-      clearPendingAutoRunStartRunCount();
-    }
-  }
-  return true;
+  return autoRunStateModel.shouldSyncRunCountFromAutoRunSource(source);
 }
 
 function getAutoRunLabel(payload = currentAutoRun) {
-  if ((payload.phase ?? currentAutoRun.phase) === 'scheduled') {
-    return (payload.totalRuns || 1) > 1 ? ` (${payload.totalRuns}轮)` : '';
-  }
-  const attemptLabel = payload.attemptRun ? ` · 尝试${payload.attemptRun}` : '';
-  if ((payload.totalRuns || 1) > 1) {
-    return ` (${payload.currentRun}/${payload.totalRuns}${attemptLabel})`;
-  }
-  return attemptLabel ? ` (${attemptLabel.slice(3)})` : '';
+  return autoRunStateModel.getAutoRunLabel(payload);
 }
 
 function normalizeAutoDelayMinutes(value) {
