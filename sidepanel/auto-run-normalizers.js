@@ -1,7 +1,14 @@
 (function attachSidepanelAutoRunNormalizers(globalScope) {
   function normalizeBoundedInteger(value, fallback, min, max, options = {}) {
     const rawValue = String(value ?? '').trim();
-    const fallbackValue = Math.min(max, Math.max(min, Math.floor(Number(fallback) || 0)));
+    const fallbackNumber = Number(fallback);
+    const hasDefaultFallback = Object.prototype.hasOwnProperty.call(options, 'defaultFallback');
+    const fallbackSource = hasDefaultFallback && (
+      !Number.isFinite(fallbackNumber) || fallbackNumber < min || fallbackNumber > max
+    )
+      ? options.defaultFallback
+      : fallback;
+    const fallbackValue = Math.min(max, Math.max(min, Math.floor(Number(fallbackSource) || 0)));
     if (!rawValue && options.emptyAsFallback !== false) {
       return fallbackValue;
     }
@@ -57,11 +64,11 @@
     }
 
     function normalizeRemovedContactVerificationPollAttempts(value, fallback = 6) {
-      return normalizeBoundedInteger(value, fallback, 1, 60);
+      return normalizeBoundedInteger(value, fallback, 1, 60, { defaultFallback: 6 });
     }
 
     function normalizeRemovedContactVerificationPollIntervalSeconds(value, fallback = 5) {
-      return normalizeBoundedInteger(value, fallback, 1, 60);
+      return normalizeBoundedInteger(value, fallback, 1, 60, { defaultFallback: 5 });
     }
 
     return {
