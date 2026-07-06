@@ -26,6 +26,7 @@ importScripts(
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
   'shared/trial-eligibility-api.js',
+  'background/email/provider-registry.js',
   'background/generated-email-helpers.js',
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
@@ -506,25 +507,34 @@ const ICLOUD_MAILDOMAINWS_CLIENT_BUILD_NUMBER = '2206Hotfix11';
 const ICLOUD_ALIAS_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const ICLOUD_TRANSIENT_RETRY_MAX_ATTEMPTS = 2;
 const ICLOUD_TRANSIENT_RETRY_DELAY_MS = 1200;
-const ICLOUD_PROVIDER = 'icloud';
-const ICLOUD_API_PROVIDER = 'icloud-api';
-const GMAIL_PROVIDER = 'gmail';
-const GMAIL_ALIAS_GENERATOR = 'gmail-alias';
-const HOTMAIL_PROVIDER = 'hotmail-api';
-const LUCKMAIL_PROVIDER = 'luckmail-api';
-const CLOUDFLARE_TEMP_EMAIL_PROVIDER = 'cloudflare-temp-email';
-const CLOUDFLARE_TEMP_EMAIL_GENERATOR = 'cloudflare-temp-email';
-const CLOUD_MAIL_PROVIDER = 'cloudmail';
-const CLOUD_MAIL_GENERATOR = 'cloudmail';
-const FREEMAIL_PROVIDER = 'freemail';
-const FREEMAIL_GENERATOR = 'freemail';
-const MOEMAIL_PROVIDER = 'moemail';
-const MOEMAIL_GENERATOR = 'moemail';
-const YYDSMAIL_PROVIDER = 'yydsmail';
-const YYDSMAIL_GENERATOR = 'yydsmail';
-const OUTLOOK_EMAIL_PLUS_PROVIDER = 'outlook-email-plus';
-const OUTLOOK_EMAIL_PLUS_GENERATOR = 'outlook-email-plus';
-const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
+const emailProviderRegistry = self.MultiPageEmailProviderRegistry.create({
+  getManagedAliasUtils: () => getManagedAliasUtils(),
+  getMail2925Mode: (stateOrMode) => getMail2925Mode(stateOrMode),
+  isCustomMailProvider: (stateOrProvider) => isCustomMailProvider(stateOrProvider),
+  isHotmailProvider: (stateOrProvider) => isHotmailProvider(stateOrProvider),
+  normalizeMail2925Mode: (value) => normalizeMail2925Mode(value),
+});
+const {
+  ICLOUD_PROVIDER,
+  ICLOUD_API_PROVIDER,
+  GMAIL_PROVIDER,
+  GMAIL_ALIAS_GENERATOR,
+  HOTMAIL_PROVIDER,
+  LUCKMAIL_PROVIDER,
+  CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+  CLOUDFLARE_TEMP_EMAIL_GENERATOR,
+  CLOUD_MAIL_PROVIDER,
+  CLOUD_MAIL_GENERATOR,
+  FREEMAIL_PROVIDER,
+  FREEMAIL_GENERATOR,
+  MOEMAIL_PROVIDER,
+  MOEMAIL_GENERATOR,
+  YYDSMAIL_PROVIDER,
+  YYDSMAIL_GENERATOR,
+  OUTLOOK_EMAIL_PLUS_PROVIDER,
+  OUTLOOK_EMAIL_PLUS_GENERATOR,
+  CUSTOM_EMAIL_POOL_GENERATOR,
+} = emailProviderRegistry;
 const HOTMAIL_MAILBOXES = ['INBOX', 'Junk'];
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
 const CLOUDFLARE_SECURITY_BLOCK_ERROR_PREFIX = 'CF_SECURITY_BLOCKED::';
@@ -1462,33 +1472,7 @@ function getAutoRunTimerStatusPayload(plan) {
 }
 
 function normalizeEmailGenerator(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  const customEmailPoolGenerator = typeof CUSTOM_EMAIL_POOL_GENERATOR === 'string'
-    ? CUSTOM_EMAIL_POOL_GENERATOR
-    : 'custom-pool';
-  const gmailAliasGenerator = typeof GMAIL_ALIAS_GENERATOR === 'string'
-    ? GMAIL_ALIAS_GENERATOR
-    : 'gmail-alias';
-  if (normalized === 'custom' || normalized === 'manual') {
-    return 'custom';
-  }
-  if (normalized === gmailAliasGenerator) {
-    return gmailAliasGenerator;
-  }
-  if (normalized === customEmailPoolGenerator) {
-    return customEmailPoolGenerator;
-  }
-  if (normalized === 'icloud') {
-    return 'icloud';
-  }
-  if (normalized === 'cloudflare') return 'cloudflare';
-  if (normalized === CLOUDFLARE_TEMP_EMAIL_GENERATOR) return CLOUDFLARE_TEMP_EMAIL_GENERATOR;
-  if (normalized === CLOUD_MAIL_GENERATOR) return CLOUD_MAIL_GENERATOR;
-  if (normalized === FREEMAIL_GENERATOR) return FREEMAIL_GENERATOR;
-  if (normalized === MOEMAIL_GENERATOR) return MOEMAIL_GENERATOR;
-  if (normalized === YYDSMAIL_GENERATOR) return YYDSMAIL_GENERATOR;
-  if (normalized === OUTLOOK_EMAIL_PLUS_GENERATOR) return OUTLOOK_EMAIL_PLUS_GENERATOR;
-  return 'duck';
+  return emailProviderRegistry.normalizeEmailGenerator(value);
 }
 
 function normalizeIcloudFetchMode(value = '') {
@@ -5977,46 +5961,6 @@ function parseGmailBaseEmail(rawValue) {
   };
 }
 
-function isGeneratedAliasProvider(stateOrProvider, mail2925Mode = undefined) {
-  if (
-    stateOrProvider
-    && typeof stateOrProvider === 'object'
-    && !Array.isArray(stateOrProvider)
-    && normalizeEmailGenerator(stateOrProvider.emailGenerator) === (
-      typeof CUSTOM_EMAIL_POOL_GENERATOR === 'string'
-        ? CUSTOM_EMAIL_POOL_GENERATOR
-        : 'custom-pool'
-    )
-  ) {
-    return false;
-  }
-  const provider = typeof stateOrProvider === 'string'
-    ? stateOrProvider
-    : stateOrProvider?.mailProvider;
-  const resolvedMail2925Mode = mail2925Mode !== undefined
-    ? normalizeMail2925Mode(mail2925Mode)
-    : getMail2925Mode(stateOrProvider);
-  const utils = (typeof self !== 'undefined' ? self : globalThis).MultiPageManagedAliasUtils || null;
-  if (utils?.usesManagedAliasGeneration) {
-    return utils.usesManagedAliasGeneration(provider, { mail2925Mode: resolvedMail2925Mode });
-  }
-  if (utils?.isManagedAliasProvider) {
-    if (String(provider || '').trim().toLowerCase() === '2925') {
-      return utils.isManagedAliasProvider(provider) && resolvedMail2925Mode === MAIL_2925_MODE_PROVIDE;
-    }
-    return utils.isManagedAliasProvider(provider);
-  }
-  return provider === GMAIL_PROVIDER
-    || (provider === '2925' && resolvedMail2925Mode === MAIL_2925_MODE_PROVIDE);
-}
-
-function shouldUseCustomRegistrationEmail(state = {}) {
-  return isCustomMailProvider(state)
-    || (!isHotmailProvider(state)
-      && !isGeneratedAliasProvider(state)
-      && normalizeEmailGenerator(state.emailGenerator) === 'custom');
-}
-
 function buildGeneratedAliasEmail(state) {
   const provider = state.mailProvider || '163';
   const emailPrefix = (state.emailPrefix || '').trim();
@@ -6147,43 +6091,11 @@ function getManagedAliasBaseEmail(state = {}, provider = state?.mailProvider) {
 }
 
 function isGeneratedAliasProvider(stateOrProvider, mail2925Mode = undefined) {
-  if (
-    stateOrProvider
-    && typeof stateOrProvider === 'object'
-    && !Array.isArray(stateOrProvider)
-    && normalizeEmailGenerator(stateOrProvider.emailGenerator) === (
-      typeof CUSTOM_EMAIL_POOL_GENERATOR === 'string'
-        ? CUSTOM_EMAIL_POOL_GENERATOR
-        : 'custom-pool'
-    )
-  ) {
-    return false;
-  }
-  const provider = typeof stateOrProvider === 'string'
-    ? stateOrProvider
-    : stateOrProvider?.mailProvider;
-  const resolvedMail2925Mode = mail2925Mode !== undefined
-    ? normalizeMail2925Mode(mail2925Mode)
-    : getMail2925Mode(stateOrProvider);
-  const utils = getManagedAliasUtils();
-  if (utils?.usesManagedAliasGeneration) {
-    return utils.usesManagedAliasGeneration(provider, { mail2925Mode: resolvedMail2925Mode });
-  }
-  if (utils?.isManagedAliasProvider) {
-    if (String(provider || '').trim().toLowerCase() === '2925') {
-      return utils.isManagedAliasProvider(provider) && resolvedMail2925Mode === MAIL_2925_MODE_PROVIDE;
-    }
-    return utils.isManagedAliasProvider(provider);
-  }
-  return provider === GMAIL_PROVIDER
-    || (provider === '2925' && resolvedMail2925Mode === MAIL_2925_MODE_PROVIDE);
+  return emailProviderRegistry.isGeneratedAliasProvider(stateOrProvider, mail2925Mode);
 }
 
 function shouldUseCustomRegistrationEmail(state = {}) {
-  return isCustomMailProvider(state)
-    || (!isHotmailProvider(state)
-      && !isGeneratedAliasProvider(state)
-      && normalizeEmailGenerator(state.emailGenerator) === 'custom');
+  return emailProviderRegistry.shouldUseCustomRegistrationEmail(state);
 }
 
 function isReusableGeneratedAliasEmail(state = {}, email = state?.email) {
