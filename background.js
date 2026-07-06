@@ -21,6 +21,7 @@ importScripts(
   'background/bootstrap/flow-runtime.js',
   'background/bootstrap/settings-defaults.js',
   'background/bootstrap/state-store.js',
+  'background/bootstrap/legacy-cleanup.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -3175,126 +3176,13 @@ async function initializeSessionStorageAccess() {
   return backgroundStateStore.initializeSessionStorageAccess();
 }
 
-const FORMER_NETWORK_STORAGE_PREFIX = 'removed' + 'Network';
-const FORMER_NETWORK_CLEANUP_MARKER = 'formerNetworkCleanupCompletedAt';
-
-function isCleanupPlainObject(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function buildFormerNetworkNestedCleanupPatch(payload = {}) {
-  const updates = {};
-  const serviceState = payload.serviceState;
-  if (
-    isCleanupPlainObject(serviceState)
-    && Object.prototype.hasOwnProperty.call(serviceState, 'proxy')
-  ) {
-    const nextServiceState = { ...serviceState };
-    delete nextServiceState.proxy;
-    updates.serviceState = nextServiceState;
-  }
-
-  const runtimeState = payload.runtimeState;
-  const runtimeServiceState = runtimeState?.serviceState;
-  if (
-    isCleanupPlainObject(runtimeState)
-    && isCleanupPlainObject(runtimeServiceState)
-    && Object.prototype.hasOwnProperty.call(runtimeServiceState, 'proxy')
-  ) {
-    const nextRuntimeServiceState = { ...runtimeServiceState };
-    delete nextRuntimeServiceState.proxy;
-    updates.runtimeState = {
-      ...runtimeState,
-      serviceState: nextRuntimeServiceState,
-    };
-  }
-  return updates;
-}
-
-async function cleanupFormerNetworkNestedState(storageArea) {
-  if (typeof storageArea.get !== 'function' || typeof storageArea.set !== 'function') {
-    return false;
-  }
-
-  const freshPayload = await storageArea.get(['runtimeState', 'serviceState']).catch(() => ({}));
-  const updates = buildFormerNetworkNestedCleanupPatch(freshPayload);
-  if (!Object.keys(updates).length) {
-    return false;
-  }
-
-  await storageArea.set(updates);
-  return true;
-}
-
-async function cleanupFormerNetworkStorageArea(storageArea, payload = {}) {
-  if (!storageArea) {
-    return { changed: false, removedKeys: 0 };
-  }
-  const keysToRemove = Object.keys(payload || {})
-    .filter((key) => key.startsWith(FORMER_NETWORK_STORAGE_PREFIX));
-  if (keysToRemove.length && typeof storageArea.remove === 'function') {
-    await storageArea.remove(keysToRemove);
-  }
-
-  const nestedChanged = await cleanupFormerNetworkNestedState(storageArea);
-
-  return {
-    changed: keysToRemove.length > 0 || nestedChanged,
-    removedKeys: keysToRemove.length,
-  };
-}
-
-async function clearFormerNetworkProxyResidue() {
-  const settings = chrome.proxy?.settings;
-  if (!settings?.clear) {
-    return false;
-  }
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (value) => {
-      if (!settled) {
-        settled = true;
-        resolve(value);
-      }
-    };
-    try {
-      const maybePromise = settings.clear({ scope: 'regular' }, () => {
-        finish(!chrome.runtime?.lastError);
-      });
-      if (maybePromise && typeof maybePromise.then === 'function') {
-        maybePromise.then(() => finish(true), () => finish(false));
-      }
-    } catch {
-      finish(false);
-    }
-  });
-}
+const backgroundLegacyCleanup = self.MultiPageBackgroundLegacyCleanup.createBackgroundLegacyCleanup({
+  chrome,
+  logPrefix: LOG_PREFIX,
+});
 
 async function purgeFormerNetworkResidue(reason = 'startup') {
-  const localPayload = await chrome.storage.local.get(null).catch(() => ({}));
-  const sessionPayload = await chrome.storage.session.get(null).catch(() => ({}));
-  const localResult = await cleanupFormerNetworkStorageArea(chrome.storage.local, localPayload);
-  const sessionResult = await cleanupFormerNetworkStorageArea(chrome.storage.session, sessionPayload);
-  const markerExists = Boolean(localPayload?.[FORMER_NETWORK_CLEANUP_MARKER]);
-  const shouldClearProxyResidue = !markerExists || localResult.changed || sessionResult.changed;
-  let proxyCleared = false;
-  if (shouldClearProxyResidue) {
-    proxyCleared = await clearFormerNetworkProxyResidue();
-  }
-  if (!markerExists || localResult.changed || sessionResult.changed || proxyCleared) {
-    await chrome.storage.local.set({
-      [FORMER_NETWORK_CLEANUP_MARKER]: Date.now(),
-    }).catch(() => {});
-  }
-  if (localResult.changed || sessionResult.changed || proxyCleared) {
-    console.info(LOG_PREFIX, 'Cleaned legacy network residue:', JSON.stringify({
-      reason,
-      localRemovedKeys: localResult.removedKeys,
-      sessionRemovedKeys: sessionResult.removedKeys,
-      proxyCleared,
-    }));
-  }
+  return backgroundLegacyCleanup.purgeFormerNetworkResidue(reason);
 }
 
 async function setState(updates) {

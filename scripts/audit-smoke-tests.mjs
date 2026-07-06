@@ -175,6 +175,7 @@ function checkCoreFiles() {
     'background/bootstrap/flow-runtime.js',
     'background/bootstrap/settings-defaults.js',
     'background/bootstrap/state-store.js',
+    'background/bootstrap/legacy-cleanup.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
     'background/membership/redeem-status-sync.js',
@@ -242,6 +243,7 @@ function checkStaticContracts() {
   const flowRuntime = readText('background/bootstrap/flow-runtime.js');
   const settingsDefaults = readText('background/bootstrap/settings-defaults.js');
   const stateStore = readText('background/bootstrap/state-store.js');
+  const legacyCleanup = readText('background/bootstrap/legacy-cleanup.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
   const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
@@ -340,6 +342,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/flow-runtime.js'", 'background flow runtime script load');
   assertIncludes(background, "'background/bootstrap/settings-defaults.js'", 'background settings defaults script load');
   assertIncludes(background, "'background/bootstrap/state-store.js'", 'background state store script load');
+  assertIncludes(background, "'background/bootstrap/legacy-cleanup.js'", 'background legacy cleanup script load');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
@@ -351,6 +354,9 @@ function checkStaticContracts() {
   assertIncludes(stateStore, 'MultiPageBackgroundStateStore', 'background state store global');
   assertIncludes(stateStore, 'createBackgroundStateStore', 'background state store factory');
   assertIncludes(stateStore, 'initializeSessionStorageAccess', 'background state store session access helper');
+  assertIncludes(legacyCleanup, 'MultiPageBackgroundLegacyCleanup', 'background legacy cleanup global');
+  assertIncludes(legacyCleanup, 'createBackgroundLegacyCleanup', 'background legacy cleanup factory');
+  assertIncludes(legacyCleanup, 'purgeFormerNetworkResidue', 'background legacy cleanup entrypoint');
   assertIncludes(background, "'background/email/provider-registry.js'", 'background email provider registry script load');
   assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
