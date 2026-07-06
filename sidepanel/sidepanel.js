@@ -1262,7 +1262,12 @@ const autoRunCountdownView = window.SidepanelAutoRunCountdownView.createAutoRunC
   timeZone: DISPLAY_TIMEZONE,
   updateStatusDisplay: (state) => updateStatusDisplay(state),
 });
-let configMenuOpen = false;
+const configMenuController = window.SidepanelConfigMenuController.createConfigMenuController({
+  dom: { btnConfigMenu, configMenu, btnExportSettings, btnImportSettings, inputImportSettingsFile },
+  exportSettings,
+  importSettingsFromFile,
+  onUpdate: () => updateSaveButtonState(),
+});
 let configActionInFlight = false;
 let currentReleaseSnapshot = null;
 let currentContributionContentSnapshot = null;
@@ -2051,9 +2056,11 @@ async function openAutoRunFallbackRiskConfirmModal(totalRuns) {
 function updateConfigMenuControls() {
   const actionLocked = configActionInFlight;
   const contributionModeEnabled = Boolean(latestState?.contributionMode);
-  if (contributionModeEnabled && configMenuOpen) {
-    configMenuOpen = false;
+  if (contributionModeEnabled && configMenuController.isOpen()) {
+    configMenuController.setOpen(false);
   }
+  configMenuController.setOpen(configMenuController.isOpen());
+  const configMenuOpen = configMenuController.isOpen();
   const importLocked = actionLocked
     || settingsSaveInFlight
     || contributionModeEnabled
@@ -2087,17 +2094,17 @@ function resetImportSettingsFile() {
 }
 
 function closeConfigMenu() {
-  configMenuOpen = false;
+  configMenuController.close();
   updateConfigMenuControls();
 }
 
 function openConfigMenu() {
-  configMenuOpen = true;
+  configMenuController.setOpen(true);
   updateConfigMenuControls();
 }
 
 function toggleConfigMenu() {
-  configMenuOpen ? closeConfigMenu() : openConfigMenu();
+  configMenuController.isOpen() ? closeConfigMenu() : openConfigMenu();
 }
 
 async function waitForSettingsSaveIdle() {
@@ -2236,50 +2243,16 @@ function getSettingsTransferManager() {
   return settingsTransferManager;
 }
 
+async function exportSettings() {
+  await getSettingsTransferManager()?.exportSettingsFile?.();
+}
+
+async function importSettingsFromFile(file) {
+  await getSettingsTransferManager()?.importSettingsFromFile?.(file);
+}
+
 function bindConfigMenuEvents() {
-  if (btnConfigMenu && btnConfigMenu.dataset.configMenuBound !== 'true') {
-    btnConfigMenu.dataset.configMenuBound = 'true';
-    btnConfigMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (btnConfigMenu.disabled) {
-        return;
-      }
-      toggleConfigMenu();
-    });
-  }
-
-  if (btnExportSettings && btnExportSettings.dataset.configExportBound !== 'true') {
-    btnExportSettings.dataset.configExportBound = 'true';
-    btnExportSettings.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (btnExportSettings.disabled) {
-        return;
-      }
-      void getSettingsTransferManager()?.exportSettingsFile?.();
-    });
-  }
-
-  if (btnImportSettings && btnImportSettings.dataset.configImportBound !== 'true') {
-    btnImportSettings.dataset.configImportBound = 'true';
-    btnImportSettings.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (btnImportSettings.disabled) {
-        return;
-      }
-      inputImportSettingsFile?.click();
-    });
-  }
-
-  if (inputImportSettingsFile && inputImportSettingsFile.dataset.configImportFileBound !== 'true') {
-    inputImportSettingsFile.dataset.configImportFileBound = 'true';
-    inputImportSettingsFile.addEventListener('change', () => {
-      const file = inputImportSettingsFile.files?.[0] || null;
-      void getSettingsTransferManager()?.importSettingsFromFile?.(file);
-    });
-  }
+  configMenuController.bind();
 }
 
 function setCurrentSessionExportButtonsDisabled(disabled) {
@@ -10550,7 +10523,7 @@ document.addEventListener('click', (event) => {
   const clickedInsideConfigMenu = Boolean(configMenuShell?.contains(event.target));
   const clickedInsideEditableListPicker = isClickInsideEditableListPicker(event.target);
 
-  if (configMenuOpen && !clickedInsideConfigMenu) {
+  if (configMenuController.isOpen() && !clickedInsideConfigMenu) {
     closeConfigMenu();
   }
 
@@ -10563,7 +10536,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') {
     return;
   }
-  if (configMenuOpen) {
+  if (configMenuController.isOpen()) {
     closeConfigMenu();
   }
   closeEditableListPickers();
