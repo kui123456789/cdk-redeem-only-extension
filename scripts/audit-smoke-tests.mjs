@@ -415,6 +415,26 @@ function checkStaticContracts() {
     'CDK import resume must not use merged UPI/IDEAL candidates'
   );
   assertIncludes(router, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
+  assertMatch(
+    background,
+    /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*true;\s*nextEntry\.lastUsedAt\s*=\s*entry\.lastUsedAt\s*\|\|\s*Date\.now\(\);/s,
+    'custom email pool ineligible entries must stay used'
+  );
+  assertNotMatch(
+    background,
+    /async function markCurrentCustomEmailPoolEntryTrialIneligible[\s\S]*?if\s*\(!isCustomEmailPoolGenerator\(state\)\)\s*{\s*return\s*{\s*updated:\s*false\s*};\s*}/,
+    'custom email pool trial-ineligible marking must not depend on current generator selection'
+  );
+  assertMatch(
+    background,
+    /const upiRedeemExecutor\s*=\s*self\.MultiPageBackgroundUpiRedeem\?\.createUpiRedeemExecutor\(\{[\s\S]*?markCurrentRegistrationAccountTrialIneligible,/,
+    'UPI redeem executor must receive trial-ineligible custom email pool marker'
+  );
+  assertMatch(
+    sidepanel,
+    /const restoredCustomEmailPoolEntries\s*=\s*restoreCustomEmailPoolEntriesFromState\(\{[\s\S]*?setCustomEmailPoolEntriesState\(restoredCustomEmailPoolEntries\);\s*renderCustomEmailPoolEntries\(restoredCustomEmailPoolEntries\);/,
+    'custom email pool DATA_UPDATED messages must immediately re-render visible entries'
+  );
 
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
   assertIncludes(upiRedeem, 'autoRedeemQueuedFreeCredentialsForChannel', 'main flow queued Free auto redeem');

@@ -1927,7 +1927,8 @@ async function markCustomEmailPoolEntryTrialEligibility(state = {}, options = {}
       nextEntry.trialEligibilityTransientFailure = options.trialEligibilityTransientFailure === true;
       nextEntry.trialEligibilityLastError = status === 'failed' ? nextEntry.trialEligibilityReason : '';
       if (status === 'ineligible') {
-        nextEntry.used = false;
+        nextEntry.used = true;
+        nextEntry.lastUsedAt = entry.lastUsedAt || Date.now();
         nextEntry.note = entry.note || '无试用资格';
       } else if (status === 'eligible') {
         nextEntry.note = entry.note === '无试用资格' ? '' : entry.note;
@@ -2079,10 +2080,6 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
 }
 
 async function markCurrentCustomEmailPoolEntryTrialIneligible(state = {}, options = {}) {
-  if (!isCustomEmailPoolGenerator(state)) {
-    return { updated: false };
-  }
-
   const currentEmail = String(options.email || state?.email || '').trim().toLowerCase();
   if (!currentEmail) {
     return { updated: false };

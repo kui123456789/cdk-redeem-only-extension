@@ -50,14 +50,11 @@
   }
 
   const now = Date.now;
-
   function getPasskeyApiLoginHelper() {
     const rootScope = typeof self !== 'undefined' ? self : globalThis;
     return rootScope.MultiPagePasskeyApiLoginExecutor || {};
   }
-
   const { buildPasskeyExportMarker, buildPasskeyNumericMetadataPatch, getPasskeyCredentialIdFromExportMarker, hasPasskeyCredential, isPasskeyExportMarker, isResultItemPasskeyExportableForStatus, parsePasskeyExportMarker } = getPasskeyApiLoginHelper();
-
   function normalizeBoolean(value) {
     if (value === true) return true;
     if (value === false || value === null || value === undefined) return false;
@@ -70,7 +67,6 @@
     const stage = normalizeString(value).toLowerCase();
     return FLOW_STAGE_KEYS.has(stage) ? stage : '';
   }
-
   function normalizeEmail(value = '') {
     return normalizeString(value).toLowerCase();
   }

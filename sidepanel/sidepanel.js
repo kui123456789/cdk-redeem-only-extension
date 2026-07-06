@@ -10480,10 +10480,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         }
       }
       if (message.payload.customEmailPoolEntries !== undefined || message.payload.customEmailPool !== undefined) {
-        setCustomEmailPoolEntriesState(restoreCustomEmailPoolEntriesFromState({
+        const restoredCustomEmailPoolEntries = restoreCustomEmailPoolEntriesFromState({
           ...latestState,
           ...message.payload,
-        }));
+        });
+        setCustomEmailPoolEntriesState(restoredCustomEmailPoolEntries);
+        renderCustomEmailPoolEntries(restoredCustomEmailPoolEntries);
         syncRunCountFromConfiguredEmailPool();
         queueCustomEmailPoolRefresh();
       }
