@@ -19,6 +19,7 @@ importScripts(
   'background/redeem/redeem-cdkey-usage.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
+  'shared/trial-eligibility-api.js',
   'background/generated-email-helpers.js',
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
