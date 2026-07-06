@@ -10388,7 +10388,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 });
 
-stepsList?.addEventListener('click', async (event) => {
+async function handleStepListClick(event) {
   const btn = event.target.closest('.step-btn');
   if (!btn) {
     return;
@@ -10398,9 +10398,9 @@ stepsList?.addEventListener('click', async (event) => {
   } catch (err) {
     showToast(err?.message || String(err || '执行节点失败'), 'error');
   }
-});
+}
 
-btnAutoRun?.addEventListener('click', async () => {
+async function startAutoRun() {
   try {
     await persistCurrentSettingsForAction();
     const totalRuns = getRunCountValue();
@@ -10429,9 +10429,9 @@ btnAutoRun?.addEventListener('click', async () => {
   } catch (err) {
     showToast(err?.message || String(err || '启动自动流程失败'), 'error');
   }
-});
+}
 
-btnAutoContinue?.addEventListener('click', async () => {
+async function autoContinue() {
   try {
     await persistCurrentSettingsForAction();
     const response = await sendSidepanelMessage({
@@ -10447,9 +10447,9 @@ btnAutoContinue?.addEventListener('click', async () => {
   } catch (err) {
     showToast(err?.message || String(err || '继续自动流程失败'), 'error');
   }
-});
+}
 
-btnAutoRunNow?.addEventListener('click', async () => {
+async function runScheduledNow() {
   try {
     const response = await sendSidepanelMessage({
       type: currentAutoRun.phase === 'waiting_interval' ? 'SKIP_AUTO_RUN_COUNTDOWN' : 'START_SCHEDULED_AUTO_RUN_NOW',
@@ -10462,9 +10462,9 @@ btnAutoRunNow?.addEventListener('click', async () => {
   } catch (err) {
     showToast(err?.message || String(err || '立即开始失败'), 'error');
   }
-});
+}
 
-btnAutoCancelSchedule?.addEventListener('click', async () => {
+async function cancelSchedule() {
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'CANCEL_SCHEDULED_AUTO_RUN',
@@ -10477,9 +10477,9 @@ btnAutoCancelSchedule?.addEventListener('click', async () => {
   } catch (err) {
     showToast(err?.message || String(err || '取消计划失败'), 'error');
   }
-});
+}
 
-btnStop?.addEventListener('click', async () => {
+async function stopCurrentRun() {
   try {
     btnStop.disabled = true;
     const response = await chrome.runtime.sendMessage({ type: 'STOP_FLOW', source: 'sidepanel', payload: {} });
@@ -10492,9 +10492,9 @@ btnStop?.addEventListener('click', async () => {
   } finally {
     updateButtonStates();
   }
-});
+}
 
-btnReset?.addEventListener('click', async () => {
+async function resetWorkflow() {
   try {
     const response = await chrome.runtime.sendMessage({ type: 'RESET', source: 'sidepanel', payload: {} });
     if (response?.error) {
@@ -10514,11 +10514,26 @@ btnReset?.addEventListener('click', async () => {
   } catch (err) {
     showToast(err?.message || String(err || '重置流程失败'), 'error');
   }
-});
+}
 
-btnClearLog?.addEventListener('click', async () => {
+async function clearLog() {
   await logPanelManager.clearLog({ persist: true });
+}
+
+const workflowActionBindings = window.SidepanelWorkflowActionBindings.createWorkflowActionBindings({
+  dom: { stepsList, btnAutoRun, btnAutoContinue, btnAutoRunNow, btnAutoCancelSchedule, btnStop, btnReset, btnClearLog },
+  actions: {
+    handleStepListClick,
+    startAutoRun,
+    autoContinue,
+    runScheduledNow,
+    cancelSchedule,
+    stopCurrentRun,
+    resetWorkflow,
+    clearLog,
+  },
 });
+workflowActionBindings.bind();
 
 document.addEventListener('click', (event) => {
   const clickedInsideConfigMenu = Boolean(configMenuShell?.contains(event.target));
