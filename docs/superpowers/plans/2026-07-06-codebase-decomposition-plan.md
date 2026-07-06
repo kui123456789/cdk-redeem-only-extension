@@ -22,6 +22,31 @@ Current tracked-source pressure points:
 | Signup content | `content/signup-page.js` | ~6.9k lines | Page detection, localized selectors, form actions, and orchestration are mixed. |
 | Membership UI | `sidepanel/account-records-manager.js` | ~5.6k lines | Parsing, grouping, candidate rules, rendering, export, and click handlers are mixed. |
 
+## Execution Results
+
+Implemented on `main` as incremental refactor commits. The pass kept the MV3 no-bundler architecture and added smoke checks for the new ordered script modules.
+
+| Task | Result |
+| --- | --- |
+| Size guard | Added tracked-source size report and non-fatal smoke warnings for files over 8,000 lines. |
+| Sidepanel bindings/log/workflow | Extracted DOM bindings, log panel rendering, and workflow status rendering. |
+| Membership UI | Extracted row policy and progress/flow rendering helpers. |
+| Background bootstrap | Extracted flow runtime and persisted-settings defaults. |
+| Email providers | Extracted provider/generator registry wrappers. |
+| Membership helpers | Extracted access-token refresh classifiers and pending redeem status target builder. |
+| Signup content | Extracted detector constants/helpers and command orchestration wrappers. |
+
+Final size snapshot from `node scripts/module-size-report.mjs`:
+
+| File | Final Lines | Status |
+| --- | ---: | --- |
+| `background.js` | 16,227 | Still over target; next split should move state assembly, router wiring, and remaining provider helpers. |
+| `sidepanel/sidepanel.js` | 10,874 | Still over target; next split should move settings/event wiring and state sync managers. |
+| `background/upi-credential-membership-checker.js` | 7,497 | Improved but still large; export/import and redeem batch runners remain candidates. |
+| `content/signup-page.js` | 6,820 | Improved; further split should move page-specific action bodies. |
+| `sidepanel/account-records-manager.js` | 5,481 | Improved via policy/renderer extraction; click handlers and export actions remain candidates. |
+| `background/message-router.js` | 4,007 | Reduced by moving pending redeem target selection. |
+
 Non-goals:
 
 - Do not change registration, trial eligibility, Free/Plus grouping, UPI/IDEAL rules, Passkey/2FA routes, exports, or GitHub release behavior.

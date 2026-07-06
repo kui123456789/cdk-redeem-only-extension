@@ -172,6 +172,11 @@ function checkCoreFiles() {
     'background/message-router.js',
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
+    'background/bootstrap/flow-runtime.js',
+    'background/bootstrap/settings-defaults.js',
+    'background/email/provider-registry.js',
+    'background/membership/access-token-refresh.js',
+    'background/membership/redeem-status-sync.js',
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
@@ -194,11 +199,16 @@ function checkCoreFiles() {
     'sidepanel/styles/settings.css',
     'sidepanel/styles/cdk-pools.css',
     'sidepanel/styles/account-records.css',
+    'sidepanel/dom-bindings.js',
+    'sidepanel/log-panel-manager.js',
+    'sidepanel/workflow-state-view.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
     'sidepanel/settings-transfer-manager.js',
     'sidepanel/cdk-pool-manager.js',
+    'sidepanel/membership-row-policy.js',
+    'sidepanel/membership-renderer.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -227,15 +237,25 @@ function checkStaticContracts() {
   const background = readText('background.js');
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
+  const flowRuntime = readText('background/bootstrap/flow-runtime.js');
+  const settingsDefaults = readText('background/bootstrap/settings-defaults.js');
+  const emailProviderRegistry = readText('background/email/provider-registry.js');
+  const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
+  const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
+  const domBindings = readText('sidepanel/dom-bindings.js');
+  const logPanelManager = readText('sidepanel/log-panel-manager.js');
+  const workflowStateView = readText('sidepanel/workflow-state-view.js');
   const downloadService = readText('sidepanel/download-service.js');
   const settingsTransferManager = readText('sidepanel/settings-transfer-manager.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
+  const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
+  const membershipRenderer = readText('sidepanel/membership-renderer.js');
   const router = readText('background/message-router.js');
   const membershipRoutes = readText('background/routes/membership-routes.js');
   const cdkRoutes = readText('background/routes/cdkey-routes.js');
@@ -257,11 +277,21 @@ function checkStaticContracts() {
   assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
+  assertIncludes(sidepanelHtml, 'src="dom-bindings.js"', 'sidepanel DOM bindings script load');
+  assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
+  assertIncludes(sidepanelHtml, 'src="workflow-state-view.js"', 'sidepanel workflow state view script load');
+  assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="workflow-state-view.js"', 'src="sidepanel.js"', 'sidepanel workflow view must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
   assertIncludes(membershipCredentialFormat, 'formatFreeCredentialLine', 'membership Free export formatter');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
+  assertIncludes(sidepanelHtml, 'src="membership-row-policy.js"', 'membership row policy script load');
+  assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
+  assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
+  assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="account-records-manager.js"', 'membership renderer must load before account records manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -275,12 +305,22 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="action-modal-service.js"', 'action modal service script load');
   assertIncludes(readText('sidepanel/sidepanel-ui-helpers.js'), 'createSidepanelUiHelpers', 'sidepanel UI helpers factory');
   assertIncludes(readText('sidepanel/action-modal-service.js'), 'createActionModalService', 'action modal service factory');
+  assertIncludes(domBindings, 'SidepanelDomBindings', 'sidepanel DOM bindings global');
+  assertIncludes(domBindings, 'getBindings', 'sidepanel DOM bindings factory');
+  assertIncludes(logPanelManager, 'SidepanelLogPanelManager', 'sidepanel log panel manager global');
+  assertIncludes(logPanelManager, 'create', 'sidepanel log panel manager factory');
+  assertIncludes(workflowStateView, 'SidepanelWorkflowStateView', 'sidepanel workflow state view global');
+  assertIncludes(workflowStateView, 'renderStepStatuses', 'sidepanel workflow state renderer');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
   assertIncludes(settingsTransferManager, "type: 'EXPORT_SETTINGS'", 'settings export route lives in transfer manager');
   assertIncludes(settingsTransferManager, "type: 'IMPORT_SETTINGS'", 'settings import route lives in transfer manager');
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
+  assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
+  assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
+  assertIncludes(membershipRenderer, 'SidepanelMembershipRenderer', 'membership renderer global');
+  assertIncludes(membershipRenderer, 'renderRedeemProgress', 'membership renderer progress helper');
   assertIncludes(settingsTransferManager, 'multipage-settings-', 'settings export filename');
   assertIncludes(background, 'containsSensitiveRuntimeData: true', 'settings export sensitive data marker');
   assertIncludes(background, "'background/settings-normalizers.js'", 'background settings normalizers script load');
@@ -289,10 +329,27 @@ function checkStaticContracts() {
   assertIncludes(settingsNormalizers, 'normalizeAutoStepDelaySeconds', 'settings normalizer step delay');
   assertIncludes(settingsNormalizers, 'normalizeLocalHttpBaseUrl', 'settings normalizer URL cleanup');
   assertIncludes(background, "'background/flow-definition-resolver.js'", 'background flow resolver script load');
+  assertIncludes(background, "'background/bootstrap/flow-runtime.js'", 'background flow runtime script load');
+  assertIncludes(background, "'background/bootstrap/settings-defaults.js'", 'background settings defaults script load');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
+  assertIncludes(flowRuntime, 'MultiPageBackgroundFlowRuntime', 'background flow runtime global');
+  assertIncludes(flowRuntime, 'create', 'background flow runtime factory');
+  assertIncludes(settingsDefaults, 'MultiPageBackgroundSettingsDefaults', 'background settings defaults global');
+  assertIncludes(settingsDefaults, 'PERSISTED_SETTING_DEFAULTS', 'background persisted settings defaults');
+  assertIncludes(background, "'background/email/provider-registry.js'", 'background email provider registry script load');
+  assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
+  assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
+  assertIncludes(background, "'background/membership/redeem-status-sync.js'", 'background redeem status sync script load');
+  assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
+  assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
+  assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
+  assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
+  assertIncludes(membershipRedeemStatusSync, 'buildPendingUpiCredentialMembershipRedeemRefreshTargets', 'membership redeem refresh target helper');
+  assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
+  assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
