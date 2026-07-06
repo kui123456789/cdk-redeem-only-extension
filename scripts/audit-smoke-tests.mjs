@@ -201,6 +201,7 @@ function checkCoreFiles() {
     'sidepanel/styles/cdk-pools.css',
     'sidepanel/styles/account-records.css',
     'sidepanel/dom-bindings.js',
+    'sidepanel/toast-service.js',
     'sidepanel/log-panel-manager.js',
     'sidepanel/workflow-state-view.js',
     'sidepanel/sidepanel-ui-helpers.js',
@@ -250,6 +251,7 @@ function checkStaticContracts() {
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
   const domBindings = readText('sidepanel/dom-bindings.js');
+  const toastService = readText('sidepanel/toast-service.js');
   const logPanelManager = readText('sidepanel/log-panel-manager.js');
   const workflowStateView = readText('sidepanel/workflow-state-view.js');
   const downloadService = readText('sidepanel/download-service.js');
@@ -280,9 +282,11 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
   assertIncludes(sidepanelHtml, 'src="dom-bindings.js"', 'sidepanel DOM bindings script load');
+  assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
   assertIncludes(sidepanelHtml, 'src="workflow-state-view.js"', 'sidepanel workflow state view script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-state-view.js"', 'src="sidepanel.js"', 'sidepanel workflow view must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
@@ -309,6 +313,8 @@ function checkStaticContracts() {
   assertIncludes(readText('sidepanel/action-modal-service.js'), 'createActionModalService', 'action modal service factory');
   assertIncludes(domBindings, 'SidepanelDomBindings', 'sidepanel DOM bindings global');
   assertIncludes(domBindings, 'getBindings', 'sidepanel DOM bindings factory');
+  assertIncludes(toastService, 'SidepanelToastService', 'sidepanel toast service global');
+  assertIncludes(toastService, 'createToastService', 'sidepanel toast service factory');
   assertIncludes(logPanelManager, 'SidepanelLogPanelManager', 'sidepanel log panel manager global');
   assertIncludes(logPanelManager, 'create', 'sidepanel log panel manager factory');
   assertIncludes(workflowStateView, 'SidepanelWorkflowStateView', 'sidepanel workflow state view global');
