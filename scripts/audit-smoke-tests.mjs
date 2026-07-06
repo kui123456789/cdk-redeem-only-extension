@@ -181,6 +181,7 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-status.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
+    'background/membership/login-session-executor.js',
     'background/membership/redeem-status-sync.js',
     'background/membership/result-state.js',
     'background/routes/membership-routes.js',
@@ -260,6 +261,7 @@ function checkStaticContracts() {
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
+  const membershipLoginSessionExecutor = readText('background/membership/login-session-executor.js');
   const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
   const membershipResultState = readText('background/membership/result-state.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
@@ -436,15 +438,19 @@ function checkStaticContracts() {
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
   assertIncludes(background, "'background/membership/redeem-status-sync.js'", 'background redeem status sync script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
+  assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
+  assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
   assertBefore(background, "'background/membership/result-state.js'", "'background/upi-credential-membership-checker.js'", 'membership result-state must load before membership checker');
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
   assertIncludes(membershipRedeemStatusSync, 'buildPendingUpiCredentialMembershipRedeemRefreshTargets', 'membership redeem refresh target helper');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
   assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
+  assertIncludes(membershipLoginSessionExecutor, 'MultiPageMembershipLoginSessionExecutor', 'membership login session executor global');
+  assertIncludes(membershipLoginSessionExecutor, 'createMembershipLoginSessionExecutor', 'membership login session executor factory');
   assertIncludes(membershipResultState, 'MultiPageMembershipResultState', 'membership result-state global');
   assertIncludes(membershipResultState, 'normalizeResultsPayload', 'membership result-state payload normalizer');
   assertIncludes(membershipResultState, 'buildResultExportRows', 'membership result-state export rows helper');

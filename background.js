@@ -30,6 +30,7 @@ importScripts(
   'background/redeem/upi-redeem-api-client.js',
   'background/membership/redeem-status-sync.js',
   'background/membership/access-token-refresh.js',
+  'background/membership/login-session-executor.js',
   'background/passkey-login-core.js',
   'background/passkey-api-login-executor.js',
   'shared/trial-eligibility-api.js',
