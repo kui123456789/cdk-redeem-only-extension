@@ -322,6 +322,9 @@ function checkStaticContracts() {
   assertIncludes(background, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
   assertIncludes(background, "'content/signup-entry-page.js'", 'background signup entry page injection');
   assertIncludes(background, "'content/signup-verification-page.js'", 'background signup verification page injection');
+  assertIncludes(background, "'content/signup-password-page.js'", 'background signup password page injection');
+  assertIncludes(background, "'content/signup-profile-page.js'", 'background signup profile page injection');
+  assertIncludes(background, "'content/signup-session-page.js'", 'background signup session page injection');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-dom-utils.js', 'manifest signup DOM utils load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-entry-page.js', 'manifest signup entry page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-verification-page.js', 'manifest signup verification page load');
