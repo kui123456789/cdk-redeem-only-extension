@@ -176,10 +176,12 @@ function checkCoreFiles() {
     'background/bootstrap/flow-runtime.js',
     'background/bootstrap/settings-defaults.js',
     'background/bootstrap/state-store.js',
+    'background/bootstrap/settings-transfer.js',
     'background/bootstrap/legacy-cleanup.js',
     'background/bootstrap/auto-run-session.js',
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
+    'background/bootstrap/state-patch-helpers.js',
     'background/bootstrap/content-script-registry.js',
     'background/bootstrap/runtime-listeners.js',
     'background/bootstrap/signup-executor-registry.js',
@@ -218,6 +220,8 @@ function checkCoreFiles() {
     'sidepanel/workflow-button-state.js',
     'sidepanel/workflow-status-display.js',
     'sidepanel/auto-run-normalizers.js',
+    'sidepanel/cdk-pool-state.js',
+    'sidepanel/settings-normalization.js',
     'sidepanel/auto-run-countdown-view.js',
     'sidepanel/auto-run-state.js',
     'sidepanel/config-menu-controller.js',
@@ -263,10 +267,12 @@ function checkStaticContracts() {
   const flowRuntime = readText('background/bootstrap/flow-runtime.js');
   const settingsDefaults = readText('background/bootstrap/settings-defaults.js');
   const stateStore = readText('background/bootstrap/state-store.js');
+  const backgroundSettingsTransfer = readText('background/bootstrap/settings-transfer.js');
   const legacyCleanup = readText('background/bootstrap/legacy-cleanup.js');
   const autoRunSession = readText('background/bootstrap/auto-run-session.js');
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
+  const statePatchHelpers = readText('background/bootstrap/state-patch-helpers.js');
   const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
   readText('background/bootstrap/runtime-listeners.js');
   const signupExecutorRegistry = readText('background/bootstrap/signup-executor-registry.js');
@@ -287,6 +293,8 @@ function checkStaticContracts() {
   const workflowButtonState = readText('sidepanel/workflow-button-state.js');
   const workflowStatusDisplay = readText('sidepanel/workflow-status-display.js');
   const autoRunNormalizers = readText('sidepanel/auto-run-normalizers.js');
+  const sidepanelCdkPoolState = readText('sidepanel/cdk-pool-state.js');
+  const sidepanelSettingsNormalization = readText('sidepanel/settings-normalization.js');
   const autoRunCountdownView = readText('sidepanel/auto-run-countdown-view.js');
   const autoRunState = readText('sidepanel/auto-run-state.js');
   const configMenuController = readText('sidepanel/config-menu-controller.js');
@@ -329,6 +337,8 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="workflow-button-state.js"', 'sidepanel workflow button state script load');
   assertIncludes(sidepanelHtml, 'src="workflow-status-display.js"', 'sidepanel workflow status display script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
+  assertIncludes(sidepanelHtml, 'src="cdk-pool-state.js"', 'sidepanel CDK pool state script load');
+  assertIncludes(sidepanelHtml, 'src="settings-normalization.js"', 'sidepanel settings normalization script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'sidepanel auto-run countdown view script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-state.js"', 'sidepanel auto-run state script load');
   assertIncludes(sidepanelHtml, 'src="config-menu-controller.js"', 'sidepanel config menu controller script load');
@@ -341,6 +351,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="workflow-button-state.js"', 'src="sidepanel.js"', 'sidepanel workflow button state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-status-display.js"', 'src="sidepanel.js"', 'sidepanel workflow status display must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="cdk-pool-state.js"', 'src="sidepanel.js"', 'sidepanel CDK pool state must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="settings-normalization.js"', 'src="sidepanel.js"', 'sidepanel settings normalization must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'src="sidepanel.js"', 'sidepanel auto-run countdown view must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-state.js"', 'src="sidepanel.js"', 'sidepanel auto-run state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
@@ -391,6 +403,12 @@ function checkStaticContracts() {
   assertIncludes(autoRunNormalizers, 'SidepanelAutoRunNormalizers', 'sidepanel auto-run normalizers global');
   assertIncludes(autoRunNormalizers, 'createAutoRunNormalizers', 'sidepanel auto-run normalizers factory');
   assertIncludes(autoRunNormalizers, 'normalizeAutoStepDelaySeconds', 'sidepanel auto-run step delay normalizer');
+  assertIncludes(sidepanelCdkPoolState, 'SidepanelCdkPoolState', 'sidepanel CDK pool state global');
+  assertIncludes(sidepanelCdkPoolState, 'createCdkPoolStateHelpers', 'sidepanel CDK pool state factory');
+  assertIncludes(sidepanelCdkPoolState, 'isUpiRedeemCdkeySelectableForRedeem', 'sidepanel CDK selectability helper');
+  assertIncludes(sidepanelSettingsNormalization, 'SidepanelSettingsNormalization', 'sidepanel settings normalization global');
+  assertIncludes(sidepanelSettingsNormalization, 'createSettingsNormalization', 'sidepanel settings normalization factory');
+  assertIncludes(sidepanelSettingsNormalization, 'normalizeCustomEmailPoolEntryObjects', 'custom email pool normalizer');
   assertIncludes(autoRunCountdownView, 'SidepanelAutoRunCountdownView', 'sidepanel auto-run countdown view global');
   assertIncludes(autoRunCountdownView, 'createAutoRunCountdownView', 'sidepanel auto-run countdown view factory');
   assertIncludes(autoRunCountdownView, 'syncScheduledCountdownTicker', 'sidepanel auto-run countdown ticker');
@@ -422,7 +440,7 @@ function checkStaticContracts() {
   assertIncludes(accountRecords, 'SidepanelAccountRecordsViewModel', 'account records manager view model dependency');
   assertIncludes(accountRecords, 'SidepanelMembershipRedeemProgress', 'account records manager redeem progress dependency');
   assertIncludes(settingsTransferManager, 'multipage-settings-', 'settings export filename');
-  assertIncludes(background, 'containsSensitiveRuntimeData: true', 'settings export sensitive data marker');
+  assertIncludes(backgroundSettingsTransfer, 'containsSensitiveRuntimeData: true', 'settings export sensitive data marker');
   assertIncludes(background, "'background/settings-normalizers.js'", 'background settings normalizers script load');
   assertIncludes(background, 'requireSettingsNormalizers()', 'background settings normalizer compatibility wrappers');
   assertIncludes(settingsNormalizers, 'createSettingsNormalizers', 'settings normalizers factory');
@@ -432,11 +450,15 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/flow-runtime.js'", 'background flow runtime script load');
   assertIncludes(background, "'background/bootstrap/settings-defaults.js'", 'background settings defaults script load');
   assertIncludes(background, "'background/bootstrap/state-store.js'", 'background state store script load');
+  assertIncludes(background, "'background/bootstrap/settings-transfer.js'", 'background settings transfer script load');
   assertIncludes(background, "'background/bootstrap/legacy-cleanup.js'", 'background legacy cleanup script load');
   assertIncludes(background, "'background/bootstrap/auto-run-session.js'", 'background auto-run session script load');
   assertIncludes(background, "'background/bootstrap/auto-run-timer-plan.js'", 'background auto-run timer plan script load');
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
+  assertIncludes(background, "'background/bootstrap/state-patch-helpers.js'", 'background state patch helpers script load');
   assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
+  assertIncludes(background, 'MultiPageBackgroundSettingsTransfer.createSettingsTransfer', 'background settings transfer wiring');
+  assertIncludes(background, 'MultiPageBackgroundStatePatchHelpers.createStatePatchHelpers', 'background state patch helper wiring');
   assertIncludes(background, 'MultiPageBackgroundContentScriptRegistry.createContentScriptRegistry()', 'content script registry wiring');
   assertIncludes(background, 'MultiPageBackgroundRuntimeListeners.createRuntimeListenerRegistrar', 'runtime listener registrar wiring');
   assertIncludes(background, 'background/bootstrap/signup-executor-registry.js', 'signup executor registry import');
@@ -454,6 +476,10 @@ function checkStaticContracts() {
   assertIncludes(stateStore, 'MultiPageBackgroundStateStore', 'background state store global');
   assertIncludes(stateStore, 'createBackgroundStateStore', 'background state store factory');
   assertIncludes(stateStore, 'initializeSessionStorageAccess', 'background state store session access helper');
+  assertIncludes(backgroundSettingsTransfer, 'MultiPageBackgroundSettingsTransfer', 'background settings transfer global');
+  assertIncludes(backgroundSettingsTransfer, 'buildSettingsRuntimeDataImportUpdates', 'background settings runtime import helper');
+  assertIncludes(statePatchHelpers, 'MultiPageBackgroundStatePatchHelpers', 'background state patch helpers global');
+  assertIncludes(statePatchHelpers, 'protectFreshMembershipResultsInStatePatch', 'background stale membership protection helper');
   assertIncludes(legacyCleanup, 'MultiPageBackgroundLegacyCleanup', 'background legacy cleanup global');
   assertIncludes(legacyCleanup, 'createBackgroundLegacyCleanup', 'background legacy cleanup factory');
   assertIncludes(legacyCleanup, 'purgeFormerNetworkResidue', 'background legacy cleanup entrypoint');
@@ -707,7 +733,7 @@ function checkStaticContracts() {
 
 function checkModuleSizeGuard() {
   readText('scripts/module-size-report.mjs');
-  assertFileLineCountAtMost('sidepanel/sidepanel.js', 10800, 'sidepanel composition root growth guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel.js', 10100, 'sidepanel composition root growth guard');
   assertFileLineCountAtMost('sidepanel/sidepanel.css', 2500, 'sidepanel base stylesheet growth guard');
   assertFileLineCountAtMost('sidepanel/styles/settings.css', 1800, 'settings stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/styles/cdk-pools.css', 500, 'CDK pools stylesheet size guard');
@@ -717,6 +743,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/workflow-button-state.js', 220, 'sidepanel workflow button state size guard');
   assertFileLineCountAtMost('sidepanel/workflow-status-display.js', 220, 'sidepanel workflow status display size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-normalizers.js', 200, 'sidepanel auto-run normalizers size guard');
+  assertFileLineCountAtMost('sidepanel/cdk-pool-state.js', 450, 'sidepanel CDK pool state size guard');
+  assertFileLineCountAtMost('sidepanel/settings-normalization.js', 280, 'sidepanel settings normalization size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-countdown-view.js', 250, 'sidepanel auto-run countdown view size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-state.js', 280, 'sidepanel auto-run state size guard');
   assertFileLineCountAtMost('sidepanel/config-menu-controller.js', 220, 'sidepanel config menu controller size guard');
@@ -725,12 +753,14 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
-  assertFileLineCountAtMost('background.js', 15800, 'background service worker growth guard');
+  assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-timer-plan.js', 260, 'auto-run timer plan size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-status.js', 220, 'auto-run status size guard');
+  assertFileLineCountAtMost('background/bootstrap/state-patch-helpers.js', 240, 'state patch helpers size guard');
+  assertFileLineCountAtMost('background/bootstrap/settings-transfer.js', 380, 'settings transfer size guard');
   assertFileLineCountAtMost('background/bootstrap/content-script-registry.js', 120, 'content script registry size guard');
   assertFileLineCountAtMost('background/bootstrap/signup-executor-registry.js', 500, 'signup executor registry size guard');
   assertFileLineCountAtMost('background/bootstrap/runtime-listeners.js', 80, 'runtime listeners size guard');

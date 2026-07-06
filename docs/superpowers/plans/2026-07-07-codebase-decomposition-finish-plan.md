@@ -112,3 +112,28 @@
 
 - Prefer extracting pure helpers first; if a dependency-heavy function would require broad behavior changes, leave it in the entry file and document the next split target.
 - Passing tests and unchanged user-facing behavior are more important than maximizing removed line count in one risky edit.
+
+## Execution Results
+
+- Created `background/bootstrap/state-patch-helpers.js` and moved registration email state fallbacks, runtime state patch wrappers, stale membership result protection, UPI CDK alias alignment, and state-patch comparison.
+- Created `background/bootstrap/settings-transfer.js` and moved settings export filename generation plus runtime data export/import normalization and settings bundle import/export.
+- Created `sidepanel/cdk-pool-state.js` and moved CDK pool text/usage/channel helpers, remote status normalization, selectability, retry, and cancel policy helpers.
+- Created `sidepanel/settings-normalization.js` and moved custom email pool entry normalization plus provider domain/base URL normalizers.
+- Added focused Node tests for all four new modules.
+- Tightened audit guards: `background.js <= 15400`, `sidepanel/sidepanel.js <= 10100`, and new modules have individual size guards.
+
+Final verification on branch `codex/codebase-decomposition-finish`:
+
+- `node --check background.js`
+- `node --check sidepanel/sidepanel.js`
+- `node --check background/bootstrap/state-patch-helpers.js`
+- `node --check background/bootstrap/settings-transfer.js`
+- `node --check sidepanel/cdk-pool-state.js`
+- `node --check sidepanel/settings-normalization.js`
+- `node scripts/audit-smoke-tests.mjs`
+- `node scripts/audit-no-phone-sms.mjs`
+- `node scripts/audit-no-removed-network.mjs`
+- `node --test scripts/test-*.cjs`
+- `node scripts/module-size-report.mjs`
+
+Result: all verification passed; `137/137` Node tests passed. Remaining warnings are the expected tracked-source warnings for `background.js` and `sidepanel/sidepanel.js` still being over 8000 lines.
