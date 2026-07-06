@@ -178,6 +178,7 @@ function checkCoreFiles() {
     'background/bootstrap/legacy-cleanup.js',
     'background/bootstrap/auto-run-session.js',
     'background/bootstrap/auto-run-timer-plan.js',
+    'background/bootstrap/auto-run-status.js',
     'background/email/provider-registry.js',
     'background/membership/access-token-refresh.js',
     'background/membership/redeem-status-sync.js',
@@ -250,6 +251,7 @@ function checkStaticContracts() {
   const legacyCleanup = readText('background/bootstrap/legacy-cleanup.js');
   const autoRunSession = readText('background/bootstrap/auto-run-session.js');
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
+  const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
   const emailProviderRegistry = readText('background/email/provider-registry.js');
   const membershipAccessTokenRefresh = readText('background/membership/access-token-refresh.js');
   const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
@@ -363,6 +365,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/legacy-cleanup.js'", 'background legacy cleanup script load');
   assertIncludes(background, "'background/bootstrap/auto-run-session.js'", 'background auto-run session script load');
   assertIncludes(background, "'background/bootstrap/auto-run-timer-plan.js'", 'background auto-run timer plan script load');
+  assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
   assertIncludes(background, 'requireFlowDefinitionResolver()', 'background flow resolver compatibility wrappers');
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
@@ -383,6 +386,9 @@ function checkStaticContracts() {
   assertIncludes(autoRunTimerPlan, 'MultiPageBackgroundAutoRunTimerPlan', 'background auto-run timer plan global');
   assertIncludes(autoRunTimerPlan, 'createAutoRunTimerPlanManager', 'background auto-run timer plan factory');
   assertIncludes(autoRunTimerPlan, 'normalizeAutoRunTimerPlanFromState', 'background auto-run timer plan state normalizer');
+  assertIncludes(autoRunStatus, 'MultiPageBackgroundAutoRunStatus', 'background auto-run status global');
+  assertIncludes(autoRunStatus, 'createAutoRunStatusManager', 'background auto-run status factory');
+  assertIncludes(autoRunStatus, 'isAutoRunLockedState', 'background auto-run status locked predicate');
   assertIncludes(background, "'background/email/provider-registry.js'", 'background email provider registry script load');
   assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
@@ -624,6 +630,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-timer-plan.js', 260, 'auto-run timer plan size guard');
+  assertFileLineCountAtMost('background/bootstrap/auto-run-status.js', 220, 'auto-run status size guard');
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');

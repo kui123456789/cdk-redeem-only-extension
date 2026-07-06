@@ -24,6 +24,7 @@ importScripts(
   'background/bootstrap/legacy-cleanup.js',
   'background/bootstrap/auto-run-session.js',
   'background/bootstrap/auto-run-timer-plan.js',
+  'background/bootstrap/auto-run-status.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -1276,6 +1277,15 @@ const autoRunTimerPlanManager = self.MultiPageBackgroundAutoRunTimerPlan.createA
   formatAutoRunScheduleTime: (timestamp) => formatAutoRunScheduleTime(timestamp),
   normalizeAutoRunSessionId: (value) => normalizeAutoRunSessionId(value),
   serializeAutoRunRoundSummaries: (totalRuns, roundSummaries) => serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
+});
+const autoRunStatusManager = self.MultiPageBackgroundAutoRunStatus.createAutoRunStatusManager({
+  getCurrentAutoRunRuntime: () => ({
+    currentRun: autoRunCurrentRun,
+    totalRuns: autoRunTotalRuns,
+    attemptRun: autoRunAttemptRun,
+    sessionId: getCurrentAutoRunSessionId(),
+  }),
+  normalizeAutoRunSessionId: (value) => normalizeAutoRunSessionId(value),
 });
 
 function normalizeRunCount(value) {
@@ -9775,33 +9785,17 @@ function resolveAccountRunRecordReasonForStop(status, reason = '') {
 }
 
 function getAutoRunStatusPayload(phase, payload = {}) {
-  const normalizedPayload = {
-    ...payload,
-    currentRun: payload.currentRun ?? autoRunCurrentRun,
-    totalRuns: payload.totalRuns ?? autoRunTotalRuns,
-    attemptRun: payload.attemptRun ?? autoRunAttemptRun,
-    sessionId: payload.sessionId ?? payload.autoRunSessionId ?? getCurrentAutoRunSessionId(),
-  };
   if (typeof loggingStatus !== 'undefined' && loggingStatus?.getAutoRunStatusPayload) {
+    const normalizedPayload = {
+      ...payload,
+      currentRun: payload.currentRun ?? autoRunCurrentRun,
+      totalRuns: payload.totalRuns ?? autoRunTotalRuns,
+      attemptRun: payload.attemptRun ?? autoRunAttemptRun,
+      sessionId: payload.sessionId ?? payload.autoRunSessionId ?? getCurrentAutoRunSessionId(),
+    };
     return loggingStatus.getAutoRunStatusPayload(phase, normalizedPayload);
   }
-  return {
-    autoRunning: phase === 'scheduled'
-      || phase === 'running'
-      || phase === 'waiting_step'
-      || phase === 'waiting_email'
-      || phase === 'retrying'
-      || phase === 'waiting_interval',
-    autoRunPhase: phase,
-    autoRunCurrentRun: normalizedPayload.currentRun ?? 0,
-    autoRunTotalRuns: normalizedPayload.totalRuns ?? 1,
-    autoRunAttemptRun: normalizedPayload.attemptRun ?? 0,
-    autoRunSessionId: normalizeAutoRunSessionId(normalizedPayload.sessionId),
-    scheduledAutoRunAt: Number.isFinite(Number(normalizedPayload.scheduledAt)) ? Number(normalizedPayload.scheduledAt) : null,
-    autoRunCountdownAt: Number.isFinite(Number(normalizedPayload.countdownAt)) ? Number(normalizedPayload.countdownAt) : null,
-    autoRunCountdownTitle: normalizedPayload.countdownTitle === undefined ? '' : String(normalizedPayload.countdownTitle || ''),
-    autoRunCountdownNote: normalizedPayload.countdownNote === undefined ? '' : String(normalizedPayload.countdownNote || ''),
-  };
+  return autoRunStatusManager.getAutoRunStatusPayload(phase, payload);
 }
 
 async function broadcastAutoRunStatus(phase, payload = {}, extraState = {}) {
@@ -9832,26 +9826,18 @@ async function broadcastAutoRunStatus(phase, payload = {}, extraState = {}) {
 }
 
 function isAutoRunLockedState(state) {
-  return Boolean(state.autoRunning)
-    && (
-      state.autoRunPhase === 'running'
-      || state.autoRunPhase === 'waiting_step'
-      || state.autoRunPhase === 'retrying'
-      || state.autoRunPhase === 'waiting_interval'
-    );
+  return autoRunStatusManager.isAutoRunLockedState(state);
 }
 
 function isAutoRunPausedState(state) {
-  return Boolean(state.autoRunning) && state.autoRunPhase === 'waiting_email';
+  return autoRunStatusManager.isAutoRunPausedState(state);
 }
 
 function isAutoRunScheduledState(state) {
-  const plan = normalizeAutoRunTimerPlanFromState(state);
-  const scheduledAt = state.scheduledAutoRunAt === null ? null : Number(state.scheduledAutoRunAt);
-  return Boolean(state.autoRunning)
-    && state.autoRunPhase === 'scheduled'
-    && Number.isFinite(scheduledAt)
-    && plan?.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START;
+  return autoRunStatusManager.isAutoRunScheduledState(state, {
+    getPendingAutoRunTimerPlan,
+    scheduledStartKind: AUTO_RUN_TIMER_KIND_SCHEDULED_START,
+  });
 }
 
 function getPendingAutoRunTimerPlan(state = {}) {
