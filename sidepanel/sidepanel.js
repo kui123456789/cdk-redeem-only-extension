@@ -1236,6 +1236,10 @@ const workflowButtonStateManager = window.SidepanelWorkflowButtonState.createWor
   getSkippableNodes: () => SKIPPABLE_NODES,
   isDoneStatus: (status) => isDoneStatus(status),
 });
+const workflowStatusDisplayManager = window.SidepanelWorkflowStatusDisplay.createWorkflowStatusDisplayManager({
+  isDoneStatus: (status) => isDoneStatus(status),
+  formatCountdown: (remainingMs) => formatCountdown(remainingMs),
+});
 let settingsDirty = false;
 let settingsSaveInFlight = false;
 let settingsAutoSaveTimer = null;
@@ -2676,64 +2680,21 @@ function updateStatusDisplay(state = latestState) {
     return;
   }
   statusBar.className = 'status-bar';
-  const nodeStatuses = getNodeStatuses(state);
-
-  const countdown = getActiveAutoRunCountdown();
-  if (countdown) {
-    const remainingMs = countdown.at - Date.now();
-    displayStatus.textContent = remainingMs > 0
-      ? `${countdown.title}，剩余 ${formatCountdown(remainingMs)}`
-      : `${countdown.title}，即将结束...`;
-    statusBar.classList.add(countdown.tone === 'scheduled' ? 'scheduled' : 'running');
-    return;
+  const displayState = workflowStatusDisplayManager.getStatusDisplayState({
+    autoLocked: isAutoRunLockedPhase(),
+    autoPaused: isAutoRunPausedPhase(),
+    autoRunLabel: getAutoRunLabel(),
+    autoRunPhase: currentAutoRun.phase,
+    countdown: getActiveAutoRunCountdown(),
+    nodeIds: NODE_IDS,
+    nodeStatuses: getNodeStatuses(state),
+    now: Date.now(),
+    runningNodes: getRunningNodes(state),
+  });
+  displayStatus.textContent = displayState.text;
+  if (displayState.tone) {
+    statusBar.classList.add(displayState.tone);
   }
-
-  if (isAutoRunPausedPhase()) {
-    displayStatus.textContent = `自动已暂停${getAutoRunLabel()}，等待继续`;
-    statusBar.classList.add('paused');
-    return;
-  }
-
-  if (isAutoRunLockedPhase()) {
-    const runningNodes = getRunningNodes(state);
-    displayStatus.textContent = runningNodes.length
-      ? `节点 ${runningNodes.join(', ')} 运行中...`
-      : `${currentAutoRun.phase === 'retrying' ? '自动重试中' : '自动运行中'}${getAutoRunLabel()}`;
-    statusBar.classList.add('running');
-    return;
-  }
-
-  const running = Object.entries(nodeStatuses).find(([, status]) => status === 'running');
-  if (running) {
-    displayStatus.textContent = `节点 ${running[0]} 运行中...`;
-    statusBar.classList.add('running');
-    return;
-  }
-
-  const failed = Object.entries(nodeStatuses).find(([, status]) => status === 'failed');
-  if (failed) {
-    displayStatus.textContent = `节点 ${failed[0]} 失败`;
-    statusBar.classList.add('failed');
-    return;
-  }
-
-  const stopped = Object.entries(nodeStatuses).find(([, status]) => status === 'stopped');
-  if (stopped) {
-    displayStatus.textContent = `节点 ${stopped[0]} 已停止`;
-    statusBar.classList.add('stopped');
-    return;
-  }
-
-  const lastCompleted = Object.entries(nodeStatuses)
-    .filter(([, status]) => isDoneStatus(status))
-    .map(([nodeId]) => nodeId)
-    .sort((left, right) => NODE_IDS.indexOf(right) - NODE_IDS.indexOf(left))[0];
-  if (lastCompleted === NODE_IDS[NODE_IDS.length - 1]) {
-    displayStatus.textContent = '全部节点已完成';
-    statusBar.classList.add('completed');
-    return;
-  }
-  displayStatus.textContent = lastCompleted ? `节点 ${lastCompleted} 已完成` : '就绪';
 }
 
 function appendLog(entry = {}) {
