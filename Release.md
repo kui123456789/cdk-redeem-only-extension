@@ -1,5 +1,36 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.6
+
+本版本补齐自定义邮箱池的手动试用资格检查和 AT 保留逻辑，移除 Free 组里容易误用的试用资格复查入口，建议已安装 V1.0.5 的用户升级。
+
+### 修复
+
+- 自定义邮箱池每个邮箱旁新增 `检查资格` 入口，可用已保存 AT 单独调用后端试用资格检查。
+- 第 7 步注册完成后会把 2FA、Passkey、免 2FA 路线读取到的 AT 回写到自定义邮箱池，便于后续手动重查资格。
+- 试用资格检查失败、网络波动或明确无资格时，只更新邮箱池行状态，不再误写入 Free，也不会删除邮箱本身。
+- Free 组移除旧的 `检查试用资格` 入口，避免和邮箱池手动检查、Free 会员状态识别混用。
+- 修复邮箱池行缺 AT 时按钮不可点且原因不清楚的问题，现在会提示缺少已保存 AT。
+- Passkey / 免 2FA / 完整 2FA 路线在资格检查失败后仍保留邮箱池里的取件链接和 AT 信息。
+
+### 验证
+
+- 已通过 `node --check background.js`。
+- 已通过 `node --check background/message-router.js`。
+- 已通过 `node --check background/steps/enable-passkey.js`。
+- 已通过 `node --check background/steps/enable-totp-mfa.js`。
+- 已通过 `node --check background/steps/no-2fa-free-route.js`。
+- 已通过 `node --check background/steps/upi-redeem.js`。
+- 已通过 `node --check background/upi-credential-membership-checker.js`。
+- 已通过 `node --check sidepanel/account-records-manager.js`。
+- 已通过 `node --check sidepanel/custom-email-pool-manager.js`。
+- 已通过 `node --check sidepanel/sidepanel.js`。
+- 已通过 `node scripts/audit-smoke-tests.mjs`。
+- 已通过 `node --test scripts/test-trial-eligibility-api.cjs`。
+- 已通过 `node --test scripts/test-passkey-login-core.cjs`。
+- 已通过 `git diff --check`。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏和后台 service worker 加载 V1.0.6 新代码。
+
 ## CDK Redeem Only V1.0.5
 
 本版本修复试用资格失败后的邮箱池状态展示，并恢复 Free 导出中三条路线的邮箱取件链接字段，建议已安装 V1.0.4 的用户升级。

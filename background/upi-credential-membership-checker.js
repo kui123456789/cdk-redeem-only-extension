@@ -1644,6 +1644,7 @@
       fetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null,
       getState = async () => ({}),
       isTabAlive = async () => true,
+      markCustomEmailPoolEntryTrialEligibility = null,
       markRegistrationEmailTrialIneligible = null,
       registerTab = async () => {},
       redeemUpiCredentialWithAccessToken = null,
@@ -6839,11 +6840,12 @@
       const requestedCredentials = resolveInputCredentials(input)
         .filter((credential) => credential.email);
       const source = normalizeString(input.source || 'manual-trial-eligibility-check');
+      const emailPoolOnly = input.emailPoolOnly === true || input.updateCustomEmailPoolEntry === true || source === 'custom-email-pool-trial-eligibility-check';
       batchRunning = true;
       batchStopRequested = false;
       const startedAt = new Date().toISOString();
       let currentResults = await getStoredResults();
-      let items = mergeCredentialsIntoResultItems(currentResults.items, requestedCredentials);
+      let items = emailPoolOnly ? (Array.isArray(currentResults.items) ? currentResults.items : []) : mergeCredentialsIntoResultItems(currentResults.items, requestedCredentials);
       const eligible = [];
       const ineligible = [];
       const retryable = [];
@@ -6868,6 +6870,25 @@
         const email = normalizeEmail(credential.email);
         const patch = buildTrialEligibilityResultPatch(decision);
         const reason = normalizeString(patch.trialEligibilityReason || decision.trialEligibilityReason || '资格检查失败，可手动重试');
+        const syncCustomEmailPoolEntry = async (status = '', extra = {}) => {
+          if (typeof markCustomEmailPoolEntryTrialEligibility !== 'function') return null;
+          return markCustomEmailPoolEntryTrialEligibility({ ...(await getState()), ...credential, email }, {
+            email,
+            status,
+            reason: extra.reason || reason,
+            reasonCode: patch.trialEligibilityReasonCode || decision.trialEligibilityReasonCode || '',
+            checkedAt,
+            accessToken: normalizeString(extra.accessToken || accessToken || credential.accessToken),
+            accessTokenMasked: maskAccessToken(extra.accessToken || accessToken || credential.accessToken),
+            accessTokenUpdatedAt: checkedAt,
+            trialEligibilityRetryable: extra.trialEligibilityRetryable === true,
+            trialEligibilityTransientFailure: extra.trialEligibilityTransientFailure === true,
+            markUsed: extra.markUsed === true,
+            clearSelectedEmail: false,
+            logPrefix: extra.logPrefix || '邮箱池试用资格检查',
+            level: extra.level || (status === 'eligible' ? 'ok' : 'warn'),
+          });
+        };
         if (patch.trialEligibilityStatus === 'eligible') {
           currentResults = await upsertTrialEligibleFreeCredential({
             source,
@@ -6882,11 +6903,20 @@
             trialEligibilityLastError: '',
           });
           items = currentResults.items;
+          if (emailPoolOnly || input.updateCustomEmailPoolEntry === true) {
+            await syncCustomEmailPoolEntry('eligible', { accessToken: normalizeString(accessToken || credential.accessToken), markUsed: true, reason: reason || '账号有试用资格', level: 'ok' });
+          }
           eligible.push({ email, reason: reason || '账号有试用资格' });
           await addLog(`UPI 试用资格手动检查：${email} -> 有试用资格。`, 'ok');
           return;
         }
         if (isTrialEligibilityAccountIneligibleDecision({ ...decision, ...patch })) {
+          if (emailPoolOnly) {
+            await syncCustomEmailPoolEntry('ineligible', { accessToken: normalizeString(accessToken || credential.accessToken), reason: reason || '账号无试用资格', level: 'warn' });
+            ineligible.push({ email, reason: reason || '账号无试用资格' });
+            await addLog(`邮箱池试用资格检查：${email} -> 无试用资格，仅更新邮箱池，不进入 Free：${reason || 'not-eligible'}`, 'warn');
+            return;
+          }
           if (typeof markRegistrationEmailTrialIneligible === 'function') {
             await markRegistrationEmailTrialIneligible({
               ...(await getState()),
@@ -6917,6 +6947,19 @@
           });
           ineligible.push({ email, reason: reason || '账号无试用资格' });
           await addLog(`UPI 试用资格手动检查：${email} -> 无试用资格：${reason || 'not-eligible'}`, 'warn');
+          return;
+        }
+
+        if (emailPoolOnly) {
+          await syncCustomEmailPoolEntry('failed', {
+            accessToken: normalizeString(accessToken || credential.accessToken),
+            reason,
+            trialEligibilityRetryable: true,
+            trialEligibilityTransientFailure: patch.trialEligibilityTransientFailure === true || patch.trialEligibilityRetryable === true,
+            level: 'warn',
+          });
+          retryable.push({ email, reason });
+          await addLog(`邮箱池试用资格检查：${email} -> 检查失败，可手动重试，仅更新邮箱池：${reason}`, 'warn');
           return;
         }
 
@@ -6988,6 +7031,23 @@
           if (!hasLoginMaterial) {
             const reason = '缺少 AT、GPT 密码、Passkey 或免 2FA 取件链接，无法检查资格';
             skipped.push({ email, reason });
+            if (emailPoolOnly) {
+              if (typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+                await markCustomEmailPoolEntryTrialEligibility({ ...(await getState()), ...credential, email }, {
+                  email,
+                  status: 'failed',
+                  reason,
+                  checkedAt,
+                  trialEligibilityRetryable: true,
+                  clearSelectedEmail: false,
+                  logPrefix: '邮箱池试用资格检查',
+                  level: 'warn',
+                });
+              }
+              await saveProgress('trial-eligibility', email);
+              await addLog(`邮箱池试用资格检查：${email} -> 跳过：${reason}`, 'warn');
+              continue;
+            }
             items = upsertResultItem(items, {
               ...credential,
               status: 'free',
@@ -7061,6 +7121,27 @@
             const reason = getErrorMessage(error) || '资格检查失败，可手动重试';
             const retryableCheck = !explicitIneligible;
             (retryableCheck ? retryable : failed).push({ email, reason });
+            if (emailPoolOnly) {
+              if (typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+                await markCustomEmailPoolEntryTrialEligibility({ ...(await getState()), ...credential, email }, {
+                  email,
+                  status: 'failed',
+                  reason,
+                  checkedAt,
+                  accessToken: credential.accessToken,
+                  accessTokenMasked: maskAccessToken(credential.accessToken),
+                  accessTokenUpdatedAt: checkedAt,
+                  trialEligibilityRetryable: retryableCheck,
+                  trialEligibilityTransientFailure: retryableCheck,
+                  clearSelectedEmail: false,
+                  logPrefix: '邮箱池试用资格检查',
+                  level: retryableCheck ? 'warn' : 'error',
+                });
+              }
+              await saveProgress('subscription-check', email);
+              await addLog(`邮箱池试用资格检查：${email} -> 检查失败，账号保留在邮箱池：${reason}`, retryableCheck ? 'warn' : 'error');
+              continue;
+            }
             items = upsertResultItem(items, {
               ...credential,
               status: 'free',

@@ -1765,6 +1765,17 @@ function isCustomEmailPoolEntryAvailable(entry = {}) {
   return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
 }
 
+function maskCustomEmailPoolAccessToken(token = '') {
+  const raw = String(token || '').trim();
+  if (!raw) {
+    return '';
+  }
+  if (raw.length <= 16) {
+    return `${raw.slice(0, 4)}****${raw.slice(-4)}`;
+  }
+  return `${raw.slice(0, 8)}****${raw.slice(-6)}`;
+}
+
 function normalizeCustomEmailPoolEntryObjects(value = []) {
   const source = splitCustomEmailPoolEntrySource(value);
   const seenEmails = new Set();
@@ -1783,6 +1794,9 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       continue;
     }
     seenEmails.add(email);
+    const accessToken = String(asObject.accessToken || asObject.access_token || asObject.upiRedeemAccessToken || '').trim();
+    const accessTokenMasked = String(asObject.accessTokenMasked || '').trim()
+      || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
     entries.push({
       id: String(asObject.id || `custom-pool-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
       email,
@@ -1792,9 +1806,16 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       used: Boolean(asObject.used),
       note: String(asObject.note || '').trim(),
       lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+      accessToken,
+      accessTokenMasked,
+      accessTokenUpdatedAt: String(asObject.accessTokenUpdatedAt || asObject.tokenUpdatedAt || asObject.checkedAt || '').trim(),
       trialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus(asObject.trialEligibilityStatus),
       trialEligibilityReason: String(asObject.trialEligibilityReason || '').trim(),
+      trialEligibilityReasonCode: String(asObject.trialEligibilityReasonCode || '').trim(),
       trialEligibilityCheckedAt: String(asObject.trialEligibilityCheckedAt || '').trim(),
+      trialEligibilityRetryable: asObject.trialEligibilityRetryable === true,
+      trialEligibilityTransientFailure: asObject.trialEligibilityTransientFailure === true,
+      trialEligibilityLastError: String(asObject.trialEligibilityLastError || '').trim(),
     });
   }
 
@@ -1838,6 +1859,135 @@ function getCustomEmailPoolCredentialForEmail(state = {}, email = '') {
   return String(entry?.credential || '').trim();
 }
 
+async function markCustomEmailPoolEntryTrialEligibility(state = {}, options = {}) {
+  const providedState = state && typeof state === 'object' ? state : {};
+  const currentState = await getState();
+  const latestState = {
+    ...(currentState && typeof currentState === 'object' ? currentState : {}),
+    ...providedState,
+  };
+  const currentEmail = String(options.email || latestState?.email || '').trim().toLowerCase();
+  if (!currentEmail) {
+    return { updated: false };
+  }
+
+  const entries = getCustomEmailPoolEntries(latestState);
+  if (!entries.length) {
+    return { updated: false };
+  }
+
+  const status = normalizeCustomEmailPoolTrialEligibilityStatus(options.status || options.trialEligibilityStatus);
+  const reason = String(options.reason || options.trialEligibilityReason || '').trim();
+  const reasonCode = String(options.reasonCode || options.trialEligibilityReasonCode || '').trim();
+  const checkedAt = String(options.checkedAt || options.trialEligibilityCheckedAt || new Date().toISOString()).trim();
+  const accessToken = String(options.accessToken || options.token || options.access_token || latestState.accessToken || latestState.upiRedeemAccessToken || '').trim();
+  const accessTokenMasked = String(options.accessTokenMasked || '').trim()
+    || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
+  const accessTokenUpdatedAt = String(options.accessTokenUpdatedAt || checkedAt || '').trim();
+  const shouldClearSelectedEmail = options.clearSelectedEmail !== false
+    && String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase() === currentEmail;
+  let matched = false;
+  let changed = false;
+
+  const nextEntries = entries.map((entry) => {
+    if (entry.email !== currentEmail) {
+      return entry;
+    }
+    matched = true;
+    const nextEntry = { ...entry };
+    if (status) {
+      nextEntry.trialEligibilityStatus = status;
+      nextEntry.trialEligibilityReason = reason || (
+        status === 'eligible'
+          ? '账号有试用资格。'
+          : status === 'ineligible'
+            ? '账号无试用资格。'
+            : '资格检查失败，可稍后重试。'
+      );
+      nextEntry.trialEligibilityCheckedAt = checkedAt;
+      nextEntry.trialEligibilityReasonCode = reasonCode;
+      nextEntry.trialEligibilityRetryable = options.trialEligibilityRetryable === true || status === 'failed';
+      nextEntry.trialEligibilityTransientFailure = options.trialEligibilityTransientFailure === true;
+      nextEntry.trialEligibilityLastError = status === 'failed' ? nextEntry.trialEligibilityReason : '';
+      if (status === 'ineligible') {
+        nextEntry.used = false;
+        nextEntry.note = entry.note || '无试用资格';
+      } else if (status === 'eligible') {
+        nextEntry.note = entry.note === '无试用资格' ? '' : entry.note;
+      }
+    }
+    if (options.markUsed === true) {
+      nextEntry.used = true;
+      nextEntry.lastUsedAt = entry.lastUsedAt || Date.now();
+    }
+    if (accessToken) {
+      nextEntry.accessToken = accessToken;
+      nextEntry.accessTokenMasked = accessTokenMasked;
+      nextEntry.accessTokenUpdatedAt = accessTokenUpdatedAt;
+    }
+    changed = changed || JSON.stringify(entry) !== JSON.stringify(nextEntry);
+    return nextEntry;
+  });
+
+  if (!matched) {
+    return { updated: false };
+  }
+
+  const nextCustomEmailPool = nextEntries
+    .filter(isCustomEmailPoolEntryAvailable)
+    .map((entry) => entry.email);
+
+  if (!changed && !shouldClearSelectedEmail) {
+    return {
+      updated: true,
+      unchanged: true,
+      email: currentEmail,
+      status,
+      reason,
+      checkedAt,
+      customEmailPoolEntries: nextEntries,
+      customEmailPool: nextCustomEmailPool,
+    };
+  }
+
+  const selectionUpdate = shouldClearSelectedEmail ? { selectedCustomEmailPoolEmail: '' } : {};
+  await setPersistentSettings({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+  await setState({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+  broadcastDataUpdate({
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+    ...selectionUpdate,
+  });
+
+  if (options.log !== false) {
+    const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱池试用资格';
+    const statusLabel = status === 'eligible'
+      ? '有试用资格'
+      : status === 'ineligible'
+        ? '无试用资格'
+        : '资格检查失败，可重试';
+    await addLog(`${logPrefix}：${currentEmail} 已更新为${statusLabel}${reason ? `：${reason}` : ''}`, options.level || (status === 'eligible' ? 'ok' : 'warn'));
+  }
+
+  return {
+    updated: true,
+    email: currentEmail,
+    status,
+    reason,
+    checkedAt,
+    customEmailPoolEntries: nextEntries,
+    customEmailPool: nextCustomEmailPool,
+  };
+}
+
 async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
   if (!isCustomEmailPoolGenerator(state)) {
     return { updated: false };
@@ -1857,11 +2007,14 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
 
   let changed = false;
   const now = Date.now();
+  const accessToken = String(state.accessToken || state.upiRedeemAccessToken || '').trim();
+  const accessTokenMasked = String(state.accessTokenMasked || '').trim()
+    || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
   const nextEntries = entries.map((entry) => {
     if (entry.email !== currentEmail) {
       return entry;
     }
-    if (entry.used && entry.lastUsedAt) {
+    if (entry.used && entry.lastUsedAt && (!accessToken || entry.accessToken === accessToken)) {
       return entry;
     }
     changed = true;
@@ -1869,6 +2022,11 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
       ...entry,
       used: true,
       lastUsedAt: now,
+      ...(accessToken ? {
+        accessToken,
+        accessTokenMasked,
+        accessTokenUpdatedAt: String(state.accessTokenUpdatedAt || state.checkedAt || new Date().toISOString()).trim(),
+      } : {}),
     };
   });
 
@@ -1913,84 +2071,25 @@ async function markCurrentCustomEmailPoolEntryTrialIneligible(state = {}, option
     return { updated: false };
   }
 
-  const entries = getCustomEmailPoolEntries(state);
-  if (!entries.length) {
-    return { updated: false };
-  }
-
   const reason = String(options.reason || '账号无试用资格').trim();
   const checkedAt = String(options.checkedAt || new Date().toISOString()).trim();
-  const shouldClearSelectedEmail = String(state?.selectedCustomEmailPoolEmail || '').trim().toLowerCase() === currentEmail;
-  let matched = false;
-  let changed = false;
-  const nextEntries = entries.map((entry) => {
-    if (entry.email !== currentEmail) {
-      return entry;
-    }
-    matched = true;
-    const nextEntry = {
-      ...entry,
-      used: false,
-      trialEligibilityStatus: 'ineligible',
-      trialEligibilityReason: reason,
-      trialEligibilityCheckedAt: checkedAt,
-      note: entry.note || '无试用资格',
-    };
-    changed = changed
-      || entry.used !== nextEntry.used
-      || entry.trialEligibilityStatus !== nextEntry.trialEligibilityStatus
-      || entry.trialEligibilityReason !== nextEntry.trialEligibilityReason
-      || entry.trialEligibilityCheckedAt !== nextEntry.trialEligibilityCheckedAt
-      || entry.note !== nextEntry.note;
-    return nextEntry;
+  const result = await markCustomEmailPoolEntryTrialEligibility(state, {
+    ...options,
+    email: currentEmail,
+    status: 'ineligible',
+    reason,
+    checkedAt,
+    clearSelectedEmail: true,
+    logPrefix: String(options.logPrefix || '').trim() || '当前账号：自定义邮箱池',
+    level: options.level || 'warn',
   });
-
-  if (!matched) {
-    return { updated: false };
-  }
-
-  const nextCustomEmailPool = nextEntries
-    .filter(isCustomEmailPoolEntryAvailable)
-    .map((entry) => entry.email);
-
-  if (!changed && !shouldClearSelectedEmail) {
-    return {
-      updated: true,
-      unchanged: true,
-      email: currentEmail,
-      reason,
-      checkedAt,
-      customEmailPoolEntries: nextEntries,
-      customEmailPool: nextCustomEmailPool,
-    };
-  }
-
-  const selectionUpdate = shouldClearSelectedEmail ? { selectedCustomEmailPoolEmail: '' } : {};
-
-  await setPersistentSettings({
-    customEmailPoolEntries: nextEntries,
-    customEmailPool: nextCustomEmailPool,
-    ...selectionUpdate,
-  });
-  await setState({
-    customEmailPoolEntries: nextEntries,
-    customEmailPool: nextCustomEmailPool,
-    ...selectionUpdate,
-  });
-  broadcastDataUpdate({
-    customEmailPoolEntries: nextEntries,
-    customEmailPool: nextCustomEmailPool,
-    ...selectionUpdate,
-  });
-  const logPrefix = String(options.logPrefix || '').trim() || '当前账号：自定义邮箱池';
-  await addLog(`${logPrefix}：${currentEmail} 已标记为无试用资格。`, options.level || 'warn');
   return {
-    updated: true,
+    updated: Boolean(result?.updated),
     email: currentEmail,
     reason,
     checkedAt,
-    customEmailPoolEntries: nextEntries,
-    customEmailPool: nextCustomEmailPool,
+    customEmailPoolEntries: result?.customEmailPoolEntries,
+    customEmailPool: result?.customEmailPool,
   };
 }
 
@@ -13896,6 +13995,7 @@ upiCredentialMembershipChecker = self.MultiPageBackgroundUpiCredentialMembership
   fetchVerificationCodeOnly: (...args) => verificationFlowHelpers.fetchVerificationCodeOnly(...args),
   getState,
   isTabAlive,
+  markCustomEmailPoolEntryTrialEligibility,
   markRegistrationEmailTrialIneligible: markCurrentRegistrationAccountTrialIneligible,
   registerTab,
   redeemUpiCredentialWithAccessToken: (...args) => upiRedeemExecutor.redeemUpiCredentialWithAccessToken(...args),

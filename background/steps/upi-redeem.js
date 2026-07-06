@@ -3298,10 +3298,15 @@
             ...runtimeState,
             ...patch,
             email,
+            accessToken,
+            upiRedeemAccessToken: accessToken,
+            accessTokenUpdatedAt: failedAt,
           }, {
             email,
             reason: message,
             checkedAt: failedAt,
+            accessToken,
+            accessTokenUpdatedAt: failedAt,
             logPrefix: '第 7 步 UPI 资格检查',
             level: 'warn',
           });

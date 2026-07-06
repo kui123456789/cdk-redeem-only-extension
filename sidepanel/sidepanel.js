@@ -3340,6 +3340,13 @@ function getCustomEmailPoolManager() {
       setEntries: (entries) => {
         setCustomEmailPoolEntriesState(entries);
       },
+      getCredentialForEmail: (email) => {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const items = Array.isArray(latestState?.upiCredentialMembershipCheckResults?.items)
+          ? latestState.upiCredentialMembershipCheckResults.items
+          : [];
+        return items.find((item) => String(item?.email || '').trim().toLowerCase() === normalizedEmail) || {};
+      },
       getCurrentEmail: () => String(inputEmail?.value || latestState?.email || '').trim().toLowerCase(),
       isVisible: () => Boolean(rowCustomEmailPool) && rowCustomEmailPool.style.display !== 'none',
     },
@@ -3360,6 +3367,37 @@ function getCustomEmailPoolManager() {
           email: selectedEmail,
           selectedCustomEmailPoolEmail: selectedEmail,
         });
+      },
+      checkTrialEligibility: async (entry = {}) => {
+        const email = String(entry.email || '').trim().toLowerCase();
+        const accessToken = String(entry.accessToken || entry.token || entry.access_token || entry.upiRedeemAccessToken || '').trim();
+        const response = await chrome.runtime.sendMessage({
+          type: 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY',
+          source: 'sidepanel',
+          payload: {
+            source: 'custom-email-pool-trial-eligibility-check',
+            emailPoolOnly: true,
+            updateCustomEmailPoolEntry: true,
+            credentials: [{
+              ...entry,
+              email,
+              accessToken,
+              token: accessToken,
+              verificationUrl: String(entry.verificationUrl || '').trim(),
+              checkedAt: String(entry.accessTokenUpdatedAt || entry.trialEligibilityCheckedAt || '').trim(),
+            }],
+            settings: collectSettingsPayload(),
+          },
+        });
+        if (response?.error) {
+          throw new Error(response.error);
+        }
+        if (response?.results) {
+          syncLatestState({
+            upiCredentialMembershipCheckResults: response.results,
+          });
+        }
+        return response || {};
       },
     },
     constants: {
@@ -6230,6 +6268,11 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       continue;
     }
     seenEmails.add(email);
+    const accessToken = String(asObject.accessToken || asObject.access_token || asObject.upiRedeemAccessToken || '').trim();
+    const accessTokenMasked = String(asObject.accessTokenMasked || '').trim()
+      || (accessToken
+        ? `${accessToken.slice(0, 8)}****${accessToken.slice(-6)}`
+        : '');
     entries.push({
       id: String(asObject.id || createCustomEmailPoolEntryId()),
       email,
@@ -6239,9 +6282,16 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
       used: Boolean(asObject.used),
       note: String(asObject.note || '').trim(),
       lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+      accessToken,
+      accessTokenMasked,
+      accessTokenUpdatedAt: String(asObject.accessTokenUpdatedAt || asObject.tokenUpdatedAt || asObject.checkedAt || '').trim(),
       trialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus(asObject.trialEligibilityStatus),
       trialEligibilityReason: String(asObject.trialEligibilityReason || '').trim(),
+      trialEligibilityReasonCode: String(asObject.trialEligibilityReasonCode || '').trim(),
       trialEligibilityCheckedAt: String(asObject.trialEligibilityCheckedAt || '').trim(),
+      trialEligibilityRetryable: asObject.trialEligibilityRetryable === true,
+      trialEligibilityTransientFailure: asObject.trialEligibilityTransientFailure === true,
+      trialEligibilityLastError: String(asObject.trialEligibilityLastError || '').trim(),
     });
   }
 

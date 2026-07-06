@@ -571,6 +571,12 @@
   border: 1px solid color-mix(in srgb, var(--orange) 24%, var(--border));
 }
 
+.luckmail-status-badge.status-active {
+  color: var(--green);
+  background: var(--green-soft);
+  border: 1px solid color-mix(in srgb, var(--green) 22%, var(--border));
+}
+
 .luckmail-status-badge.status-used {
   color: var(--green);
   background: var(--green-soft);

@@ -3487,14 +3487,24 @@
         case 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY':
         case 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH': {
           clearStopRequest();
+          const payload = message.payload || {};
+          const allowAutoRunEmailPoolCheck = payload.source === 'custom-email-pool-trial-eligibility-check'
+            && Array.isArray(payload.credentials)
+            && payload.credentials.length > 0
+            && payload.credentials.every((credential) => String(
+              credential?.accessToken
+              || credential?.token
+              || credential?.access_token
+              || credential?.upiRedeemAccessToken
+              || ''
+            ).trim());
           const state = await getState();
-          if (isAutoRunLockedState(state)) {
+          if (isAutoRunLockedState(state) && !allowAutoRunEmailPoolCheck) {
             throw new Error('自动流程运行中，当前不能手动检查 UPI Free 分组试用资格。');
           }
           if (typeof checkUpiCredentialMembershipTrialEligibility !== 'function') {
             throw new Error('UPI Free 分组试用资格手动检查能力尚未接入。');
           }
-          const payload = message.payload || {};
           const result = await checkUpiCredentialMembershipTrialEligibility({
             ...payload,
             source: payload.source

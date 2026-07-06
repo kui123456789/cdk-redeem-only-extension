@@ -284,6 +284,22 @@
         upiRedeemAccessToken: accessToken,
       });
 
+      if (typeof markCurrentRegistrationAccountUsed === 'function') {
+        await markCurrentRegistrationAccountUsed({
+          ...latestState,
+          email,
+          verificationUrl,
+          no2faFreeRecordedAt: recordedAt,
+          upiRedeemAccessToken: accessToken,
+          accessToken,
+          accessTokenUpdatedAt: new Date().toISOString(),
+        }, {
+          logPrefix: '免 2FA Free 路线已读取 AT',
+          level: 'ok',
+          preferProvidedState: true,
+        });
+      }
+
       const eligibility = await checkRegistrationUpiTrialEligibility({
         state: latestState,
         email,
@@ -312,6 +328,7 @@
           email,
           verificationUrl,
           no2faFreeRecordedAt: recordedAt,
+          accessToken,
           upiRedeemAccessToken: accessToken,
         }, {
           logPrefix: '免 2FA Free 路线',

@@ -90,6 +90,53 @@
       return '';
     }
 
+    function maskAccessToken(token = '') {
+      const raw = String(token || '').trim();
+      if (!raw) {
+        return '';
+      }
+      if (raw.length <= 16) {
+        return `${raw.slice(0, 4)}****${raw.slice(-4)}`;
+      }
+      return `${raw.slice(0, 8)}****${raw.slice(-6)}`;
+    }
+
+    function getEntryAccessToken(entry = {}) {
+      const storedCredential = state.getCredentialForEmail?.(entry.email) || {};
+      return String(
+        entry.accessToken
+        || entry.token
+        || entry.access_token
+        || entry.upiRedeemAccessToken
+        || storedCredential.accessToken
+        || storedCredential.token
+        || storedCredential.access_token
+        || storedCredential.upiRedeemAccessToken
+        || ''
+      ).trim();
+    }
+
+    function getStoredCredentialForEntry(entry = {}) {
+      const storedCredential = state.getCredentialForEmail?.(entry.email) || {};
+      return storedCredential && typeof storedCredential === 'object' && !Array.isArray(storedCredential)
+        ? storedCredential
+        : {};
+    }
+
+    function getTrialEligibilityBadgeHtml(entry = {}) {
+      const status = normalizeTrialEligibilityStatus(entry.trialEligibilityStatus);
+      if (status === 'eligible') {
+        return '<span class="luckmail-status-badge status-active">有试用资格</span>';
+      }
+      if (status === 'ineligible') {
+        return '<span class="luckmail-status-badge status-warning">无试用资格</span>';
+      }
+      if (status === 'failed') {
+        return '<span class="luckmail-status-badge status-warning">资格待重试</span>';
+      }
+      return '';
+    }
+
     function isTrialIneligibleEntry(entry = {}) {
       return normalizeTrialEligibilityStatus(entry.trialEligibilityStatus) === 'ineligible';
     }
@@ -107,6 +154,9 @@
       const verificationUrl = normalizeVerificationUrl(
         rawEntry?.verificationUrl || rawEntry?.url || parsedEntry.verificationUrl || ''
       );
+      const accessToken = String(rawEntry?.accessToken || rawEntry?.access_token || rawEntry?.upiRedeemAccessToken || '').trim();
+      const accessTokenMasked = String(rawEntry?.accessTokenMasked || '').trim()
+        || maskAccessToken(accessToken);
 
       return {
         id: String(rawEntry?.id || createEntryId()),
@@ -117,9 +167,16 @@
         used: Boolean(rawEntry?.used),
         note: String(rawEntry?.note || '').trim(),
         lastUsedAt: Number.isFinite(Number(rawEntry?.lastUsedAt)) ? Number(rawEntry.lastUsedAt) : 0,
+        accessToken,
+        accessTokenMasked,
+        accessTokenUpdatedAt: String(rawEntry?.accessTokenUpdatedAt || rawEntry?.tokenUpdatedAt || rawEntry?.checkedAt || '').trim(),
         trialEligibilityStatus: normalizeTrialEligibilityStatus(rawEntry?.trialEligibilityStatus),
         trialEligibilityReason: String(rawEntry?.trialEligibilityReason || '').trim(),
+        trialEligibilityReasonCode: String(rawEntry?.trialEligibilityReasonCode || '').trim(),
         trialEligibilityCheckedAt: String(rawEntry?.trialEligibilityCheckedAt || '').trim(),
+        trialEligibilityRetryable: rawEntry?.trialEligibilityRetryable === true,
+        trialEligibilityTransientFailure: rawEntry?.trialEligibilityTransientFailure === true,
+        trialEligibilityLastError: String(rawEntry?.trialEligibilityLastError || '').trim(),
       };
     }
 
@@ -176,7 +233,9 @@
           entry.note,
           entry.enabled ? 'enabled 启用' : 'disabled 停用',
           entry.used ? 'used 已用' : 'unused 未用',
+          normalizeTrialEligibilityStatus(entry.trialEligibilityStatus),
           isTrialIneligibleEntry(entry) ? 'ineligible no trial no_trial 无试用资格 无资格' : '',
+          entry.accessTokenMasked,
           entry.trialEligibilityReason,
           entry.trialEligibilityCheckedAt,
           entry.current ? 'current 当前' : '',
@@ -265,6 +324,10 @@
 
       for (const entry of visibleEntries) {
         const entryId = String(entry.id);
+        const accessToken = getEntryAccessToken(entry);
+        const accessTokenBadge = entry.accessTokenMasked || maskAccessToken(accessToken);
+        const trialStatus = normalizeTrialEligibilityStatus(entry.trialEligibilityStatus);
+        const trialDetail = String(entry.trialEligibilityReason || entry.trialEligibilityLastError || '').trim();
         const item = document.createElement('div');
         item.className = `luckmail-item${entry.current ? ' is-current' : ''}`;
         item.innerHTML = `
@@ -272,7 +335,8 @@
           <div class="luckmail-item-main">
             <div class="luckmail-item-email-row">
               <div class="luckmail-item-email">${helpers.escapeHtml(entry.email || '(未知邮箱)')}</div>
-              ${isTrialIneligibleEntry(entry) ? '<span class="luckmail-status-badge status-warning">无试用资格</span>' : ''}
+              ${getTrialEligibilityBadgeHtml(entry)}
+              ${accessToken ? `<span class="luckmail-status-badge status-active">AT ${helpers.escapeHtml(accessTokenBadge || '已保存')}</span>` : ''}
               ${entry.used ? '<span class="luckmail-status-badge status-used">已用</span>' : ''}
               <button
                 class="hotmail-copy-btn"
@@ -287,12 +351,15 @@
               ${entry.used ? '<span class="luckmail-tag used">已用</span>' : '<span class="luckmail-tag active">未用</span>'}
               ${entry.enabled ? '<span class="luckmail-tag active">启用</span>' : '<span class="luckmail-tag disabled">停用</span>'}
               ${entry.verificationUrl ? '<span class="luckmail-tag active">取码URL</span>' : ''}
+              ${entry.trialEligibilityCheckedAt ? `<span class="luckmail-tag">资格 ${helpers.escapeHtml(entry.trialEligibilityCheckedAt)}</span>` : ''}
               ${entry.note ? `<span class="luckmail-tag">${helpers.escapeHtml(entry.note)}</span>` : ''}
             </div>
-            ${isTrialIneligibleEntry(entry) ? `<div class="luckmail-item-details status-warning-text">${helpers.escapeHtml(entry.trialEligibilityReason || '账号无试用资格，不会再被主流程选中。')}</div>` : ''}
+            ${trialStatus === 'ineligible' ? `<div class="luckmail-item-details status-warning-text">${helpers.escapeHtml(trialDetail || '账号无试用资格，不会再被主流程选中。')}</div>` : ''}
+            ${trialStatus === 'failed' ? `<div class="luckmail-item-details status-warning-text">${helpers.escapeHtml(trialDetail || '资格检查失败，可稍后重试。')}</div>` : ''}
             ${entry.verificationUrl ? `<div class="luckmail-item-details mono">${helpers.escapeHtml(entry.verificationUrl)}</div>` : ''}
           </div>
           <div class="luckmail-item-actions">
+            <button class="btn btn-outline btn-xs" type="button" data-action="check-trial" title="${accessToken ? '使用已保存 AT 检查试用资格' : '缺少 AT，点击查看原因'}">检查资格</button>
             <button class="btn btn-outline btn-xs" type="button" data-action="use" ${isTrialIneligibleEntry(entry) ? 'disabled title="该邮箱无试用资格，不会被主流程选中"' : ''}>使用此邮箱</button>
             <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(entry.used ? '标记未用' : '标记已用')}</button>
             <button class="btn btn-outline btn-xs" type="button" data-action="toggle-enabled">${helpers.escapeHtml(entry.enabled ? '停用' : '启用')}</button>
@@ -313,6 +380,38 @@
         item.querySelector('[data-action="copy-email"]').addEventListener('click', async () => {
           await helpers.copyTextToClipboard(entry.email || '');
           helpers.showToast('邮箱已复制', 'success', 1600);
+        });
+
+        item.querySelector('[data-action="check-trial"]')?.addEventListener('click', async () => {
+          const storedCredential = getStoredCredentialForEntry(entry);
+          const token = getEntryAccessToken(entry);
+          if (!token) {
+            helpers.showToast(`邮箱 ${entry.email} 缺少 AT，注册完成后保存 AT 才能检查试用资格。`, 'warn', 2600);
+            return;
+          }
+          try {
+            setLoadingState(true, `正在检查 ${entry.email} 的试用资格...`);
+            const response = await actions.checkTrialEligibility?.({
+              ...storedCredential,
+              ...entry,
+              accessToken: token,
+            });
+            const statusText = response?.eligible?.length
+              ? '有试用资格，已进入 Free'
+              : response?.ineligible?.length
+                ? '无试用资格，已标记在邮箱池'
+                : response?.retryable?.length
+                  ? '网络/后端波动，可稍后重试'
+                  : response?.skipped?.length
+                    ? '已跳过'
+                    : '检查失败';
+            helpers.showToast(`邮箱 ${entry.email} 资格检查完成：${statusText}`, response?.eligible?.length ? 'success' : 'warn', 2800);
+            queueCustomEmailPoolRefresh();
+          } catch (error) {
+            helpers.showToast(`检查 ${entry.email} 试用资格失败：${error.message}`, 'error');
+          } finally {
+            setLoadingState(false);
+          }
         });
 
         item.querySelector('[data-action="use"]').addEventListener('click', async () => {

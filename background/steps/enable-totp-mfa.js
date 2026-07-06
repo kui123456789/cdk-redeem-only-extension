@@ -1361,6 +1361,9 @@
             ...runtimeState,
             ...patch,
             email: accountEmail || runtimeState.email,
+            accessToken,
+            upiRedeemAccessToken: accessToken,
+            accessTokenUpdatedAt: enabledAt,
             accountIdentifierType: runtimeState.accountIdentifierType || 'email',
             accountIdentifier: runtimeState.accountIdentifier || accountEmail || runtimeState.email,
           }, {
