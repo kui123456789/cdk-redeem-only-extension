@@ -43,6 +43,7 @@ importScripts(
   'background/routes/workflow-routes.js',
   'background/message-router.js',
   'shared/membership-credential-format.js',
+  'background/membership/result-state.js',
   'background/membership/results-store.js',
   'background/upi-credential-membership-checker.js',
   'background/verification-flow.js',

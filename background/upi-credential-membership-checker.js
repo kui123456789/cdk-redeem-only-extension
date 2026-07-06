@@ -77,54 +77,39 @@
       .filter(Boolean)));
   }
 
+  function getMembershipResultStateHelpers() {
+    const rootScope = typeof self !== 'undefined' ? self : globalThis;
+    if (rootScope.MultiPageMembershipResultState) {
+      return rootScope.MultiPageMembershipResultState;
+    }
+    if (typeof require === 'function') {
+      return require('./membership/result-state.js');
+    }
+    return {};
+  }
+
+  function getMembershipResultStateHelper(name = '') {
+    const helper = getMembershipResultStateHelpers()[name];
+    if (typeof helper !== 'function') {
+      throw new Error(`Membership result-state helper module is not loaded: ${name}.`);
+    }
+    return helper;
+  }
+
   function normalizeRedeemPlusDeletedEmailsByChannel(value = {}) {
-    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    return {
-      upi: normalizeEmailList(source.upi),
-      ideal: normalizeEmailList(source.ideal),
-    };
+    return getMembershipResultStateHelper('normalizeRedeemPlusDeletedEmailsByChannel')(value);
   }
 
   function addRedeemPlusDeletedEmailsByChannel(value = {}, emails = new Set(), channels = []) {
-    const current = normalizeRedeemPlusDeletedEmailsByChannel(value);
-    const targetEmails = Array.from(emails instanceof Set ? emails : (Array.isArray(emails) ? emails : []))
-      .map(normalizeEmail)
-      .filter(Boolean);
-    const targetChannels = (Array.isArray(channels) ? channels : [])
-      .map(normalizeRedeemChannel)
-      .filter((channel, index, list) => channel && list.indexOf(channel) === index);
-    targetChannels.forEach((channel) => {
-      current[channel] = normalizeEmailList([...(current[channel] || []), ...targetEmails]);
-    });
-    return current;
+    return getMembershipResultStateHelper('addRedeemPlusDeletedEmailsByChannel')(value, emails, channels);
   }
 
   function buildRedeemDeletionStatePatch(source = {}) {
-    const redeemAutoDeletedEmails = normalizeEmailList(source.redeemAutoDeletedEmails);
-    const redeemPlusDeletedEmailsByChannel = normalizeRedeemPlusDeletedEmailsByChannel(source.redeemPlusDeletedEmailsByChannel);
-    return {
-      redeemAutoDeletedEmails,
-      redeemAutoDeletedCount: redeemAutoDeletedEmails.length,
-      redeemPlusDeletedEmailsByChannel,
-      redeemPlusDeletedCountByChannel: {
-        upi: redeemPlusDeletedEmailsByChannel.upi.length,
-        ideal: redeemPlusDeletedEmailsByChannel.ideal.length,
-      },
-    };
+    return getMembershipResultStateHelper('buildRedeemDeletionStatePatch')(source);
   }
 
   function mergeRedeemDeletionStateForSave(previous = {}, next = {}) {
-    const hasOwn = (key) => Object.prototype.hasOwnProperty.call(next || {}, key);
-    const previousDeletion = buildRedeemDeletionStatePatch(previous);
-    const nextDeletion = buildRedeemDeletionStatePatch(next);
-    return {
-      redeemAutoDeletedEmails: hasOwn('redeemAutoDeletedEmails')
-        ? nextDeletion.redeemAutoDeletedEmails
-        : previousDeletion.redeemAutoDeletedEmails,
-      redeemPlusDeletedEmailsByChannel: hasOwn('redeemPlusDeletedEmailsByChannel')
-        ? nextDeletion.redeemPlusDeletedEmailsByChannel
-        : previousDeletion.redeemPlusDeletedEmailsByChannel,
-    };
+    return getMembershipResultStateHelper('mergeRedeemDeletionStateForSave')(previous, next);
   }
 
   function normalizeResultsTimestamp(value = '') {
@@ -1279,188 +1264,15 @@
   }
 
   function normalizeResultItem(item = {}) {
-    const email = normalizeEmail(item.email);
-    const rawAccessToken = normalizeString(item.accessToken || item.token || item.access_token || item.upiRedeemAccessToken);
-    const rawAccessTokenUpdatedAt = normalizeString(item.accessTokenUpdatedAt || item.tokenUpdatedAt);
-    const accessTokenIsTimestamp = rawAccessToken
-      && !rawAccessTokenUpdatedAt
-      && isLikelyCredentialTimestamp(rawAccessToken);
-    const accessToken = accessTokenIsTimestamp ? '' : rawAccessToken;
-    const accessTokenUpdatedAt = rawAccessTokenUpdatedAt || (accessTokenIsTimestamp ? rawAccessToken : '');
-    const status = ['paid', 'free', 'failed'].includes(normalizeString(item.status))
-      ? normalizeString(item.status)
-      : 'failed';
-    const rawRedeemChannel = normalizeString(item.redeemChannel || item.channel || item.paymentChannel);
-    const redeemChannel = rawRedeemChannel ? normalizeRedeemChannel(rawRedeemChannel) : '';
-    const legacyFailureCount = Math.max(0, Math.floor(Number(item.redeemFailureCount) || 0));
-    const upiRedeemFailureCount = Math.max(0, Math.floor(Number(
-      item.upiRedeemFailureCount ?? (redeemChannel === 'upi' ? legacyFailureCount : 0)
-    ) || 0));
-    const idealRedeemFailureCount = Math.max(0, Math.floor(Number(
-      item.idealRedeemFailureCount ?? (redeemChannel === 'ideal' ? legacyFailureCount : 0)
-    ) || 0));
-    const redeemLocked = normalizeBoolean(item.redeemLocked) || idealRedeemFailureCount >= REDEEM_CHANNEL_FAILURE_LIMIT;
-    const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(item);
-    const normalized = {
-      email,
-      password: normalizeString(item.password),
-      totpMfaSecret: normalizeTotpSecret(item.totpMfaSecret),
-      gptPassword: normalizeString(item.gptPassword || item.password),
-      verificationUrl: normalizeString(item.verificationUrl || item.emailVerificationUrl || item.url),
-      recordedAt: Math.max(0, Math.floor(Number(item.recordedAt || item.no2faFreeRecordedAt) || 0)),
-      no2faFreeRoute: item.no2faFreeRoute === true,
-      passkeyEnabled: item.passkeyEnabled === true || Boolean(normalizeString(item.passkeyCredentialId || item.credentialId || item.credential_id)),
-      passkeyEnabledAt: normalizeString(item.passkeyEnabledAt), passkeyCredentialId: normalizeString(item.passkeyCredentialId || item.credentialId || item.credential_id),
-      passkeyFactorId: normalizeString(item.passkeyFactorId || item.factorId || item.factor_id), passkeyRpId: normalizeString(item.passkeyRpId || item.rpId || item.rp_id),
-      passkeyUserHandle: normalizeString(item.passkeyUserHandle || item.userHandle || item.user_handle),
-      passkeyPrivateJwk: item.passkeyPrivateJwk && typeof item.passkeyPrivateJwk === 'object' && !Array.isArray(item.passkeyPrivateJwk) ? item.passkeyPrivateJwk : null,
-      passkeyPublicKeyCose: normalizeString(item.passkeyPublicKeyCose || item.publicKeyCose || item.public_key_cose), ...passkeyNumericMetadataPatch,
-      passkeyApiPersisted: item.passkeyApiPersisted === true || item.persisted === true,
-      twoFactorEnabled: item.twoFactorEnabled === true
-        || Boolean(normalizeTotpSecret(item.totpMfaSecret))
-        || item.passkeyEnabled === true
-        || Boolean(normalizeString(item.passkeyCredentialId || item.credentialId || item.credential_id)),
-      status,
-      planType: normalizePlanType(item.planType),
-      checkedAt: normalizeString(item.checkedAt),
-      reason: normalizeString(item.reason),
-      trialEligibilityStatus: normalizeString(item.trialEligibilityStatus),
-      trialEligibilityReason: normalizeString(item.trialEligibilityReason),
-      trialEligibilityCheckedAt: normalizeString(item.trialEligibilityCheckedAt),
-      trialEligibilityReasonCode: normalizeString(item.trialEligibilityReasonCode),
-      trialEligibilityCheckedByApi: item.trialEligibilityCheckedByApi === true,
-      trialEligibilityTransientFailure: item.trialEligibilityTransientFailure === true,
-      trialEligibilityRetryable: item.trialEligibilityRetryable === true,
-      trialEligibilityRetryCount: Math.max(0, Math.floor(Number(item.trialEligibilityRetryCount) || 0)),
-      trialEligibilityLastError: normalizeString(item.trialEligibilityLastError),
-      couponState: normalizeString(item.couponState || item.coupon_state),
-      registrationType: normalizeString(item.registrationType || item.reg_type),
-      registrationPhone: normalizeString(item.registrationPhone || item.phone_number),
-      phoneVerified: item.phoneVerified === true,
-      accountId: normalizeString(item.accountId || item.account_id),
-      responseEmail: normalizeEmail(item.responseEmail || item.emailFromApi || item.apiEmail),
-      jwtExpired: item.jwtExpired === true,
-      jwtExpiresInSeconds: Math.max(0, Math.floor(Number(item.jwtExpiresInSeconds || item.jwt_exp_in_sec) || 0)),
-      upiChannelEligibilityStatus: normalizeString(item.upiChannelEligibilityStatus || item.upiEligibilityStatus),
-      upiChannelEligibilityReason: normalizeString(item.upiChannelEligibilityReason || item.upi_eligible_reason || item.upiEligibleReason),
-      idealChannelEligibilityStatus: normalizeString(item.idealChannelEligibilityStatus || item.idealEligibilityStatus),
-      idealChannelEligibilityReason: normalizeString(item.idealChannelEligibilityReason || item.ideal_eligible_reason || item.idealEligibleReason),
-      accessToken,
-      accessTokenMasked: accessToken ? (normalizeString(item.accessTokenMasked) || maskAccessToken(accessToken)) : '',
-      accessTokenUpdatedAt,
-      redeemStatus: normalizeString(item.redeemStatus),
-      redeemReason: normalizeString(item.redeemReason),
-      redeemFailureCount: Math.max(0, Math.floor(Number(item.redeemFailureCount) || 0)),
-      redeemFailureLimit: Math.max(0, Math.floor(Number(item.redeemFailureLimit) || 0)),
-      upiRedeemFailureCount,
-      idealRedeemFailureCount,
-      redeemLocked,
-      redeemLockedReason: redeemLocked
-        ? (normalizeString(item.redeemLockedReason) || 'IDEAL 已失败 3 次，账号已封存，不再使用')
-        : '',
-      redeemLockedAt: redeemLocked ? normalizeString(item.redeemLockedAt) : '',
-      redeemLastFailedAt: normalizeString(item.redeemLastFailedAt),
-      redeemAttemptedAt: normalizeString(item.redeemAttemptedAt),
-      redeemSuccessAt: normalizeString(item.redeemSuccessAt),
-      redeemChannel,
-      upiRedeemCdkey: normalizeString(item.upiRedeemCdkey || item.cdkey),
-      lastFailedUpiRedeemCdkey: normalizeString(item.lastFailedUpiRedeemCdkey || item.failedUpiRedeemCdkey),
-      upiRedeemPendingVerifySince: normalizeString(item.upiRedeemPendingVerifySince),
-      upiRedeemPendingVerifyLastCheckedAt: normalizeString(item.upiRedeemPendingVerifyLastCheckedAt),
-      upiRedeemPendingVerifyLoggedAt: normalizeString(item.upiRedeemPendingVerifyLoggedAt),
-      upiRedeemPendingVerifyReason: normalizeString(item.upiRedeemPendingVerifyReason),
-      membershipOverrideStatus: normalizeString(item.membershipOverrideStatus),
-      membershipOverrideCheckedAt: normalizeString(item.membershipOverrideCheckedAt),
-    };
-    if (Object.prototype.hasOwnProperty.call(item, 'upiRedeemSubscriptionActive')) {
-      normalized.upiRedeemSubscriptionActive = item.upiRedeemSubscriptionActive === true;
-    }
-    if (Object.prototype.hasOwnProperty.call(item, 'upiRedeemSubscriptionPlanType')) {
-      normalized.upiRedeemSubscriptionPlanType = normalizePlanType(item.upiRedeemSubscriptionPlanType);
-    }
-    if (Object.prototype.hasOwnProperty.call(item, 'upiRedeemSubscriptionCheckedAt')) {
-      normalized.upiRedeemSubscriptionCheckedAt = normalizeString(item.upiRedeemSubscriptionCheckedAt);
-    }
-    return normalized;
+    return getMembershipResultStateHelper('normalizeResultItem')(item);
   }
 
   function dedupeResultItemsByEmail(items = []) {
-    const byEmail = {};
-    (Array.isArray(items) ? items : []).forEach((item) => {
-      const normalized = normalizeResultItem(item);
-      if (!normalized.email) return;
-      byEmail[normalized.email] = normalized;
-    });
-    return Object.values(byEmail);
-  }
-
-  function normalizeTrialEligibilitySummaryItem(item = {}) {
-    const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-    return {
-      email: normalizeEmail(source.email),
-      reason: normalizeString(source.reason),
-    };
-  }
-
-  function normalizeTrialEligibilitySummary(value = {}) {
-    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    const kept = Array.isArray(source.kept) ? source.kept.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-    const skipped = Array.isArray(source.skipped) ? source.skipped.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-    const failed = Array.isArray(source.failed) ? source.failed.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-    const deletedEmails = Array.isArray(source.deletedEmails)
-      ? source.deletedEmails.map(normalizeEmail).filter(Boolean)
-      : [];
-    const ineligibleEmails = Array.isArray(source.ineligibleEmails)
-      ? source.ineligibleEmails.map(normalizeEmail).filter(Boolean)
-      : [];
-    return {
-      checkedAt: normalizeString(source.checkedAt),
-      kept,
-      skipped,
-      failed,
-      deletedEmails,
-      ineligibleEmails,
-      eligibleCount: Math.max(0, Math.floor(Number(source.eligibleCount) || kept.length || 0)),
-      skippedCount: Math.max(0, Math.floor(Number(source.skippedCount) || skipped.length || 0)),
-      failedCount: Math.max(0, Math.floor(Number(source.failedCount) || failed.length || 0)),
-      deletedCount: Math.max(0, Math.floor(Number(source.deletedCount) || deletedEmails.length || 0)),
-      ineligibleCount: Math.max(0, Math.floor(Number(source.ineligibleCount) || ineligibleEmails.length || 0)),
-    };
+    return getMembershipResultStateHelper('dedupeResultItemsByEmail')(items);
   }
 
   function normalizeResultsPayload(value = {}) {
-    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    const items = dedupeResultItemsByEmail(source.items);
-    const trialEligibilitySummary = normalizeTrialEligibilitySummary(source.trialEligibilitySummary);
-    const deletionStatePatch = buildRedeemDeletionStatePatch(source);
-    return {
-      items,
-      running: source.running === true,
-      redeeming: source.redeeming === true,
-      startedAt: normalizeString(source.startedAt),
-      updatedAt: normalizeString(source.updatedAt),
-      finishedAt: normalizeString(source.finishedAt),
-      stoppedAt: normalizeString(source.stoppedAt),
-      redeemStartedAt: normalizeString(source.redeemStartedAt),
-      redeemUpdatedAt: normalizeString(source.redeemUpdatedAt),
-      redeemFinishedAt: normalizeString(source.redeemFinishedAt),
-      redeemStoppedAt: normalizeString(source.redeemStoppedAt),
-      flowStage: normalizeFlowStage(source.flowStage),
-      flowStageEmail: normalizeEmail(source.flowStageEmail),
-      flowMode: normalizeString(source.flowMode) === 'login-only' && normalizeString(source.source) === 'row-login'
-        ? 'login-only'
-        : '',
-      source: normalizeString(source.source),
-      total: Math.max(0, Math.floor(Number(source.total) || items.length || 0)),
-      completed: Math.max(0, Math.floor(Number(source.completed) || items.length || 0)),
-      redeemTotal: Math.max(0, Math.floor(Number(source.redeemTotal) || 0)),
-      redeemCompleted: Math.max(0, Math.floor(Number(source.redeemCompleted) || 0)),
-      paidCount: items.filter((item) => item.status === 'paid').length,
-      freeCount: items.filter((item) => item.status === 'free').length,
-      failedCount: items.filter((item) => item.status === 'failed').length,
-      trialEligibilitySummary,
-      ...deletionStatePatch,
-    };
+    return getMembershipResultStateHelper('normalizeResultsPayload')(value);
   }
 
   function buildFreeMembershipOverrideFields(checkedAt = new Date().toISOString()) {
@@ -1507,76 +1319,8 @@
     return (deletedByChannel[targetChannel] || []).includes(email);
   }
 
-  function buildResultExportRowsFreeFallback(item = {}) {
-    const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
-    const verificationUrl = item.verificationUrl ? normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl) : '';
-    if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
-    if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
-      const passkeyMarker = buildPasskeyExportMarker(item);
-      return verificationUrl ? `${item.email}---${item.password}---${passkeyMarker}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${passkeyMarker}---${item.accessToken || ''}---${timestamp}`;
-    }
-    return verificationUrl ? `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
-  }
-
   function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = []) {
-    const normalizedStatus = normalizeString(status);
-    const normalizedChannel = normalizeString(channel) ? normalizeRedeemChannel(channel) : '';
-    const normalizedResults = normalizeResultsPayload(results);
-    const allowedEmailSet = new Set(normalizeEmailList(emails));
-    const seenExportKeys = new Set();
-    return normalizedResults.items
-      .filter((item) => {
-        const email = normalizeEmail(item.email);
-        if (!email || (allowedEmailSet.size && !allowedEmailSet.has(email))) return false;
-        const statusMatches = normalizedStatus === 'free'
-          ? item.status === 'free' || item.status === 'failed'
-          : item.status === normalizedStatus;
-        if (!statusMatches) return false;
-        if (normalizedStatus === 'paid' && normalizedChannel) {
-          if (
-            getResultItemRedeemChannel(item) !== normalizedChannel
-            || isResultItemHiddenByPlusDeletion(normalizedResults, item, normalizedChannel)
-          ) {
-            return false;
-          }
-        } else if (normalizedStatus === 'paid' && isResultItemHiddenByPlusDeletion(normalizedResults, item)) {
-          return false;
-        }
-        if (normalizedStatus !== 'failed') {
-          const no2faExportable = normalizedStatus === 'free'
-            && item.no2faFreeRoute === true
-            && item.email
-            && item.verificationUrl
-            && item.accessToken;
-          const passkeyExportable = isResultItemPasskeyExportableForStatus(item, normalizedStatus);
-          const password2faExportable = Boolean(item.email && item.password && item.totpMfaSecret);
-          if (!no2faExportable && !passkeyExportable && !password2faExportable) return false;
-        }
-        const key = normalizedStatus === 'paid'
-          ? `${getResultItemRedeemChannel(item)}:${email}`
-          : `${normalizedStatus}:${email}`;
-        if (seenExportKeys.has(key)) return false;
-        seenExportKeys.add(key);
-        return true;
-      })
-      .map((item) => {
-        if (normalizedStatus === 'failed') {
-          return `${item.email}---${item.reason || '核验失败'}`;
-        }
-        if (normalizedStatus === 'free') {
-          const formatFreeCredentialLine = getMembershipCredentialFormat().formatFreeCredentialLine;
-          if (typeof formatFreeCredentialLine === 'function') {
-            return formatFreeCredentialLine({ ...item, checkedAt: formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item)) });
-          }
-          return buildResultExportRowsFreeFallback(item);
-        }
-        const timestamp = item.redeemSuccessAt || item.upiRedeemSubscriptionCheckedAt || item.checkedAt || '';
-        if (item.passkeyEnabled === true && item.password && !item.totpMfaSecret) {
-          return `${item.email}----${item.password}---${buildPasskeyExportMarker(item)}---${timestamp}`;
-        }
-        return `${item.email}----${item.password}---${item.totpMfaSecret}---${timestamp}`;
-      })
-      .filter(Boolean);
+    return getMembershipResultStateHelper('buildResultExportRows')(results, status, channel, emails);
   }
 
   function classifySubscriptionResult(subscriptionItem = {}) {
