@@ -32,16 +32,19 @@ Implemented on `main` as incremental refactor commits. The pass kept the MV3 no-
 | Sidepanel bindings/log/workflow | Extracted DOM bindings, log panel rendering, and workflow status rendering. |
 | Membership UI | Extracted row policy and progress/flow rendering helpers. |
 | Background bootstrap | Extracted flow runtime and persisted-settings defaults. |
+| Background state store | Extracted service worker state/session-storage wrappers into `background/bootstrap/state-store.js`. |
+| Background legacy cleanup | Extracted removed-network/IP-proxy residue cleanup into `background/bootstrap/legacy-cleanup.js`. |
 | Email providers | Extracted provider/generator registry wrappers. |
 | Membership helpers | Extracted access-token refresh classifiers and pending redeem status target builder. |
 | Signup content | Extracted detector constants/helpers and command orchestration wrappers. |
+| Sidepanel toast service | Extracted toast rendering/dismissal into `sidepanel/toast-service.js`. |
 
 Final size snapshot from `node scripts/module-size-report.mjs`:
 
 | File | Final Lines | Status |
 | --- | ---: | --- |
-| `background.js` | 16,227 | Still over target; next split should move state assembly, router wiring, and remaining provider helpers. |
-| `sidepanel/sidepanel.js` | 10,874 | Still over target; next split should move settings/event wiring and state sync managers. |
+| `background.js` | 16,058 | Still over target; next split should move router wiring, runtime orchestration, and remaining provider helpers. |
+| `sidepanel/sidepanel.js` | 10,862 | Still over target; next split should move settings/event wiring and state sync managers. |
 | `background/upi-credential-membership-checker.js` | 7,497 | Improved but still large; export/import and redeem batch runners remain candidates. |
 | `content/signup-page.js` | 6,820 | Improved; further split should move page-specific action bodies. |
 | `sidepanel/account-records-manager.js` | 5,481 | Improved via policy/renderer extraction; click handlers and export actions remain candidates. |
