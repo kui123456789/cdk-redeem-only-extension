@@ -119,6 +119,9 @@ function checkCoreFiles() {
     'background/message-router.js',
     'background/settings-normalizers.js',
     'background/flow-definition-resolver.js',
+    'background/routes/membership-routes.js',
+    'background/routes/cdkey-routes.js',
+    'background/routes/workflow-routes.js',
     'shared/redeem-channel-state.js',
     'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
@@ -176,6 +179,9 @@ function checkStaticContracts() {
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const router = readText('background/message-router.js');
+  const membershipRoutes = readText('background/routes/membership-routes.js');
+  const cdkRoutes = readText('background/routes/cdkey-routes.js');
+  const workflowRoutes = readText('background/routes/workflow-routes.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
   const signupDomUtils = readText('content/signup-dom-utils.js');
@@ -224,6 +230,35 @@ function checkStaticContracts() {
   assertIncludes(flowDefinitionResolver, 'createFlowDefinitionResolver', 'flow resolver factory');
   assertIncludes(flowDefinitionResolver, 'getStepDefinitionsForState', 'flow resolver step definitions');
   assertIncludes(flowDefinitionResolver, 'getNodeDefinitionsForState', 'flow resolver node definitions');
+  assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
+  assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
+  assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
+  assertBefore(
+    background,
+    "'background/routes/membership-routes.js'",
+    "'background/message-router.js'",
+    'background membership routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/cdkey-routes.js'",
+    "'background/message-router.js'",
+    'background CDK routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/workflow-routes.js'",
+    "'background/message-router.js'",
+    'background workflow routes must load before message router'
+  );
+  assertIncludes(membershipRoutes, 'createMembershipRoutes', 'membership routes factory');
+  assertIncludes(membershipRoutes, 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH', 'membership trial batch route');
+  assertIncludes(cdkRoutes, 'createCdkeyRoutes', 'CDK routes factory');
+  assertIncludes(cdkRoutes, 'REFRESH_UPI_REDEEM_CDKEY_STATUSES', 'remote CDK status refresh route');
+  assertIncludes(workflowRoutes, 'createWorkflowRoutes', 'workflow routes factory');
+  assertIncludes(workflowRoutes, 'EXECUTE_NODE', 'workflow execute node route');
+  assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
+  assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
   assertBefore(
@@ -322,7 +357,6 @@ function checkStaticContracts() {
     /const credentials = getEnabledFreeUpiCredentialMembershipRows\(\);\s+if \(!credentials\.length\)/,
     'CDK import resume must not use merged UPI/IDEAL candidates'
   );
-  assertIncludes(router, "case 'REFRESH_UPI_REDEEM_CDKEY_STATUSES'", 'remote CDK status refresh route');
   assertIncludes(router, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
 
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
