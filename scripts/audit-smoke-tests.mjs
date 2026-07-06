@@ -111,6 +111,37 @@ function checkManifest() {
       fail(`manifest is missing permission: ${permission}`);
     }
   }
+
+  const authContentScript = manifest.content_scripts?.find((script) => (
+    Array.isArray(script?.matches)
+    && script.matches.some((pattern) => /auth(?:0)?\.openai\.com|accounts\.openai\.com/i.test(pattern))
+  ));
+  if (!authContentScript) {
+    fail('manifest is missing OpenAI auth content script entry.');
+    return;
+  }
+
+  const expectedSignupOrder = [
+    'content/signup-dom-utils.js',
+    'content/signup-entry-page.js',
+    'content/signup-verification-page.js',
+    'content/signup-password-page.js',
+    'content/signup-profile-page.js',
+    'content/signup-session-page.js',
+    'content/signup-page.js',
+  ];
+  let previousIndex = -1;
+  for (const file of expectedSignupOrder) {
+    const index = authContentScript.js?.indexOf(file) ?? -1;
+    if (index === -1) {
+      fail(`manifest OpenAI auth content script is missing ${file}`);
+      continue;
+    }
+    if (index <= previousIndex) {
+      fail(`manifest OpenAI auth content script has ${file} out of signup helper order`);
+    }
+    previousIndex = index;
+  }
 }
 
 function checkCoreFiles() {
@@ -131,6 +162,9 @@ function checkCoreFiles() {
     'content/signup-dom-utils.js',
     'content/signup-entry-page.js',
     'content/signup-verification-page.js',
+    'content/signup-password-page.js',
+    'content/signup-profile-page.js',
+    'content/signup-session-page.js',
     'content/signup-page.js',
     'sidepanel/sidepanel.html',
     'sidepanel/styles/settings.css',
@@ -187,6 +221,9 @@ function checkStaticContracts() {
   const signupDomUtils = readText('content/signup-dom-utils.js');
   const signupEntryPage = readText('content/signup-entry-page.js');
   const signupVerificationPage = readText('content/signup-verification-page.js');
+  const signupPasswordPage = readText('content/signup-password-page.js');
+  const signupProfilePage = readText('content/signup-profile-page.js');
+  const signupSessionPage = readText('content/signup-session-page.js');
   const gitignore = readText('.gitignore');
 
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
@@ -288,6 +325,9 @@ function checkStaticContracts() {
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-dom-utils.js', 'manifest signup DOM utils load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-entry-page.js', 'manifest signup entry page load');
   assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-verification-page.js', 'manifest signup verification page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-password-page.js', 'manifest signup password page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-profile-page.js', 'manifest signup profile page load');
+  assertIncludes(JSON.stringify(readJson('manifest.json')), 'content/signup-session-page.js', 'manifest signup session page load');
   assertIncludes(signupDomUtils, 'MultiPageSignupDomUtils', 'signup DOM utils global');
   assertIncludes(signupDomUtils, 'getAssociatedInputText', 'signup DOM associated input helper');
   assertIncludes(signupEntryPage, 'MultiPageSignupEntryPage', 'signup entry page global');
@@ -296,6 +336,20 @@ function checkStaticContracts() {
   assertIncludes(signupVerificationPage, 'MultiPageSignupVerificationPage', 'signup verification page global');
   assertIncludes(signupVerificationPage, 'getVerificationCodeTarget', 'signup verification target helper');
   assertIncludes(signupVerificationPage, 'findResendVerificationCodeTrigger', 'signup verification resend helper');
+  assertIncludes(signupPasswordPage, 'MultiPageSignupPasswordPage', 'signup password page global');
+  assertIncludes(signupPasswordPage, 'createSignupPasswordPage', 'signup password page factory');
+  assertIncludes(signupPasswordPage, 'setPassword', 'signup password set password helper');
+  assertIncludes(signupPasswordPage, 'detectPasswordPage', 'signup password page detector');
+  assertIncludes(signupProfilePage, 'MultiPageSignupProfilePage', 'signup profile page global');
+  assertIncludes(signupProfilePage, 'createSignupProfilePage', 'signup profile page factory');
+  assertIncludes(signupProfilePage, 'detectProfilePage', 'signup profile page detector');
+  assertIncludes(signupProfilePage, 'fillProfileNameAndBirthday', 'signup profile fill helper');
+  assertIncludes(signupProfilePage, 'submitProfilePage', 'signup profile submit helper');
+  assertIncludes(signupSessionPage, 'MultiPageSignupSessionPage', 'signup session page global');
+  assertIncludes(signupSessionPage, 'createSignupSessionPage', 'signup session page factory');
+  assertIncludes(signupSessionPage, 'readChatGptSession', 'signup session reader');
+  assertIncludes(signupSessionPage, 'extractAccessToken', 'signup session access token helper');
+  assertIncludes(signupSessionPage, 'detectLoggedInHome', 'signup session logged-in home detector');
 
   [
     'btn-upi-redeem-cdkey-status-refresh',
@@ -389,6 +443,9 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
   assertFileLineCountAtMost('content/signup-verification-page.js', 300, 'signup verification page size guard');
+  assertFileLineCountAtMost('content/signup-password-page.js', 350, 'signup password page size guard');
+  assertFileLineCountAtMost('content/signup-profile-page.js', 550, 'signup profile page size guard');
+  assertFileLineCountAtMost('content/signup-session-page.js', 220, 'signup session page size guard');
   assertFileLineCountAtMost('content/signup-page.js', 10000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 7500, 'membership checker growth guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5800, 'account records manager growth guard');
