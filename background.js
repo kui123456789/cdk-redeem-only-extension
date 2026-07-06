@@ -20,6 +20,7 @@ importScripts(
   'background/flow-definition-resolver.js',
   'background/bootstrap/flow-runtime.js',
   'background/bootstrap/settings-defaults.js',
+  'background/bootstrap/state-store.js',
   'shared/redeem-channel-state.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
@@ -3148,37 +3149,30 @@ async function getPersistedAliasState() {
   }
 }
 
+const backgroundStateStore = self.MultiPageBackgroundStateStore.createBackgroundStateStore({
+  alignUpiRedeemCdkeyAliasStatePatch,
+  buildStatePatchWithRuntimeState,
+  buildStateViewWithRuntimeState,
+  chrome,
+  defaultState: DEFAULT_STATE,
+  getPersistedAccountRunHistory: async () => accountRunHistoryHelpers?.getPersistedAccountRunHistory?.() || [],
+  getPersistedAliasState,
+  getPersistedSettings,
+  logPrefix: LOG_PREFIX,
+  membershipResultsStorageKey: UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY,
+  normalizeBooleanMap,
+  normalizeIcloudAliasCacheList,
+  normalizePersistentSettingValue,
+  protectFreshMembershipResultsInStatePatch,
+  setPersistentSettings,
+});
+
 async function getState() {
-  const [state, persistedSettings, persistedAliasState, accountRunHistory, credentialMembershipCheckState] = await Promise.all([
-    chrome.storage.session.get(null),
-    getPersistedSettings(),
-    getPersistedAliasState(),
-    accountRunHistoryHelpers?.getPersistedAccountRunHistory?.() || [],
-    chrome.storage.local.get([UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]).catch(() => ({})),
-  ]);
-  const persistedCredentialMembershipCheckResults = credentialMembershipCheckState?.[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]
-    || DEFAULT_STATE.upiCredentialMembershipCheckResults;
-  return buildStateViewWithRuntimeState({
-    ...DEFAULT_STATE,
-    ...persistedSettings,
-    ...persistedAliasState,
-    ...state,
-    upiCredentialMembershipCheckResults: persistedCredentialMembershipCheckResults,
-    accountRunHistory,
-  });
+  return backgroundStateStore.getState();
 }
 
 async function initializeSessionStorageAccess() {
-  try {
-    if (chrome.storage?.session?.setAccessLevel) {
-      await chrome.storage.session.setAccessLevel({
-        accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
-      });
-      console.log(LOG_PREFIX, 'Enabled storage.session for content scripts');
-    }
-  } catch (err) {
-    console.warn(LOG_PREFIX, 'Failed to enable storage.session for content scripts:', err?.message || err);
-  }
+  return backgroundStateStore.initializeSessionStorageAccess();
 }
 
 const FORMER_NETWORK_STORAGE_PREFIX = 'removed' + 'Network';
@@ -3304,58 +3298,7 @@ async function purgeFormerNetworkResidue(reason = 'startup') {
 }
 
 async function setState(updates) {
-  console.log(LOG_PREFIX, 'storage.set:', JSON.stringify(updates).slice(0, 200));
-  if (Object.keys(updates || {}).length > 0) {
-    const currentSessionState = await chrome.storage.session.get(null);
-    const sessionUpdates = alignUpiRedeemCdkeyAliasStatePatch(buildStatePatchWithRuntimeState({
-      ...DEFAULT_STATE,
-      ...currentSessionState,
-    }, updates));
-    await protectFreshMembershipResultsInStatePatch(sessionUpdates);
-    await chrome.storage.session.set(sessionUpdates);
-    const persistentAliasUpdates = {};
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'manualAliasUsage')) {
-      persistentAliasUpdates.manualAliasUsage = normalizeBooleanMap(sessionUpdates.manualAliasUsage);
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'preservedAliases')) {
-      persistentAliasUpdates.preservedAliases = normalizeBooleanMap(sessionUpdates.preservedAliases);
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'icloudAliasCache')) {
-      persistentAliasUpdates.icloudAliasCache = normalizeIcloudAliasCacheList(sessionUpdates.icloudAliasCache);
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'icloudAliasCacheAt')) {
-      persistentAliasUpdates.icloudAliasCacheAt = Math.max(0, Number(sessionUpdates.icloudAliasCacheAt) || 0);
-    }
-    if (Object.keys(persistentAliasUpdates).length > 0) {
-      await chrome.storage.local.set(persistentAliasUpdates);
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'upiRedeemCdkeyUsage')) {
-      await chrome.storage.local.set({
-        upiRedeemCdkeyUsage: normalizePersistentSettingValue(
-          'upiRedeemCdkeyUsage',
-          sessionUpdates.upiRedeemCdkeyUsage
-        ),
-      });
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'idealRedeemCdkeyUsage')) {
-      await chrome.storage.local.set({
-        idealRedeemCdkeyUsage: normalizePersistentSettingValue(
-          'idealRedeemCdkeyUsage',
-          sessionUpdates.idealRedeemCdkeyUsage
-        ),
-      });
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY)) {
-      await chrome.storage.local.set({
-        [UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]: sessionUpdates[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY],
-      });
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'upiRedeemClientId')) {
-      await setPersistentSettings({
-        upiRedeemClientId: sessionUpdates.upiRedeemClientId,
-      });
-    }
-  }
+  return backgroundStateStore.setState(updates);
 }
 
 function normalizeLocalCpaJsonPluginDir(rawValue = '') {
