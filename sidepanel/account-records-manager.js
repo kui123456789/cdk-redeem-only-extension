@@ -11,6 +11,7 @@
     const root = typeof window !== 'undefined' ? window : globalScope;
     const displayTimeZone = constants.displayTimeZone || 'Asia/Shanghai';
     const pageSize = Math.max(1, Math.floor(Number(constants.pageSize) || 10));
+    const accountRecordsViewModel = globalScope.SidepanelAccountRecordsViewModel || {};
     const membershipViewModel = globalScope.SidepanelMembershipViewModel || {};
     const membershipRowPolicy = globalScope.SidepanelMembershipRowPolicy || {};
     const membershipRenderer = globalScope.SidepanelMembershipRenderer || {};
@@ -40,31 +41,31 @@
       success: {
         label: '成',
         className: 'is-success',
-        matches: (record) => getRecordDisplayStatus(record) === 'success',
+        matches: (record) => matchesRecordFilter(record, 'success'),
         metaLabel: '成功',
       },
       running: {
         label: '运行',
         className: 'is-running',
-        matches: (record) => getRecordDisplayStatus(record) === 'running',
+        matches: (record) => matchesRecordFilter(record, 'running'),
         metaLabel: '运行中',
       },
       failed: {
         label: '失',
         className: 'is-failed',
-        matches: (record) => getRecordDisplayStatus(record) === 'failed',
+        matches: (record) => matchesRecordFilter(record, 'failed'),
         metaLabel: '失败',
       },
       stopped: {
         label: '停',
         className: 'is-stopped',
-        matches: (record) => getRecordDisplayStatus(record) === 'stopped',
+        matches: (record) => matchesRecordFilter(record, 'stopped'),
         metaLabel: '停止',
       },
       retry: {
         label: '重试',
         className: 'is-retry',
-        matches: (record) => normalizeRetryCount(record.retryCount) > 0,
+        matches: (record) => matchesRecordFilter(record, 'retry'),
         metaLabel: '重试',
       },
     };
@@ -244,22 +245,16 @@
     }
 
     function buildRecordId(record = {}) {
-      const rawRecordId = String(record.recordId || '').trim();
-      if (rawRecordId) {
-        return rawRecordId.toLowerCase();
+      if (typeof accountRecordsViewModel.buildRecordId === 'function') {
+        return accountRecordsViewModel.buildRecordId(record);
       }
-      const identifier = String(
-        record.email
-        || record.accountIdentifier
-        || ''
-      ).trim();
-      if (!identifier) {
-        return '';
-      }
-      return identifier.toLowerCase();
+      return String(record.recordId || record.email || record.accountIdentifier || '').trim().toLowerCase();
     }
 
     function getRecordDisplayStatus(record = {}) {
+      if (typeof accountRecordsViewModel.getRecordDisplayStatus === 'function') {
+        return accountRecordsViewModel.getRecordDisplayStatus(record);
+      }
       return String(record.displayStatus || record.finalStatus || '').trim().toLowerCase();
     }
 
@@ -2836,10 +2831,16 @@
     }
 
     function getRecordIdentifierType(record = {}) {
+      if (typeof accountRecordsViewModel.getRecordIdentifierType === 'function') {
+        return accountRecordsViewModel.getRecordIdentifierType(record);
+      }
       return 'email';
     }
 
     function getRecordEmail(record = {}) {
+      if (typeof accountRecordsViewModel.getRecordEmail === 'function') {
+        return accountRecordsViewModel.getRecordEmail(record);
+      }
       const identifierType = getRecordIdentifierType(record);
       return String(
         record.email
@@ -2874,25 +2875,10 @@
     }
 
     function summarizeAccountRunHistory(records = []) {
-      return records.reduce((summary, record) => {
-        const retryCount = normalizeRetryCount(record.retryCount);
-        const status = getRecordDisplayStatus(record);
-        summary.total += 1;
-        if (status === 'success') {
-          summary.success += 1;
-        } else if (status === 'running') {
-          summary.running += 1;
-        } else if (status === 'failed') {
-          summary.failed += 1;
-        } else if (status === 'stopped') {
-          summary.stopped += 1;
-        }
-        if (retryCount > 0) {
-          summary.retryRecordCount += 1;
-        }
-        summary.retryTotal += retryCount;
-        return summary;
-      }, {
+      if (typeof accountRecordsViewModel.summarizeAccountRunHistory === 'function') {
+        return accountRecordsViewModel.summarizeAccountRunHistory(records);
+      }
+      return {
         total: 0,
         success: 0,
         running: 0,
@@ -2900,7 +2886,7 @@
         stopped: 0,
         retryRecordCount: 0,
         retryTotal: 0,
-      });
+      };
     }
 
     function formatAccountRecordTime(value) {
@@ -2978,9 +2964,32 @@
       return FILTER_CONFIG[filterKey] || FILTER_CONFIG.all;
     }
 
+    function matchesRecordFilter(record = {}, filterKey = activeFilter) {
+      if (typeof accountRecordsViewModel.matchesFilter === 'function') {
+        return accountRecordsViewModel.matchesFilter(record, filterKey);
+      }
+      switch (String(filterKey || '').trim().toLowerCase()) {
+        case 'success':
+          return getRecordDisplayStatus(record) === 'success';
+        case 'running':
+          return getRecordDisplayStatus(record) === 'running';
+        case 'failed':
+          return getRecordDisplayStatus(record) === 'failed';
+        case 'stopped':
+          return getRecordDisplayStatus(record) === 'stopped';
+        case 'retry':
+          return normalizeRetryCount(record.retryCount) > 0;
+        case 'all':
+        default:
+          return true;
+      }
+    }
+
     function getFilteredRecords(records = []) {
-      const filterConfig = getFilterConfig(activeFilter);
-      return records.filter((record) => filterConfig.matches(record));
+      if (typeof accountRecordsViewModel.filterRecords === 'function') {
+        return accountRecordsViewModel.filterRecords(records, activeFilter);
+      }
+      return records.filter((record) => matchesRecordFilter(record, activeFilter));
     }
 
     function pruneSelectedRecordIds(records = []) {
