@@ -4,7 +4,7 @@ const test = require('node:test');
 require('../background/verification/assurivo-time.js');
 const verificationKeywords = require('../background/verification/verification-keywords.js');
 const verificationCodeExtractor = require('../background/verification/code-extractor.js');
-require('../background/verification/assurivo-feed-client.js');
+const assurivoFeedClient = require('../background/verification/assurivo-feed-client.js');
 require('../background/verification/resend-controller.js');
 require('../background/verification-flow.js');
 const verificationFlow = globalThis.MultiPageBackgroundVerificationFlow;
@@ -62,4 +62,56 @@ test('standalone extractStrictVerificationCodeFromBody handles Hindi code bodies
 
   assert.deepEqual(result.codes, ['123456']);
   assert.equal(result.promptMatched, true);
+});
+
+test('standalone fetchAssurivoFeed uses default assurivo endpoints for entry credentials', async () => {
+  const requests = [];
+  const fetchImpl = async (url, options = {}) => {
+    requests.push({ url, options });
+    return {
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          data: [
+            {
+              id: 'mail-1',
+              from: 'noreply@openai.com',
+              subject: 'ChatGPT verification code',
+              body: 'Your code is 123456.',
+            },
+          ],
+        });
+      },
+    };
+  };
+
+  const entries = await assurivoFeedClient.fetchAssurivoFeed({
+    entry: {
+      email: 'user@example.com',
+      credential: 'user@example.com----secret-pass',
+    },
+    state: {
+      assurivoMailLimit: 7,
+    },
+    fetchImpl,
+  });
+
+  assert.equal(requests.length, 1);
+  const requestUrl = new URL(requests[0].url);
+  assert.equal(requestUrl.origin, 'https://assurivo.com');
+  assert.equal(requestUrl.pathname, '/console/feed.php');
+  assert.equal(requestUrl.searchParams.get('mail'), 'user@example.com');
+  assert.equal(requestUrl.searchParams.get('pwd'), 'secret-pass');
+  assert.equal(requestUrl.searchParams.get('limit'), '7');
+  assert.equal(requests[0].options.method, 'GET');
+  assert.equal(requests[0].options.cache, 'no-store');
+  assert.deepEqual(entries, [
+    {
+      id: 'mail-1',
+      from: 'noreply@openai.com',
+      subject: 'ChatGPT verification code',
+      body: 'Your code is 123456.',
+    },
+  ]);
 });

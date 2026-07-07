@@ -5,6 +5,9 @@
   }
   root.MultiPageAssurivoFeedClient = api;
 })(typeof self !== 'undefined' ? self : globalThis, function createMultiPageAssurivoFeedClientModule() {
+  const DEFAULT_ASSURIVO_VERIFICATION_OPEN_URL = 'https://assurivo.com/console/open.php';
+  const DEFAULT_ASSURIVO_VERIFICATION_FEED_URL = 'https://assurivo.com/console/feed.php';
+
   function createAssurivoFeedClient(context = {}) {
     const constants = context.constants || {};
     const { ICLOUD_MAIL_POLL_MIN_ATTEMPTS, ICLOUD_MAIL_POLL_TIMEOUT_MARGIN_MS, ASSURIVO_VERIFICATION_OPEN_URL, ASSURIVO_VERIFICATION_FEED_URL, ASSURIVO_VERIFICATION_FILTER_SKEW_MS, ASSURIVO_RESEND_SAME_CODE_GRACE_MS } = constants;
@@ -824,6 +827,11 @@
 
   return {
     createAssurivoFeedClient,
-    fetchAssurivoFeed: (...args) => createAssurivoFeedClient()["fetchAssurivoFeed"](...args),
+    fetchAssurivoFeed: (...args) => createAssurivoFeedClient({
+      constants: {
+        ASSURIVO_VERIFICATION_OPEN_URL: DEFAULT_ASSURIVO_VERIFICATION_OPEN_URL,
+        ASSURIVO_VERIFICATION_FEED_URL: DEFAULT_ASSURIVO_VERIFICATION_FEED_URL,
+      },
+    }).fetchAssurivoFeed(...args),
   };
 });
