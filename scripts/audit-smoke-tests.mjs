@@ -311,6 +311,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-dom-helpers.js',
     'sidepanel/account-records-membership-state-sync.js',
     'sidepanel/account-records-trial-eligibility.js',
+    'sidepanel/account-records-run-history.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -445,6 +446,7 @@ function checkStaticContracts() {
   const accountRecordsDomHelpers = readText('sidepanel/account-records-dom-helpers.js');
   const accountRecordsMembershipStateSync = readText('sidepanel/account-records-membership-state-sync.js');
   const accountRecordsTrialEligibility = readText('sidepanel/account-records-trial-eligibility.js');
+  const accountRecordsRunHistory = readText('sidepanel/account-records-run-history.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -618,6 +620,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'account records DOM helpers script load');
   assertIncludes(sidepanelHtml, 'src="account-records-membership-state-sync.js"', 'account records membership state sync script load');
   assertIncludes(sidepanelHtml, 'src="account-records-trial-eligibility.js"', 'account records trial eligibility script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-run-history.js"', 'account records run history script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -669,6 +672,9 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsTrialEligibility, 'SidepanelAccountRecordsTrialEligibility', 'account records trial eligibility global');
   assertIncludes(accountRecordsTrialEligibility, 'createAccountRecordsTrialEligibility', 'account records trial eligibility factory');
   assertIncludes(accountRecordsTrialEligibility, 'module.exports', 'account records trial eligibility CommonJS export');
+  assertIncludes(accountRecordsRunHistory, 'SidepanelAccountRecordsRunHistory', 'account records run history global');
+  assertIncludes(accountRecordsRunHistory, 'createAccountRecordsRunHistory', 'account records run history factory');
+  assertIncludes(accountRecordsRunHistory, 'module.exports', 'account records run history CommonJS export');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -708,6 +714,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'src="account-records-manager.js"', 'account records DOM helpers must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-membership-state-sync.js"', 'src="account-records-manager.js"', 'account records membership state sync must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-trial-eligibility.js"', 'src="account-records-manager.js"', 'account records trial eligibility must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-run-history.js"', 'src="account-records-manager.js"', 'account records run history must load before manager');
   assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipHelpers', 'account records manager membership helpers dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipPoolOps', 'account records manager membership pool ops dependency');
@@ -1394,6 +1401,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
   assertFileLineCountAtMost('sidepanel/account-records-membership-state-sync.js', 520, 'account records membership state sync size guard');
   assertFileLineCountAtMost('sidepanel/account-records-trial-eligibility.js', 260, 'account records trial eligibility size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-run-history.js', 250, 'account records run history size guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 1800, 'account records manager growth guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/message-router.js', 1200, 'message router size guard');

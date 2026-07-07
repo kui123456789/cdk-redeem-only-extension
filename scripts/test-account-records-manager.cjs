@@ -26,6 +26,7 @@ delete globalThis.SidepanelAccountRecordsRedeemActions;
 delete globalThis.SidepanelAccountRecordsDomHelpers;
 delete globalThis.SidepanelAccountRecordsMembershipStateSync;
 delete globalThis.SidepanelAccountRecordsTrialEligibility;
+delete globalThis.SidepanelAccountRecordsRunHistory;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -52,6 +53,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-redeem-action
 delete require.cache[require.resolve('../sidepanel/account-records-dom-helpers.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-membership-state-sync.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-trial-eligibility.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-run-history.js')];
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
@@ -79,6 +81,7 @@ require('../sidepanel/account-records-redeem-actions.js');
 require('../sidepanel/account-records-dom-helpers.js');
 require('../sidepanel/account-records-membership-state-sync.js');
 require('../sidepanel/account-records-trial-eligibility.js');
+require('../sidepanel/account-records-run-history.js');
 require('../sidepanel/account-records-manager.js');
 
 function createDisplayModel(overrides = {}) {
