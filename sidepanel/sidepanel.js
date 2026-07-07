@@ -9699,6 +9699,7 @@ document.addEventListener('scroll', () => {
 // Init
 // ============================================================
 
+renderStepsList();
 initializeManualStepActions();
 bindConfigMenuEvents();
 bindAccountRecordEvents();

@@ -434,6 +434,7 @@ function checkStaticContracts() {
   assertIncludes(workflowActionBindings, 'SidepanelWorkflowActionBindings', 'sidepanel workflow action bindings global');
   assertIncludes(workflowActionBindings, 'createWorkflowActionBindings', 'sidepanel workflow action bindings factory');
   assertIncludes(sidepanel, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel workflow action bindings wiring');
+  assertBefore(sidepanel, 'renderStepsList();\ninitializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel must render workflow steps before binding init actions');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
