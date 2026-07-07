@@ -10,6 +10,7 @@ delete globalThis.SidepanelAccountRecordsCdkPoolText;
 delete globalThis.SidepanelAccountRecordsDeletionState;
 delete globalThis.SidepanelAccountRecordsExportBuilders;
 delete globalThis.SidepanelAccountRecordsRedeemPolicy;
+delete globalThis.SidepanelAccountRecordsCredentialParser;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -20,6 +21,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-cdk-pool-text
 delete require.cache[require.resolve('../sidepanel/account-records-deletion-state.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-export-builders.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-redeem-policy.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-credential-parser.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
 require('../sidepanel/account-records-subscription.js');
@@ -29,7 +31,20 @@ require('../sidepanel/account-records-cdk-pool-text.js');
 require('../sidepanel/account-records-deletion-state.js');
 require('../sidepanel/account-records-export-builders.js');
 require('../sidepanel/account-records-redeem-policy.js');
+require('../sidepanel/account-records-credential-parser.js');
 require('../sidepanel/account-records-manager.js');
+
+test('account records credential parser exposes the expected factory helpers', () => {
+  const parser = globalThis.SidepanelAccountRecordsCredentialParser.createAccountRecordsCredentialParser({
+    getMembershipCredentialFormatHelpers: () => require('../shared/membership-credential-format.js'),
+  });
+
+  assert.equal(typeof parser.parseUpiCredentialMembershipText, 'function');
+  assert.equal(typeof parser.normalizeUpiCredentialMembershipCredential, 'function');
+  assert.equal(typeof parser.parseUpiCredentialMembershipParts, 'function');
+  assert.equal(typeof parser.normalizeUpiCredentialMembershipTotpSecret, 'function');
+  assert.equal(typeof parser.parseUpiCredentialMembershipPasskeyMarker, 'function');
+});
 
 test('createAccountRecordsManager fails loudly when redeem progress module is unavailable', () => {
   assert.throws(
