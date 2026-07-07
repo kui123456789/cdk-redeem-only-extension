@@ -967,164 +967,54 @@ const DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL = 'http://127.0.0.1:17373';
 const CONTRIBUTION_UPLOAD_URL = '';
 const DEFAULT_AUTH_VERIFICATION_ENABLED = false;
 
-function getMailProviderValue(stateOrProvider = (typeof selectMailProvider !== 'undefined' ? selectMailProvider?.value : undefined)) {
-  const provider = typeof stateOrProvider === 'string'
-    ? stateOrProvider
-    : stateOrProvider?.mailProvider;
-  return String(provider || '').trim().toLowerCase();
-}
-
-function isCustomMailProvider(stateOrProvider = (typeof selectMailProvider !== 'undefined' ? selectMailProvider?.value : undefined)) {
-  return getMailProviderValue(stateOrProvider) === 'custom';
-}
-
-function isLuckmailProvider(stateOrProvider = (typeof selectMailProvider !== 'undefined' ? selectMailProvider?.value : undefined)) {
-  return getMailProviderValue(stateOrProvider) === LUCKMAIL_PROVIDER;
-}
-
-function getManagedAliasUtils() {
-  return window.MultiPageManagedAliasUtils || null;
-}
-
-function isManagedAliasProvider(provider = selectMailProvider.value, mail2925Mode = getSelectedMail2925Mode()) {
-  const utils = getManagedAliasUtils();
-  if (utils?.usesManagedAliasGeneration) {
-    return utils.usesManagedAliasGeneration(provider, { mail2925Mode });
-  }
-  if (utils?.isManagedAliasProvider) {
-    const normalizedProvider = String(provider || '').trim().toLowerCase();
-    if (normalizedProvider === '2925') {
-      return utils.isManagedAliasProvider(provider)
-        && normalizeMail2925Mode(mail2925Mode) === MAIL_2925_MODE_PROVIDE;
-    }
-    return utils.isManagedAliasProvider(provider);
-  }
-  const normalizedProvider = String(provider || '').trim().toLowerCase();
-  if (normalizedProvider === '2925') {
-    return normalizeMail2925Mode(mail2925Mode) === MAIL_2925_MODE_PROVIDE;
-  }
-  return normalizedProvider === GMAIL_PROVIDER;
-}
-
-function parseManagedAliasBaseEmail(rawValue, provider = selectMailProvider.value) {
-  const utils = getManagedAliasUtils();
-  if (utils?.parseManagedAliasBaseEmail) {
-    return utils.parseManagedAliasBaseEmail(rawValue, provider);
-  }
-  return null;
-}
-
-function isManagedAliasEmail(value, baseEmail = '', provider = selectMailProvider.value) {
-  const utils = getManagedAliasUtils();
-  if (utils?.isManagedAliasEmail) {
-    return utils.isManagedAliasEmail(value, provider, baseEmail);
-  }
-  return false;
-}
-
-function getSelectedEmailGenerator() {
-  const generator = String(selectEmailGenerator?.value || '').trim().toLowerCase();
-  if (generator === 'custom' || generator === 'manual') {
-    return 'custom';
-  }
-  if (generator === GMAIL_ALIAS_GENERATOR) {
-    return GMAIL_ALIAS_GENERATOR;
-  }
-  if (generator === CUSTOM_EMAIL_POOL_GENERATOR) {
-    return CUSTOM_EMAIL_POOL_GENERATOR;
-  }
-  if (generator === 'icloud') {
-    return 'icloud';
-  }
-  if (generator === 'cloudflare') return 'cloudflare';
-  if (generator === CLOUDFLARE_TEMP_EMAIL_PROVIDER) return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
-  if (generator === CLOUD_MAIL_PROVIDER) return CLOUD_MAIL_PROVIDER;
-  if (generator === FREEMAIL_PROVIDER) return FREEMAIL_PROVIDER;
-  if (generator === MOEMAIL_GENERATOR) return MOEMAIL_GENERATOR;
-  if (generator === YYDSMAIL_GENERATOR) return YYDSMAIL_GENERATOR;
-  if (generator === OUTLOOK_EMAIL_PLUS_GENERATOR) return OUTLOOK_EMAIL_PLUS_GENERATOR;
-  return 'duck';
-}
-
-function normalizeLuckmailBaseUrl(value = '') {
-  if (window.LuckMailUtils?.normalizeLuckmailBaseUrl) {
-    return window.LuckMailUtils.normalizeLuckmailBaseUrl(value);
-  }
-  const trimmed = String(value || '').trim();
-  if (!trimmed) {
-    return DEFAULT_LUCKMAIL_BASE_URL;
-  }
-  try {
-    const parsed = new URL(trimmed);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return DEFAULT_LUCKMAIL_BASE_URL;
-    }
-    parsed.pathname = parsed.pathname.replace(/\/+$/g, '');
-    parsed.search = '';
-    parsed.hash = '';
-    return parsed.toString().replace(/\/$/g, '');
-  } catch {
-    return DEFAULT_LUCKMAIL_BASE_URL;
-  }
-}
-
-function normalizeLuckmailEmailType(value = '') {
-  if (window.LuckMailUtils?.normalizeLuckmailEmailType) {
-    return window.LuckMailUtils.normalizeLuckmailEmailType(value);
-  }
-  const normalized = String(value || '').trim().toLowerCase();
-  return ['self_built', 'ms_imap', 'ms_graph', 'google_variant'].includes(normalized)
-    ? normalized
-    : DEFAULT_LUCKMAIL_EMAIL_TYPE;
-}
-
-function getManagedAliasProviderUiCopy(provider = selectMailProvider.value, mail2925Mode = getSelectedMail2925Mode()) {
-  if (!isManagedAliasProvider(provider, mail2925Mode)) {
-    return null;
-  }
-  const utils = getManagedAliasUtils();
-  if (utils?.getManagedAliasProviderUiCopy) {
-    return utils.getManagedAliasProviderUiCopy(provider);
-  }
-  if (String(provider || '').trim().toLowerCase() === GMAIL_PROVIDER) {
-    return {
-      baseLabel: '基邮箱',
-      basePlaceholder: '例如 yourname@gmail.com',
-      buttonLabel: '生成',
-      successVerb: '生成',
-      label: 'Gmail +tag 邮箱',
-      placeholder: '点击生成 Gmail +tag 邮箱，或手动填写完整邮箱',
-      hint: '先填写基邮箱后点“生成”，也可以直接手动填写完整的 Gmail 邮箱。',
-    };
-  }
-  if (String(provider || '').trim().toLowerCase() === '2925') {
-    return {
-      baseLabel: '基邮箱',
-      basePlaceholder: '例如 yourname@2925.com',
-      buttonLabel: '生成',
-      successVerb: '生成',
-      label: '2925 邮箱',
-      placeholder: '点击生成 2925 邮箱，或手动填写完整邮箱',
-      hint: '先填写基邮箱后点“生成”，也可以直接手动填写完整的 2925 邮箱。',
-    };
-  }
-  return null;
-}
-
-function getManagedAliasBaseEmailKey(provider = selectMailProvider.value) {
-  const normalizedProvider = String(provider || '').trim().toLowerCase();
-  if (normalizedProvider === GMAIL_PROVIDER) {
-    return 'gmailBaseEmail';
-  }
-  if (normalizedProvider === '2925') {
-    return 'mail2925BaseEmail';
-  }
-  return '';
-}
-
-function isMail2925AccountPoolEnabled(state = latestState) {
-  return Boolean(state?.mail2925UseAccountPool);
-}
+const mailProviderState = window.SidepanelMailProviderState.createMailProviderState({
+  rootScope: window,
+  constants: {
+    cloudMailProvider: CLOUD_MAIL_PROVIDER,
+    cloudflareTempEmailProvider: CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+    customEmailPoolGenerator: CUSTOM_EMAIL_POOL_GENERATOR,
+    defaultLuckmailBaseUrl: DEFAULT_LUCKMAIL_BASE_URL,
+    defaultLuckmailEmailType: DEFAULT_LUCKMAIL_EMAIL_TYPE,
+    freemailProvider: FREEMAIL_PROVIDER,
+    gmailAliasGenerator: GMAIL_ALIAS_GENERATOR,
+    gmailProvider: GMAIL_PROVIDER,
+    luckmailProvider: LUCKMAIL_PROVIDER,
+    mail2925ModeProvide: MAIL_2925_MODE_PROVIDE,
+    moemailGenerator: MOEMAIL_GENERATOR,
+    outlookEmailPlusGenerator: OUTLOOK_EMAIL_PLUS_GENERATOR,
+    yydsMailGenerator: YYDSMAIL_GENERATOR,
+  },
+  getters: {
+    getInputEmailValue: () => inputEmail?.value?.trim?.() || '',
+    getLatestState: () => latestState,
+    getSelectedEmailGeneratorValue: () => selectEmailGenerator?.value,
+    getSelectedMail2925Mode: () => getSelectedMail2925Mode(),
+    getSelectedMailProviderValue: () => selectMailProvider?.value,
+  },
+  helpers: {
+    getCurrentMail2925Email: (state) => getCurrentMail2925Email(state),
+    usesGeneratedAliasMailProvider: (provider, mail2925Mode) => usesGeneratedAliasMailProvider(provider, mail2925Mode),
+  },
+  normalizers: {
+    normalizeMail2925Mode: (value) => normalizeMail2925Mode(value),
+  },
+});
+const {
+  getMailProviderValue,
+  getManagedAliasBaseEmailForProvider,
+  getManagedAliasBaseEmailKey,
+  getManagedAliasProviderUiCopy,
+  getManagedAliasUtils,
+  getSelectedEmailGenerator,
+  isCustomMailProvider,
+  isLuckmailProvider,
+  isMail2925AccountPoolEnabled,
+  isManagedAliasEmail,
+  isManagedAliasProvider,
+  normalizeLuckmailBaseUrl,
+  normalizeLuckmailEmailType,
+  parseManagedAliasBaseEmail,
+} = mailProviderState;
 
 function getPreferredMail2925PoolAccountId(state = latestState) {
   const currentId = String(state?.currentMail2925AccountId || '').trim();
@@ -1181,28 +1071,6 @@ async function syncSelectedMail2925PoolAccount(options = {}) {
   return response.account || null;
 }
 
-function getManagedAliasBaseEmailForProvider(provider = selectMailProvider.value, state = latestState) {
-  if (String(provider || '').trim().toLowerCase() === '2925' && isMail2925AccountPoolEnabled(state)) {
-    const currentMail2925Email = getCurrentMail2925Email(state);
-    if (currentMail2925Email) {
-      return currentMail2925Email;
-    }
-  }
-
-  const key = getManagedAliasBaseEmailKey(provider);
-  if (!key) {
-    return '';
-  }
-
-  const providerValue = String(state?.[key] || '').trim();
-  if (providerValue) {
-    return providerValue;
-  }
-
-  const legacyEmailPrefix = String(state?.emailPrefix || '').trim();
-  return parseManagedAliasBaseEmail(legacyEmailPrefix, provider) ? legacyEmailPrefix : '';
-}
-
 function buildManagedAliasBaseEmailPayload(state = latestState) {
   const payload = {
     gmailBaseEmail: String(state?.gmailBaseEmail || '').trim(),
@@ -1248,11 +1116,12 @@ function getCurrentRegistrationEmailUiCopy() {
 }
 
 function isCurrentRegistrationEmailCompatible(email = inputEmail.value.trim(), provider = selectMailProvider.value, state = latestState) {
-  if (!usesGeneratedAliasMailProvider(provider, getSelectedMail2925Mode()) || !email) {
-    return true;
-  }
-  const baseEmail = getManagedAliasBaseEmailForProvider(provider, state);
-  return isManagedAliasEmail(email, baseEmail, provider);
+  return mailProviderState.isRegistrationEmailCompatible({
+    email,
+    mail2925Mode: getSelectedMail2925Mode(),
+    provider,
+    state,
+  });
 }
 
 function validateCurrentRegistrationEmail(email = inputEmail.value.trim(), options = {}) {

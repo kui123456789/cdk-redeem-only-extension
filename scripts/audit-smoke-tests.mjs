@@ -233,6 +233,7 @@ function checkCoreFiles() {
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
     'sidepanel/settings-transfer-manager.js',
+    'sidepanel/mail-provider-state.js',
     'sidepanel/cdk-pool-manager.js',
     'sidepanel/membership-row-policy.js',
     'sidepanel/membership-renderer.js',
@@ -305,6 +306,7 @@ function checkStaticContracts() {
   const workflowActionBindings = readText('sidepanel/workflow-action-bindings.js');
   const downloadService = readText('sidepanel/download-service.js');
   const settingsTransferManager = readText('sidepanel/settings-transfer-manager.js');
+  const mailProviderState = readText('sidepanel/mail-provider-state.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecordsViewModel = readText('sidepanel/account-records-view-model.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
@@ -334,6 +336,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
+  assertIncludes(sidepanelHtml, 'src="mail-provider-state.js"', 'sidepanel mail provider state script load');
   assertIncludes(sidepanelHtml, 'src="dom-bindings.js"', 'sidepanel DOM bindings script load');
   assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
@@ -366,6 +369,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-action-bindings.js"', 'src="sidepanel.js"', 'sidepanel workflow action bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-field-bindings.js"', 'src="sidepanel.js"', 'sidepanel settings field bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
@@ -443,6 +447,9 @@ function checkStaticContracts() {
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
   assertIncludes(settingsTransferManager, "type: 'EXPORT_SETTINGS'", 'settings export route lives in transfer manager');
   assertIncludes(settingsTransferManager, "type: 'IMPORT_SETTINGS'", 'settings import route lives in transfer manager');
+  assertIncludes(mailProviderState, 'SidepanelMailProviderState', 'sidepanel mail provider state global');
+  assertIncludes(mailProviderState, 'createMailProviderState', 'sidepanel mail provider state factory');
+  assertIncludes(sidepanel, 'SidepanelMailProviderState.createMailProviderState', 'sidepanel mail provider state wiring');
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
   assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
@@ -772,6 +779,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/settings-field-bindings.js', 120, 'sidepanel settings field bindings size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
+  assertFileLineCountAtMost('sidepanel/mail-provider-state.js', 260, 'mail provider state size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
