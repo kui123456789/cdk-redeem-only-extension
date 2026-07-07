@@ -243,6 +243,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-view-model.js',
     'sidepanel/account-records-export.js',
     'sidepanel/account-records-subscription.js',
+    'sidepanel/account-records-membership-groups.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -317,6 +318,7 @@ function checkStaticContracts() {
   const accountRecordsViewModel = readText('sidepanel/account-records-view-model.js');
   const accountRecordsExport = readText('sidepanel/account-records-export.js');
   const accountRecordsSubscription = readText('sidepanel/account-records-subscription.js');
+  const accountRecordsMembershipGroups = readText('sidepanel/account-records-membership-groups.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -394,10 +396,13 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-view-model.js"', 'account records view model script load');
   assertIncludes(sidepanelHtml, 'src="account-records-export.js"', 'account records export script load');
   assertIncludes(sidepanelHtml, 'src="account-records-subscription.js"', 'account records subscription script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-groups.js"', 'account records membership groups script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
   assertIncludes(accountRecordsSubscription, 'createAccountRecordsSubscriptionHelpers', 'account records subscription helper factory');
+  assertIncludes(accountRecordsMembershipGroups, 'SidepanelAccountRecordsMembershipGroups', 'account records membership groups global');
+  assertIncludes(accountRecordsMembershipGroups, 'createAccountRecordsMembershipGroupHelpers', 'account records membership groups helper factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -407,6 +412,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-export.js"', 'src="account-records-manager.js"', 'account records export helpers must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-export.js"', 'src="account-records-subscription.js"', 'account records export helpers must load before subscription helpers');
   assertBefore(sidepanelHtml, 'src="account-records-subscription.js"', 'src="account-records-manager.js"', 'account records subscription helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-subscription.js"', 'src="account-records-membership-groups.js"', 'account records subscription helpers must load before membership groups');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-groups.js"', 'src="account-records-manager.js"', 'account records membership groups must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -813,6 +820,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
   assertFileLineCountAtMost('sidepanel/account-records-export.js', 180, 'account records export helper size guard');
   assertFileLineCountAtMost('sidepanel/account-records-subscription.js', 220, 'account records subscription helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-groups.js', 180, 'account records membership groups size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');

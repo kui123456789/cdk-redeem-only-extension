@@ -57,6 +57,23 @@
       getRecordEmail: (record) => getRecordEmail(record),
       getRecordUpiRedeemCdkey,
     });
+    const accountRecordsMembershipGroups = globalScope.SidepanelAccountRecordsMembershipGroups || {};
+    if (typeof accountRecordsMembershipGroups.createAccountRecordsMembershipGroupHelpers !== 'function') {
+      throw new Error('Account records membership groups module is not loaded.');
+    }
+    const {
+      getMembershipViewModelGroup,
+      getUpiCredentialMembershipUiGroup,
+      buildMembershipViewModelRows,
+      summarizeMembershipViewModelRows,
+      buildUpiCredentialMembershipDisplayRowKey,
+    } = accountRecordsMembershipGroups.createAccountRecordsMembershipGroupHelpers({
+      membershipViewModel,
+      membershipRowPolicy,
+      normalizeEmail: (value) => normalizeUpiCredentialMembershipEmail(value),
+      normalizeText: (value) => normalizeUpiCredentialMembershipText(value),
+      normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
+    });
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -364,76 +381,6 @@
       }
       return membershipRowPolicy.normalizeRedeemChannel?.(value)
         || (normalizeUpiCredentialMembershipText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
-    }
-
-    const MEMBERSHIP_VIEW_MODEL_GROUP_TO_UI_GROUP = {
-      free: 'free',
-      'upi-plus': 'paid-upi',
-      'ideal-plus': 'paid-ideal',
-    };
-
-    function getMembershipViewModelGroup(row = {}) {
-      if (typeof membershipViewModel.getGroup === 'function') {
-        return membershipViewModel.getGroup(row);
-      }
-      return membershipRowPolicy.getMembershipGroup?.(row) || 'free';
-    }
-
-    function getUpiCredentialMembershipUiGroup(row = {}) {
-      const group = getMembershipViewModelGroup(row);
-      return MEMBERSHIP_VIEW_MODEL_GROUP_TO_UI_GROUP[group] || 'free';
-    }
-
-    function buildMembershipViewModelRows(rows = []) {
-      if (typeof membershipViewModel.buildRows === 'function') {
-        return membershipViewModel.buildRows({ items: rows });
-      }
-      return (Array.isArray(rows) ? rows : [])
-        .map((row) => {
-          const source = row && typeof row === 'object' && !Array.isArray(row) ? row : {};
-          const email = normalizeUpiCredentialMembershipEmail(source.email || source.accountIdentifier);
-          return email ? { ...source, email } : null;
-        })
-        .filter(Boolean);
-    }
-
-    function summarizeMembershipViewModelRows(rows = []) {
-      if (typeof membershipViewModel.summarize === 'function') {
-        return membershipViewModel.summarize(rows);
-      }
-      return (Array.isArray(rows) ? rows : []).reduce((summary, row) => {
-        const group = getMembershipViewModelGroup(row);
-        summary.total += 1;
-        if (normalizeUpiCredentialMembershipText(
-          row?.accessToken
-          || row?.access_token
-          || row?.token
-          || row?.upiRedeemAccessToken
-        )) {
-          summary.withAt += 1;
-        }
-        if (Object.prototype.hasOwnProperty.call(summary, group)) {
-          summary[group] += 1;
-        }
-        return summary;
-      }, {
-        total: 0,
-        withAt: 0,
-        free: 0,
-        'upi-plus': 0,
-        'ideal-plus': 0,
-      });
-    }
-
-    function buildUpiCredentialMembershipDisplayRowKey(row = {}, fallbackEmail = '') {
-      const email = normalizeUpiCredentialMembershipEmail(row?.email || fallbackEmail);
-      if (!email) {
-        return '';
-      }
-      if (String(row?.status || '').trim().toLowerCase() === 'paid') {
-        return `paid:${normalizeRedeemChannel(row?.redeemChannel || row?.channel || row?.paymentChannel)}:${email}`;
-      }
-      return email;
     }
 
     function normalizeUpiCredentialMembershipEmailList(values = []) {
