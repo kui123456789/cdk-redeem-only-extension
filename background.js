@@ -65,6 +65,7 @@ importScripts(
   'background/membership/free-pool-service.js',
   'background/membership/redeem-candidate-service.js',
   'background/membership/credential-pool-service.js',
+  'background/membership/import-export-service.js',
   'background/upi-credential-membership-checker.js',
   'background/verification/assurivo-time.js',
   'background/verification/verification-keywords.js',
