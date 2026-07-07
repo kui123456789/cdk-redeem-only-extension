@@ -210,6 +210,7 @@ function checkCoreFiles() {
     'shared/redeem-channel-state.js',
     'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
+    'background/router/redeem-refresh-service.js',
     'background/steps/upi-redeem/session-material.js',
     'background/steps/upi-redeem/free-entry.js',
     'background/steps/upi-redeem/channel-submission.js',
@@ -356,6 +357,7 @@ function checkStaticContracts() {
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
+  const routerRedeemRefreshService = readText('background/router/redeem-refresh-service.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelAppState = readText('sidepanel/app-state.js');
   const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
@@ -838,6 +840,7 @@ function checkStaticContracts() {
   assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
   assertIncludes(background, "'background/membership/redeem-status-sync.js'", 'background redeem status sync script load');
+  assertIncludes(background, "'background/router/redeem-refresh-service.js'", 'background router redeem refresh service script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
@@ -880,6 +883,7 @@ function checkStaticContracts() {
   assertIncludes(verificationFlow, 'MultiPageBackgroundVerificationFlow', 'verification flow facade global');
   assertIncludes(verificationFlow, 'createVerificationFlowHelpers', 'verification flow facade factory');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
+  assertBefore(background, "'background/router/redeem-refresh-service.js'", "'background/message-router.js'", 'router redeem refresh service must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
@@ -932,6 +936,9 @@ function checkStaticContracts() {
   });
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
   assertIncludes(membershipRedeemStatusSync, 'buildPendingUpiCredentialMembershipRedeemRefreshTargets', 'membership redeem refresh target helper');
+  assertIncludes(routerRedeemRefreshService, 'MultiPageRouterRedeemRefreshService', 'router redeem refresh service global');
+  assertIncludes(routerRedeemRefreshService, 'createRouterRedeemRefreshService', 'router redeem refresh service factory');
+  assertIncludes(routerRedeemRefreshService, 'module.exports', 'router redeem refresh service CommonJS export');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
   assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
   assertIncludes(membershipLoginSessionExecutor, 'MultiPageMembershipLoginSessionExecutor', 'membership login session executor global');
@@ -1022,6 +1029,8 @@ function checkStaticContracts() {
   assertIncludes(emailPoolRoutes, 'FETCH_DUCK_EMAIL', 'email pool Duck route');
   assertIncludes(emailPoolRoutes, 'DELETE_USED_ICLOUD_ALIASES', 'email pool iCloud cleanup route');
   assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
+  assertIncludes(router, 'getRouterRedeemRefreshServiceModule', 'message router redeem refresh helper module lookup');
+  assertIncludes(router, 'createRouterRedeemRefreshService', 'message router redeem refresh service wiring');
   assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
   assertIncludes(router, 'rootScope.MultiPageSettingsRoutes?.createSettingsRoutes', 'message router settings route registration');
   assertIncludes(router, 'rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes', 'message router account record route registration');
@@ -1047,8 +1056,8 @@ function checkStaticContracts() {
   assertIncludes(upiRedeem, 'getRedeemCdkeyUsageHelpers()', 'UPI redeem CDK usage wrapper');
   assertIncludes(checker, 'getRedeemChannelStateHelpers()', 'membership checker channel state wrapper');
   assertIncludes(checker, 'getRedeemCdkeyUsageHelpers()', 'membership checker CDK usage wrapper');
-  assertIncludes(router, 'getRedeemChannelStateHelpers()', 'router channel state wrapper');
-  assertIncludes(router, 'getRedeemCdkeyUsageHelpers()', 'router CDK usage wrapper');
+  assertIncludes(routerRedeemRefreshService, 'getRedeemChannelStateHelpers()', 'router redeem refresh channel state wrapper');
+  assertIncludes(routerRedeemRefreshService, 'getRedeemCdkeyUsageHelpers()', 'router redeem refresh CDK usage wrapper');
   assertIncludes(contentScriptRegistry, "'content/auth-page-detectors.js'", 'background auth page detectors injection');
   assertIncludes(contentScriptRegistry, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
   assertIncludes(contentScriptRegistry, "'content/signup-entry-page.js'", 'background signup entry page injection');
@@ -1188,7 +1197,7 @@ function checkStaticContracts() {
     /const credentials = getEnabledFreeUpiCredentialMembershipRows\(\);\s+if \(!credentials\.length\)/,
     'CDK import resume must not use merged UPI/IDEAL candidates'
   );
-  assertIncludes(router, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
+  assertIncludes(routerRedeemRefreshService, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
   assertMatch(
     background,
     /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*true;\s*nextEntry\.lastUsedAt\s*=\s*entry\.lastUsedAt\s*\|\|\s*Date\.now\(\);/s,
@@ -1279,6 +1288,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 1800, 'account records manager growth guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
+  assertFileLineCountAtMost('background/message-router.js', 2400, 'message router size guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
@@ -1300,6 +1310,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
+  assertFileLineCountAtMost('background/router/redeem-refresh-service.js', 1500, 'router redeem refresh service size guard');
   assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
   assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
   assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');

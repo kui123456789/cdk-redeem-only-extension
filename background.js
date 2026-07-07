@@ -34,6 +34,7 @@ importScripts(
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
   'background/membership/redeem-status-sync.js',
+  'background/router/redeem-refresh-service.js',
   'background/membership/access-token-refresh.js',
   'background/membership/login-session-executor.js',
   'background/passkey-login-core.js',
