@@ -232,6 +232,9 @@ function checkCoreFiles() {
     'sidepanel/app-state.js',
     'sidepanel/settings-controller.js',
     'sidepanel/runtime-message-controller.js',
+    'sidepanel/upi-redeem-cdk-state.js',
+    'sidepanel/upi-redeem-cdk-status-view.js',
+    'sidepanel/upi-redeem-cdk-controller.js',
     'sidepanel/sidepanel-bootstrap.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
@@ -319,6 +322,9 @@ function checkStaticContracts() {
   const sidepanelRuntimeMessageDataHandler = readText('sidepanel/runtime-message-data-handler.js');
   const sidepanelRuntimeMessageHandlers = readText('sidepanel/runtime-message-handlers.js');
   const sidepanelRuntimeMessageController = readText('sidepanel/runtime-message-controller.js');
+  const sidepanelUpiRedeemCdkState = readText('sidepanel/upi-redeem-cdk-state.js');
+  const sidepanelUpiRedeemCdkStatusView = readText('sidepanel/upi-redeem-cdk-status-view.js');
+  const sidepanelUpiRedeemCdkController = readText('sidepanel/upi-redeem-cdk-controller.js');
   const sidepanelAppController = readText('sidepanel/sidepanel-app-controller.js');
   const sidepanelBootstrap = readText('sidepanel/sidepanel-bootstrap.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
@@ -400,6 +406,12 @@ function checkStaticContracts() {
   assertIncludes(sidepanelRuntimeMessageHandlers, 'createRuntimeMessageHandlers', 'sidepanel runtime message handlers factory');
   assertIncludes(sidepanelRuntimeMessageController, 'SidepanelRuntimeMessageController', 'sidepanel runtime message controller global');
   assertIncludes(sidepanelRuntimeMessageController, 'createRuntimeMessageController', 'sidepanel runtime message controller factory');
+  assertIncludes(sidepanelUpiRedeemCdkState, 'SidepanelUpiRedeemCdkState', 'sidepanel UPI redeem CDK state global');
+  assertIncludes(sidepanelUpiRedeemCdkState, 'createUpiRedeemCdkState', 'sidepanel UPI redeem CDK state factory');
+  assertIncludes(sidepanelUpiRedeemCdkStatusView, 'SidepanelUpiRedeemCdkStatusView', 'sidepanel UPI redeem CDK status view global');
+  assertIncludes(sidepanelUpiRedeemCdkStatusView, 'createUpiRedeemCdkStatusView', 'sidepanel UPI redeem CDK status view factory');
+  assertIncludes(sidepanelUpiRedeemCdkController, 'SidepanelUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller global');
+  assertIncludes(sidepanelUpiRedeemCdkController, 'createUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller factory');
   assertIncludes(sidepanelAppController, 'SidepanelAppController', 'sidepanel app controller global');
   assertIncludes(sidepanelAppController, 'createSidepanelApp', 'sidepanel app controller factory');
   assertIncludes(workflowController, 'SidepanelWorkflowController', 'sidepanel workflow controller global');
@@ -432,6 +444,9 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="runtime-message-data-handler.js"', 'sidepanel runtime message data handler script load');
   assertIncludes(sidepanelHtml, 'src="runtime-message-handlers.js"', 'sidepanel runtime message handlers script load');
   assertIncludes(sidepanelHtml, 'src="runtime-message-controller.js"', 'sidepanel runtime message controller script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'sidepanel UPI redeem CDK state script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK status view script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK controller script load');
   assertIncludes(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'sidepanel app controller script load');
   assertIncludes(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'sidepanel bootstrap script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
@@ -455,7 +470,10 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="settings-controller.js"', 'src="runtime-message-controller.js"', 'sidepanel settings controller must load before runtime controller');
   assertBefore(sidepanelHtml, 'src="runtime-message-data-handler.js"', 'src="runtime-message-handlers.js"', 'sidepanel runtime message data handler must load before runtime handlers');
   assertBefore(sidepanelHtml, 'src="runtime-message-handlers.js"', 'src="runtime-message-controller.js"', 'sidepanel runtime message handlers must load before runtime controller');
-  assertBefore(sidepanelHtml, 'src="runtime-message-controller.js"', 'src="sidepanel-app-controller.js"', 'sidepanel runtime controller must load before app controller');
+  assertBefore(sidepanelHtml, 'src="runtime-message-controller.js"', 'src="upi-redeem-cdk-state.js"', 'sidepanel runtime controller must load before UPI redeem CDK state');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK state must load before status view');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK status view must load before controller');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'src="sidepanel-app-controller.js"', 'sidepanel UPI redeem CDK controller must load before app controller');
   assertBefore(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'src="sidepanel-bootstrap.js"', 'sidepanel app controller must load before bootstrap');
   assertBefore(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'src="sidepanel.js"', 'sidepanel bootstrap must load before compatibility entrypoint');
   assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
@@ -981,6 +999,10 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/runtime-message-data-handler.js', 700, 'sidepanel runtime message data handler size guard');
   assertFileLineCountAtMost('sidepanel/runtime-message-handlers.js', 700, 'sidepanel runtime message handlers size guard');
   assertFileLineCountAtMost('sidepanel/runtime-message-controller.js', 700, 'sidepanel runtime message controller size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-state.js', 250, 'sidepanel UPI redeem CDK state size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-status-view.js', 250, 'sidepanel UPI redeem CDK status view size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-controller.js', 700, 'sidepanel UPI redeem CDK controller size guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7963, 'sidepanel app controller decomposition guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-bootstrap.js', 700, 'sidepanel bootstrap size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
