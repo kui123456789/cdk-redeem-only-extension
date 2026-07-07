@@ -1122,7 +1122,7 @@
               ? `核验已停止 ${results.completed}/${results.total || results.completed}`
         : `已核验 ${results.completed || results.items.length}/${results.total || results.items.length}`;
       const currentFlowEmail = normalizeUpiCredentialMembershipEmail(results.flowStageEmail);
-      const currentFlowTitle = getUpiCredentialMembershipFlowTitle(results.flowStage);
+      const currentFlowTitle = getUpiCredentialMembershipFlowTitle(results.flowStage, results);
       const currentFlowText = currentFlowEmail
         ? ` · 当前 ${currentFlowEmail}${currentFlowTitle ? ` · ${currentFlowTitle}` : ''}`
         : '';
