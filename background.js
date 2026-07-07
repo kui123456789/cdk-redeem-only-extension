@@ -38,6 +38,7 @@ importScripts(
   'background/router/node-protocol-service.js',
   'background/router/payment-session-service.js',
   'background/router/core-routes.js',
+  'background/router/message-dispatcher.js',
   'background/membership/access-token-refresh.js',
   'background/membership/login-session-executor.js',
   'background/passkey-login-core.js',

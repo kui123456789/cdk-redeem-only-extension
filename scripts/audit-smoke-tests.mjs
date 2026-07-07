@@ -214,6 +214,7 @@ function checkCoreFiles() {
     'background/router/node-protocol-service.js',
     'background/router/payment-session-service.js',
     'background/router/core-routes.js',
+    'background/router/message-dispatcher.js',
     'background/steps/upi-redeem/session-material.js',
     'background/steps/upi-redeem/free-entry.js',
     'background/steps/upi-redeem/channel-submission.js',
@@ -364,6 +365,7 @@ function checkStaticContracts() {
   const routerNodeProtocolService = readText('background/router/node-protocol-service.js');
   const routerPaymentSessionService = readText('background/router/payment-session-service.js');
   const routerCoreRoutes = readText('background/router/core-routes.js');
+  const routerMessageDispatcher = readText('background/router/message-dispatcher.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelAppState = readText('sidepanel/app-state.js');
   const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
@@ -850,6 +852,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/router/node-protocol-service.js'", 'background router node protocol service script load');
   assertIncludes(background, "'background/router/payment-session-service.js'", 'background router payment session service script load');
   assertIncludes(background, "'background/router/core-routes.js'", 'background router core routes script load');
+  assertIncludes(background, "'background/router/message-dispatcher.js'", 'background router message dispatcher script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
@@ -896,6 +899,7 @@ function checkStaticContracts() {
   assertBefore(background, "'background/router/node-protocol-service.js'", "'background/message-router.js'", 'router node protocol service must load before message router');
   assertBefore(background, "'background/router/payment-session-service.js'", "'background/message-router.js'", 'router payment session service must load before message router');
   assertBefore(background, "'background/router/core-routes.js'", "'background/message-router.js'", 'router core routes must load before message router');
+  assertBefore(background, "'background/router/message-dispatcher.js'", "'background/message-router.js'", 'router message dispatcher must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
@@ -957,8 +961,13 @@ function checkStaticContracts() {
   assertIncludes(routerPaymentSessionService, 'MultiPageRouterPaymentSessionService', 'router payment session service global');
   assertIncludes(routerPaymentSessionService, 'createRouterPaymentSessionService', 'router payment session service factory');
   assertIncludes(routerPaymentSessionService, 'module.exports', 'router payment session service CommonJS export');
+  assertIncludes(routerMessageDispatcher, 'MultiPageRouterMessageDispatcher', 'router message dispatcher global');
+  assertIncludes(routerMessageDispatcher, 'createRouterMessageDispatcher', 'router message dispatcher factory');
+  assertIncludes(routerMessageDispatcher, 'module.exports', 'router message dispatcher CommonJS export');
   assertIncludes(router, 'getRouterPaymentSessionServiceModule()', 'message router payment session service module accessor');
   assertIncludes(router, 'createRouterPaymentSessionService', 'message router payment session service factory dependency');
+  assertIncludes(router, 'getRouterMessageDispatcherModule()', 'message router dispatcher module accessor');
+  assertIncludes(router, 'createRouterMessageDispatcher', 'message router dispatcher factory dependency');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
   assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
   assertIncludes(membershipLoginSessionExecutor, 'MultiPageMembershipLoginSessionExecutor', 'membership login session executor global');
@@ -1061,7 +1070,7 @@ function checkStaticContracts() {
   assertIncludes(router, 'createRouterNodeProtocolService', 'message router node protocol service wiring');
   assertIncludes(router, 'getRouterCoreRoutesModule', 'message router core routes helper module lookup');
   assertIncludes(router, 'createRouterCoreRoutes', 'message router core routes factory wiring');
-  assertIncludes(router, 'routeHandlers[type]', 'message router delegated route dispatch');
+  assertIncludes(routerMessageDispatcher, 'routeHandlers[type]', 'message dispatcher delegated route dispatch');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
   assertBefore(
@@ -1341,6 +1350,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/router/node-protocol-service.js', 700, 'router node protocol service size guard');
   assertFileLineCountAtMost('background/router/payment-session-service.js', 500, 'router payment session service size guard');
   assertFileLineCountAtMost('background/router/core-routes.js', 500, 'router core routes size guard');
+  assertFileLineCountAtMost('background/router/message-dispatcher.js', 1000, 'router message dispatcher size guard');
+  assertFileLineCountAtMost('background/message-router.js', 700, 'message router facade size guard');
   assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
   assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
   assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');
