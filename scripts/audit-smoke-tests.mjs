@@ -181,6 +181,11 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-session.js',
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
+    'background/auto-run/summary-builder.js',
+    'background/auto-run/log-snapshot.js',
+    'background/auto-run/retry-policy.js',
+    'background/auto-run/session-runner.js',
+    'background/auto-run-controller.js',
     'background/bootstrap/state-patch-helpers.js',
     'background/bootstrap/content-script-registry.js',
     'background/bootstrap/runtime-listeners.js',
@@ -328,6 +333,11 @@ function checkStaticContracts() {
   const autoRunSession = readText('background/bootstrap/auto-run-session.js');
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
+  const autoRunSummaryBuilder = readText('background/auto-run/summary-builder.js');
+  const autoRunLogSnapshot = readText('background/auto-run/log-snapshot.js');
+  const autoRunRetryPolicy = readText('background/auto-run/retry-policy.js');
+  const autoRunSessionRunner = readText('background/auto-run/session-runner.js');
+  const autoRunController = readText('background/auto-run-controller.js');
   const statePatchHelpers = readText('background/bootstrap/state-patch-helpers.js');
   const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
   readText('background/bootstrap/runtime-listeners.js');
@@ -765,6 +775,11 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/auto-run-session.js'", 'background auto-run session script load');
   assertIncludes(background, "'background/bootstrap/auto-run-timer-plan.js'", 'background auto-run timer plan script load');
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
+  assertIncludes(background, "'background/auto-run/summary-builder.js'", 'background auto-run summary builder script load');
+  assertIncludes(background, "'background/auto-run/log-snapshot.js'", 'background auto-run log snapshot script load');
+  assertIncludes(background, "'background/auto-run/retry-policy.js'", 'background auto-run retry policy script load');
+  assertIncludes(background, "'background/auto-run/session-runner.js'", 'background auto-run session runner script load');
+  assertIncludes(background, "'background/auto-run-controller.js'", 'background auto-run controller script load');
   assertIncludes(background, "'background/bootstrap/state-patch-helpers.js'", 'background state patch helpers script load');
   assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
   assertIncludes(background, 'MultiPageBackgroundSettingsTransfer.createSettingsTransfer', 'background settings transfer wiring');
@@ -802,6 +817,23 @@ function checkStaticContracts() {
   assertIncludes(autoRunStatus, 'MultiPageBackgroundAutoRunStatus', 'background auto-run status global');
   assertIncludes(autoRunStatus, 'createAutoRunStatusManager', 'background auto-run status factory');
   assertIncludes(autoRunStatus, 'isAutoRunLockedState', 'background auto-run status locked predicate');
+  assertIncludes(autoRunSummaryBuilder, 'MultiPageBackgroundAutoRunSummaryBuilder', 'background auto-run summary builder global');
+  assertIncludes(autoRunSummaryBuilder, 'createAutoRunSummaryBuilder', 'background auto-run summary builder factory');
+  assertIncludes(autoRunSummaryBuilder, 'logAutoRunFinalSummary', 'background auto-run summary builder summary logger');
+  assertIncludes(autoRunLogSnapshot, 'MultiPageBackgroundAutoRunLogSnapshot', 'background auto-run log snapshot global');
+  assertIncludes(autoRunLogSnapshot, 'createAutoRunLogSnapshot', 'background auto-run log snapshot factory');
+  assertIncludes(autoRunLogSnapshot, 'replayPreviousSuccessfulAutoRunRoundLogSnapshot', 'background auto-run log snapshot replay helper');
+  assertIncludes(autoRunRetryPolicy, 'MultiPageBackgroundAutoRunRetryPolicy', 'background auto-run retry policy global');
+  assertIncludes(autoRunRetryPolicy, 'createAutoRunRetryPolicy', 'background auto-run retry policy factory');
+  assertIncludes(autoRunRetryPolicy, 'evaluateAttemptFailure', 'background auto-run retry policy classifier');
+  assertIncludes(autoRunSessionRunner, 'MultiPageBackgroundAutoRunSessionRunner', 'background auto-run session runner global');
+  assertIncludes(autoRunSessionRunner, 'createAutoRunSessionRunner', 'background auto-run session runner factory');
+  assertIncludes(autoRunSessionRunner, 'autoRunLoop', 'background auto-run session runner loop');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunSummaryBuilder', 'background auto-run controller summary builder dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunLogSnapshot', 'background auto-run controller log snapshot dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunRetryPolicy', 'background auto-run controller retry policy dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunSessionRunner', 'background auto-run controller session runner dependency');
+  assertIncludes(autoRunController, 'createAutoRunController', 'background auto-run controller factory');
   assertIncludes(background, "'background/email/provider-registry.js'", 'background email provider registry script load');
   assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
@@ -852,6 +884,10 @@ function checkStaticContracts() {
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
   assertBefore(background, "'background/membership/result-state.js'", "'background/upi-credential-membership-checker.js'", 'membership result-state must load before membership checker');
+  assertBefore(background, "'background/auto-run/summary-builder.js'", "'background/auto-run-controller.js'", 'auto-run summary builder must load before controller');
+  assertBefore(background, "'background/auto-run/log-snapshot.js'", "'background/auto-run-controller.js'", 'auto-run log snapshot must load before controller');
+  assertBefore(background, "'background/auto-run/retry-policy.js'", "'background/auto-run-controller.js'", 'auto-run retry policy must load before controller');
+  assertBefore(background, "'background/auto-run/session-runner.js'", "'background/auto-run-controller.js'", 'auto-run session runner must load before controller');
   [
     'trial-eligibility-service.js',
     'membership-result-sync.js',
@@ -1248,6 +1284,11 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-timer-plan.js', 260, 'auto-run timer plan size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-status.js', 220, 'auto-run status size guard');
+  assertFileLineCountAtMost('background/auto-run/summary-builder.js', 180, 'auto-run summary builder size guard');
+  assertFileLineCountAtMost('background/auto-run/log-snapshot.js', 320, 'auto-run log snapshot size guard');
+  assertFileLineCountAtMost('background/auto-run/retry-policy.js', 400, 'auto-run retry policy size guard');
+  assertFileLineCountAtMost('background/auto-run/session-runner.js', 1100, 'auto-run session runner size guard');
+  assertFileLineCountAtMost('background/auto-run-controller.js', 220, 'auto-run controller facade size guard');
   assertFileLineCountAtMost('background/bootstrap/state-patch-helpers.js', 240, 'state patch helpers size guard');
   assertFileLineCountAtMost('background/bootstrap/settings-transfer.js', 380, 'settings transfer size guard');
   assertFileLineCountAtMost('background/bootstrap/content-script-registry.js', 120, 'content script registry size guard');
