@@ -254,6 +254,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-status-meta.js',
     'sidepanel/account-records-display-model.js',
     'sidepanel/account-records-flow-view.js',
+    'sidepanel/account-records-renderer.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -339,6 +340,7 @@ function checkStaticContracts() {
   const accountRecordsStatusMeta = readText('sidepanel/account-records-status-meta.js');
   const accountRecordsDisplayModel = readText('sidepanel/account-records-display-model.js');
   const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
+  const accountRecordsRenderer = readText('sidepanel/account-records-renderer.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -425,6 +427,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'account records passkey helpers script load');
   assertIncludes(sidepanelHtml, 'src="account-records-credential-parser.js"', 'account records credential parser script load');
   assertIncludes(sidepanelHtml, 'src="account-records-status-meta.js"', 'account records status meta script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-renderer.js"', 'account records renderer script load');
   assertIncludes(sidepanelHtml, 'src="account-records-flow-view.js"', 'account records flow view script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
@@ -478,7 +481,10 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-display-model.js"', 'account records credential parser must load before display model');
   assertBefore(sidepanelHtml, 'src="account-records-status-meta.js"', 'src="account-records-display-model.js"', 'account records status meta must load before display model');
   assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-flow-view.js"', 'account records display model must load before flow view');
-  assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-manager.js"', 'account records flow view must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-renderer.js"', 'account records flow view must load before renderer');
+  assertBefore(sidepanelHtml, 'src="account-records-renderer.js"', 'src="account-records-manager.js"', 'account records renderer must load before manager');
+  assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -895,6 +901,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-credential-parser.js', 250, 'account records credential parser size guard');
   assertFileLineCountAtMost('sidepanel/account-records-status-meta.js', 250, 'account records status meta size guard');
   assertFileLineCountAtMost('sidepanel/account-records-display-model.js', 250, 'account records display model size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 800, 'account records renderer size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');

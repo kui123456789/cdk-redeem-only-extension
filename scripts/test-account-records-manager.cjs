@@ -15,6 +15,7 @@ delete globalThis.SidepanelAccountRecordsCredentialParser;
 delete globalThis.SidepanelAccountRecordsStatusMeta;
 delete globalThis.SidepanelAccountRecordsDisplayModel;
 delete globalThis.SidepanelAccountRecordsFlowView;
+delete globalThis.SidepanelAccountRecordsRenderer;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -30,6 +31,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-credential-pa
 delete require.cache[require.resolve('../sidepanel/account-records-status-meta.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-display-model.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-flow-view.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-renderer.js')];
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
@@ -46,6 +48,7 @@ require('../sidepanel/account-records-credential-parser.js');
 require('../sidepanel/account-records-status-meta.js');
 require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-flow-view.js');
+require('../sidepanel/account-records-renderer.js');
 require('../sidepanel/account-records-manager.js');
 
 function createDisplayModel(overrides = {}) {
@@ -140,6 +143,18 @@ test('account records credential parser exposes the expected factory helpers', (
   assert.equal(typeof parser.parseUpiCredentialMembershipParts, 'function');
   assert.equal(typeof parser.normalizeUpiCredentialMembershipTotpSecret, 'function');
   assert.equal(typeof parser.parseUpiCredentialMembershipPasskeyMarker, 'function');
+});
+
+test('account records renderer exposes the expected factory helpers', () => {
+  const rendererApi = globalThis.SidepanelAccountRecordsRenderer;
+  assert.equal(typeof rendererApi?.createAccountRecordsRenderer, 'function');
+
+  const renderer = rendererApi.createAccountRecordsRenderer();
+  assert.equal(typeof renderer.renderAccountRecordsPanel, 'function');
+  assert.equal(typeof renderer.renderUpiCredentialMembershipCheckResults, 'function');
+  assert.equal(typeof renderer.updateHeader, 'function');
+  assert.equal(typeof renderer.updateStats, 'function');
+  assert.equal(typeof renderer.updatePagination, 'function');
 });
 
 test('display model does not backfill source passkey state when result already enables passkey', () => {
