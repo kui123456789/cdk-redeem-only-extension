@@ -7,6 +7,7 @@ delete globalThis.SidepanelAccountRecordsSubscription;
 delete globalThis.SidepanelAccountRecordsMembershipGroups;
 delete globalThis.SidepanelAccountRecordsRedeemStatus;
 delete globalThis.SidepanelAccountRecordsCdkPoolText;
+delete globalThis.SidepanelAccountRecordsDeletionState;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -14,12 +15,14 @@ delete require.cache[require.resolve('../sidepanel/account-records-subscription.
 delete require.cache[require.resolve('../sidepanel/account-records-membership-groups.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-redeem-status.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-cdk-pool-text.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-deletion-state.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
 require('../sidepanel/account-records-subscription.js');
 require('../sidepanel/account-records-membership-groups.js');
 require('../sidepanel/account-records-redeem-status.js');
 require('../sidepanel/account-records-cdk-pool-text.js');
+require('../sidepanel/account-records-deletion-state.js');
 require('../sidepanel/account-records-manager.js');
 
 test('createAccountRecordsManager fails loudly when redeem progress module is unavailable', () => {

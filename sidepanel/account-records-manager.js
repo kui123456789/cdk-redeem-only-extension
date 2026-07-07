@@ -97,6 +97,18 @@
     } = accountRecordsCdkPoolText.createAccountRecordsCdkPoolTextHelpers({
       normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
     });
+    const accountRecordsDeletionState = globalScope.SidepanelAccountRecordsDeletionState || {};
+    if (typeof accountRecordsDeletionState.createAccountRecordsDeletionStateHelpers !== 'function') {
+      throw new Error('Account records deletion state module is not loaded.');
+    }
+    const {
+      normalizeUpiCredentialMembershipEmailList,
+      normalizeRedeemPlusDeletedEmailsByChannel,
+      mergeRedeemPlusDeletedEmailsByChannel,
+      buildRedeemPlusDeletedEmailSets: buildRedeemPlusDeletedEmailSetsFromValues,
+    } = accountRecordsDeletionState.createAccountRecordsDeletionStateHelpers({
+      normalizeEmail: (value) => normalizeUpiCredentialMembershipEmail(value),
+    });
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -335,37 +347,10 @@
         || (normalizeUpiCredentialMembershipText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
     }
 
-    function normalizeUpiCredentialMembershipEmailList(values = []) {
-      return Array.from(new Set((Array.isArray(values) ? values : [])
-        .map(normalizeUpiCredentialMembershipEmail)
-        .filter(Boolean)));
-    }
-
-    function normalizeRedeemPlusDeletedEmailsByChannel(value = {}) {
-      const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-      return {
-        upi: normalizeUpiCredentialMembershipEmailList(source.upi),
-        ideal: normalizeUpiCredentialMembershipEmailList(source.ideal),
-      };
-    }
-
     function getLocallyDeletedRedeemPlusEmailsByChannel() {
       return {
         upi: Array.from(locallyDeletedRedeemPlusEmailsByChannel.upi),
         ideal: Array.from(locallyDeletedRedeemPlusEmailsByChannel.ideal),
-      };
-    }
-
-    function mergeRedeemPlusDeletedEmailsByChannel(...values) {
-      const merged = { upi: [], ideal: [] };
-      values.forEach((value) => {
-        const normalized = normalizeRedeemPlusDeletedEmailsByChannel(value);
-        merged.upi.push(...normalized.upi);
-        merged.ideal.push(...normalized.ideal);
-      });
-      return {
-        upi: normalizeUpiCredentialMembershipEmailList(merged.upi),
-        ideal: normalizeUpiCredentialMembershipEmailList(merged.ideal),
       };
     }
 
@@ -377,11 +362,7 @@
     }
 
     function buildRedeemPlusDeletedEmailSets(value = {}) {
-      const normalized = mergeRedeemPlusDeletedEmailsByChannel(value, getLocallyDeletedRedeemPlusEmailsByChannel());
-      return {
-        upi: new Set(normalized.upi),
-        ideal: new Set(normalized.ideal),
-      };
+      return buildRedeemPlusDeletedEmailSetsFromValues(value, getLocallyDeletedRedeemPlusEmailsByChannel());
     }
 
     function isRedeemPlusDeletedEmail(email = '', channel = 'upi', deletedEmailSets = {}) {

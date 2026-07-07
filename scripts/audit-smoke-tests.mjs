@@ -246,6 +246,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-membership-groups.js',
     'sidepanel/account-records-redeem-status.js',
     'sidepanel/account-records-cdk-pool-text.js',
+    'sidepanel/account-records-deletion-state.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -323,6 +324,7 @@ function checkStaticContracts() {
   const accountRecordsMembershipGroups = readText('sidepanel/account-records-membership-groups.js');
   const accountRecordsRedeemStatus = readText('sidepanel/account-records-redeem-status.js');
   const accountRecordsCdkPoolText = readText('sidepanel/account-records-cdk-pool-text.js');
+  const accountRecordsDeletionState = readText('sidepanel/account-records-deletion-state.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -403,6 +405,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-membership-groups.js"', 'account records membership groups script load');
   assertIncludes(sidepanelHtml, 'src="account-records-redeem-status.js"', 'account records redeem status script load');
   assertIncludes(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'account records CDK pool text script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-deletion-state.js"', 'account records deletion state script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -413,6 +416,8 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsRedeemStatus, 'createAccountRecordsRedeemStatusHelpers', 'account records redeem status helper factory');
   assertIncludes(accountRecordsCdkPoolText, 'SidepanelAccountRecordsCdkPoolText', 'account records CDK pool text global');
   assertIncludes(accountRecordsCdkPoolText, 'createAccountRecordsCdkPoolTextHelpers', 'account records CDK pool text helper factory');
+  assertIncludes(accountRecordsDeletionState, 'SidepanelAccountRecordsDeletionState', 'account records deletion state global');
+  assertIncludes(accountRecordsDeletionState, 'createAccountRecordsDeletionStateHelpers', 'account records deletion state helper factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -428,6 +433,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-redeem-status.js"', 'src="account-records-manager.js"', 'account records redeem status helpers must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-redeem-status.js"', 'src="account-records-cdk-pool-text.js"', 'account records redeem status helpers must load before CDK pool text');
   assertBefore(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'src="account-records-manager.js"', 'account records CDK pool text helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'src="account-records-deletion-state.js"', 'account records CDK pool text helpers must load before deletion state');
+  assertBefore(sidepanelHtml, 'src="account-records-deletion-state.js"', 'src="account-records-manager.js"', 'account records deletion state helpers must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -837,6 +844,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-membership-groups.js', 180, 'account records membership groups size guard');
   assertFileLineCountAtMost('sidepanel/account-records-redeem-status.js', 180, 'account records redeem status helper size guard');
   assertFileLineCountAtMost('sidepanel/account-records-cdk-pool-text.js', 120, 'account records CDK pool text helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-deletion-state.js', 120, 'account records deletion state helper size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
