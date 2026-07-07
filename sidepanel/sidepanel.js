@@ -1540,8 +1540,8 @@ const cfDomainPicker = createEditableListPicker({
   menu: cfDomainMenu,
   emptyLabel: '请先添加域名',
   itemLabel: '域名',
-  normalizeItems: normalizeCloudflareDomains,
-  normalizeValue: normalizeCloudflareDomainValue,
+  normalizeItems: (values) => normalizeCloudflareDomains(values),
+  normalizeValue: (value) => normalizeCloudflareDomainValue(value),
   onDelete: handleDeleteCloudflareDomain,
   onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare 域名失败。', 'error'),
 });
@@ -1554,8 +1554,8 @@ const tempEmailDomainPicker = createEditableListPicker({
   menu: tempEmailDomainMenu,
   emptyLabel: '请先更新域名',
   itemLabel: '域名',
-  normalizeItems: normalizeCloudflareTempEmailDomains,
-  normalizeValue: normalizeCloudflareTempEmailDomainValue,
+  normalizeItems: (values) => normalizeCloudflareTempEmailDomains(values),
+  normalizeValue: (value) => normalizeCloudflareTempEmailDomainValue(value),
   onDelete: handleDeleteCloudflareTempEmailDomain,
   onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare Temp Email 域名失败。', 'error'),
 });

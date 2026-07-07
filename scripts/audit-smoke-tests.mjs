@@ -435,6 +435,9 @@ function checkStaticContracts() {
   assertIncludes(workflowActionBindings, 'createWorkflowActionBindings', 'sidepanel workflow action bindings factory');
   assertIncludes(sidepanel, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel workflow action bindings wiring');
   assertBefore(sidepanel, 'renderStepsList();\ninitializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel must render workflow steps before binding init actions');
+  assertIncludes(sidepanelHtml, '<span id="steps-progress" class="steps-progress">0 / 0</span>', 'sidepanel workflow progress placeholder must not hard-code stale step count');
+  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareDomains(values)', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
+  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareTempEmailDomains(values)', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
