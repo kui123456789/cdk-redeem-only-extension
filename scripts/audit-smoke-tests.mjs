@@ -229,6 +229,10 @@ function checkCoreFiles() {
     'sidepanel/config-menu-controller.js',
     'sidepanel/workflow-action-bindings.js',
     'sidepanel/settings-field-bindings.js',
+    'sidepanel/app-state.js',
+    'sidepanel/settings-controller.js',
+    'sidepanel/runtime-message-controller.js',
+    'sidepanel/sidepanel-bootstrap.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
@@ -310,6 +314,10 @@ function checkStaticContracts() {
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
+  const sidepanelAppState = readText('sidepanel/app-state.js');
+  const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
+  const sidepanelRuntimeMessageController = readText('sidepanel/runtime-message-controller.js');
+  const sidepanelBootstrap = readText('sidepanel/sidepanel-bootstrap.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
   const domBindings = readText('sidepanel/dom-bindings.js');
   const toastService = readText('sidepanel/toast-service.js');
@@ -377,8 +385,13 @@ function checkStaticContracts() {
   const gitignore = readText('.gitignore');
 
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
-  assertIncludes(sidepanel, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel step delay default');
-  assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
+  assertIncludes(sidepanelBootstrap, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel bootstrap step delay default');
+  assertIncludes(sidepanelBootstrap, 'requestTextFileSaveTarget', 'sidepanel bootstrap export picker support');
+  assertIncludes(sidepanel, 'SidepanelBootstrap?.createSidepanelApp', 'sidepanel compatibility entrypoint bootstrap wiring');
+  assertIncludes(sidepanelAppState, 'createSidepanelAppState', 'sidepanel app state factory');
+  assertIncludes(sidepanelSettingsController, 'createSettingsController', 'sidepanel settings controller factory');
+  assertIncludes(sidepanelRuntimeMessageController, 'createRuntimeMessageController', 'sidepanel runtime message controller factory');
+  assertIncludes(sidepanelBootstrap, 'createSidepanelApp', 'sidepanel bootstrap app factory');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
   assertIncludes(sidepanelHtml, 'src="mail-provider-state.js"', 'sidepanel mail provider state script load');
@@ -400,6 +413,10 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="config-menu-controller.js"', 'sidepanel config menu controller script load');
   assertIncludes(sidepanelHtml, 'src="workflow-action-bindings.js"', 'sidepanel workflow action bindings script load');
   assertIncludes(sidepanelHtml, 'src="settings-field-bindings.js"', 'sidepanel settings field bindings script load');
+  assertIncludes(sidepanelHtml, 'src="app-state.js"', 'sidepanel app state script load');
+  assertIncludes(sidepanelHtml, 'src="settings-controller.js"', 'sidepanel settings controller script load');
+  assertIncludes(sidepanelHtml, 'src="runtime-message-controller.js"', 'sidepanel runtime message controller script load');
+  assertIncludes(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'sidepanel bootstrap script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
@@ -416,6 +433,10 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-action-bindings.js"', 'src="sidepanel.js"', 'sidepanel workflow action bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-field-bindings.js"', 'src="sidepanel.js"', 'sidepanel settings field bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="app-state.js"', 'src="settings-controller.js"', 'sidepanel app state must load before settings controller');
+  assertBefore(sidepanelHtml, 'src="settings-controller.js"', 'src="runtime-message-controller.js"', 'sidepanel settings controller must load before runtime controller');
+  assertBefore(sidepanelHtml, 'src="runtime-message-controller.js"', 'src="sidepanel-bootstrap.js"', 'sidepanel runtime controller must load before bootstrap');
+  assertBefore(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'src="sidepanel.js"', 'sidepanel bootstrap must load before compatibility entrypoint');
   assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="sidepanel-runtime-bridge.js"', 'src="sidepanel.js"', 'sidepanel runtime bridge must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="cloudflare-domain-ui.js"', 'src="sidepanel.js"', 'sidepanel Cloudflare domain UI must load before sidepanel.js');
@@ -586,8 +607,9 @@ function checkStaticContracts() {
   assertIncludes(configMenuController, 'createConfigMenuController', 'sidepanel config menu controller factory');
   assertIncludes(workflowActionBindings, 'SidepanelWorkflowActionBindings', 'sidepanel workflow action bindings global');
   assertIncludes(workflowActionBindings, 'createWorkflowActionBindings', 'sidepanel workflow action bindings factory');
-  assertIncludes(sidepanel, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel workflow action bindings wiring');
-  assertBefore(sidepanel, 'renderStepsList();\ninitializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel must render workflow steps before binding init actions');
+  assertIncludes(sidepanelBootstrap, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel bootstrap workflow action bindings wiring');
+  assertBefore(sidepanelBootstrap, 'renderStepsList();', 'bindConfigMenuEvents();', 'sidepanel bootstrap must render workflow steps before binding init actions');
+  assertBefore(sidepanelBootstrap, 'initializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel bootstrap must initialize manual step actions before binding config menu events');
   assertIncludes(sidepanelHtml, '<span id="steps-progress" class="steps-progress">0 / 0</span>', 'sidepanel workflow progress placeholder must not hard-code stale step count');
   assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareDomains?.(values) || []', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
   assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareTempEmailDomains?.(values) || []', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
@@ -598,13 +620,13 @@ function checkStaticContracts() {
   assertIncludes(settingsTransferManager, "type: 'IMPORT_SETTINGS'", 'settings import route lives in transfer manager');
   assertIncludes(mailProviderState, 'SidepanelMailProviderState', 'sidepanel mail provider state global');
   assertIncludes(mailProviderState, 'createMailProviderState', 'sidepanel mail provider state factory');
-  assertIncludes(sidepanel, 'SidepanelMailProviderState.createMailProviderState', 'sidepanel mail provider state wiring');
+  assertIncludes(sidepanelBootstrap, 'SidepanelMailProviderState.createMailProviderState', 'sidepanel bootstrap mail provider state wiring');
   assertIncludes(sidepanelRuntimeBridge, 'SidepanelRuntimeBridge', 'sidepanel runtime bridge global');
   assertIncludes(sidepanelRuntimeBridge, 'createSidepanelRuntimeBridge', 'sidepanel runtime bridge factory');
-  assertIncludes(sidepanel, 'SidepanelRuntimeBridge.createSidepanelRuntimeBridge', 'sidepanel runtime bridge wiring');
+  assertIncludes(sidepanelBootstrap, 'SidepanelRuntimeBridge.createSidepanelRuntimeBridge', 'sidepanel bootstrap runtime bridge wiring');
   assertIncludes(cloudflareDomainUi, 'SidepanelCloudflareDomainUi', 'sidepanel Cloudflare domain UI global');
   assertIncludes(cloudflareDomainUi, 'createCloudflareDomainUi', 'sidepanel Cloudflare domain UI factory');
-  assertIncludes(sidepanel, 'SidepanelCloudflareDomainUi.createCloudflareDomainUi', 'sidepanel Cloudflare domain UI wiring');
+  assertIncludes(sidepanelBootstrap, 'SidepanelCloudflareDomainUi.createCloudflareDomainUi', 'sidepanel bootstrap Cloudflare domain UI wiring');
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
   assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
@@ -856,12 +878,12 @@ function checkStaticContracts() {
     'IDEAL CDK import button must resume queued Free redeem'
   );
   assertNotMatch(
-    sidepanel,
+    sidepanelBootstrap,
     /btnImport(?:Ideal)?CdkPool\?\.addEventListener/,
     'CDK import event binding must live in sidepanel/cdk-pool-manager.js'
   );
   assertNotMatch(
-    sidepanel,
+    sidepanelBootstrap,
     /importCdkPoolFromTextarea\(\{\s*channel:\s*['"](upi|ideal)['"]\s*\}\)/,
     'CDK import entrypoints must not skip autoResume'
   );
@@ -897,7 +919,7 @@ function checkStaticContracts() {
     'custom email pool trial-ineligible marking must not depend on current generator selection'
   );
   assertMatch(
-    sidepanel,
+    sidepanelRuntimeMessageController,
     /const restoredCustomEmailPoolEntries\s*=\s*restoreCustomEmailPoolEntriesFromState\(\{[\s\S]*?setCustomEmailPoolEntriesState\(restoredCustomEmailPoolEntries\);\s*renderCustomEmailPoolEntries\(restoredCustomEmailPoolEntries\);/,
     'custom email pool DATA_UPDATED messages must immediately re-render visible entries'
   );
@@ -913,7 +935,7 @@ function checkStaticContracts() {
 
 function checkModuleSizeGuard() {
   readText('scripts/module-size-report.mjs');
-  assertFileLineCountAtMost('sidepanel/sidepanel.js', 9800, 'sidepanel composition root growth guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel.js', 1500, 'sidepanel compatibility entrypoint growth guard');
   assertFileLineCountAtMost('sidepanel/sidepanel.css', 2500, 'sidepanel base stylesheet growth guard');
   assertFileLineCountAtMost('sidepanel/styles/settings.css', 1800, 'settings stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/styles/cdk-pools.css', 500, 'CDK pools stylesheet size guard');
@@ -932,6 +954,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/config-menu-controller.js', 220, 'sidepanel config menu controller size guard');
   assertFileLineCountAtMost('sidepanel/workflow-action-bindings.js', 80, 'sidepanel workflow action bindings size guard');
   assertFileLineCountAtMost('sidepanel/settings-field-bindings.js', 120, 'sidepanel settings field bindings size guard');
+  assertFileLineCountAtMost('sidepanel/app-state.js', 250, 'sidepanel app state size guard');
+  assertFileLineCountAtMost('sidepanel/settings-controller.js', 700, 'sidepanel settings controller size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/mail-provider-state.js', 260, 'mail provider state size guard');
