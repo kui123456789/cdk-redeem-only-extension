@@ -86,6 +86,17 @@
     } = accountRecordsRedeemStatus.createAccountRecordsRedeemStatusHelpers({
       normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
     });
+    const accountRecordsCdkPoolText = globalScope.SidepanelAccountRecordsCdkPoolText || {};
+    if (typeof accountRecordsCdkPoolText.createAccountRecordsCdkPoolTextHelpers !== 'function') {
+      throw new Error('Account records CDK pool text module is not loaded.');
+    }
+    const {
+      getUpiRedeemCdkeyUsage,
+      getStoredCdkPoolText,
+      parseUpiRedeemCdkeyPoolText,
+    } = accountRecordsCdkPoolText.createAccountRecordsCdkPoolTextHelpers({
+      normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
+    });
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -379,46 +390,6 @@
 
     function isRedeemPlusDeletedDisplayRow(row = {}, deletedEmailSets = {}) {
       return membershipRowPolicy.isRedeemPlusDeletedDisplayRow?.(row, deletedEmailSets) === true;
-    }
-
-    function getUpiRedeemCdkeyUsage(currentState = state.getLatestState(), channel = 'upi') {
-      const normalizedChannel = normalizeRedeemChannel(channel);
-      const rawUsage = normalizedChannel === 'ideal'
-        ? (currentState?.idealRedeemCdkeyUsage || {})
-        : (currentState?.cdkUsage
-          || currentState?.upiRedeemCdkUsage
-          || currentState?.upiRedeemCdkeyUsage
-          || currentState?.pixRedeemCdkeyUsage
-          || {});
-      return rawUsage && typeof rawUsage === 'object' && !Array.isArray(rawUsage) ? rawUsage : {};
-    }
-
-    function getStoredCdkPoolText(currentState = state.getLatestState(), channel = 'upi') {
-      const normalizedChannel = normalizeRedeemChannel(channel);
-      return String(
-        normalizedChannel === 'ideal'
-          ? (currentState?.idealRedeemCdkeyPoolText ?? '')
-          : (currentState?.cdkPoolText
-            ?? currentState?.upiRedeemCdkPoolText
-            ?? currentState?.upiRedeemCdkeyPoolText
-            ?? currentState?.pixRedeemCdkeyPoolText
-            ?? '')
-      ).replace(/\r/g, '').trim();
-    }
-
-    function parseUpiRedeemCdkeyPoolText(value = '') {
-      const seen = new Set();
-      return String(value || '')
-        .replace(/\r/g, '')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => {
-          if (!line || seen.has(line)) {
-            return false;
-          }
-          seen.add(line);
-          return true;
-        });
     }
 
     function isActiveUpiCredentialMembershipRedeemRow(row = {}, results = getUpiCredentialMembershipCheckResults()) {
