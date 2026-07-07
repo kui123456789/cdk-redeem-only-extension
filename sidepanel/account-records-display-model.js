@@ -85,7 +85,13 @@
           password: normalizeText(sourceCredential.password),
           gptPassword: normalizeText(sourceCredential.gptPassword || sourceCredential.password),
         }),
-        ...buildPasskeyPatch(sourceCredential, credentialPasskeyCredentialId, resultPasskeyCredentialId, passkeyNumericMetadataPatch),
+        ...buildPasskeyPatch(
+          sourceCredential,
+          sourceResult,
+          credentialPasskeyCredentialId,
+          resultPasskeyCredentialId,
+          passkeyNumericMetadataPatch
+        ),
         ...passkeyNumericMetadataPatch,
       };
     }
@@ -166,8 +172,9 @@
 
     function pushDisplayRow(rows, seen, row, email, plusDeletedEmailSets) {
       const rowKey = buildUpiCredentialMembershipDisplayRowKey(row, email);
-      if (!rowKey || seen.has(rowKey) || isRedeemPlusDeletedDisplayRow(row, plusDeletedEmailSets)) return;
+      if (!rowKey || seen.has(rowKey)) return;
       seen.add(rowKey);
+      if (isRedeemPlusDeletedDisplayRow(row, plusDeletedEmailSets)) return;
       rows.push(row);
     }
 
@@ -175,9 +182,9 @@
       return { status: 'free', planType: 'free', reason: 'Free 分组账号，有试用资格' };
     }
 
-    function buildPasskeyPatch(sourceCredential, credentialId, resultCredentialId, metadataPatch) {
+    function buildPasskeyPatch(sourceCredential, sourceResult, credentialId, resultCredentialId, metadataPatch) {
       const hasCredentialPasskey = sourceCredential.passkeyEnabled === true || Boolean(credentialId);
-      const hasResultPasskey = Boolean(resultCredentialId);
+      const hasResultPasskey = sourceResult.passkeyEnabled === true || Boolean(resultCredentialId);
       if (!hasCredentialPasskey || hasResultPasskey) return {};
       return {
         passkeyEnabled: true,

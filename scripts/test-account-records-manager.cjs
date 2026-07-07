@@ -43,6 +43,19 @@ require('../sidepanel/account-records-status-meta.js');
 require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-manager.js');
 
+function createDisplayModel(overrides = {}) {
+  return globalThis.SidepanelAccountRecordsDisplayModel.createAccountRecordsDisplayModel({
+    createAccountRecordsStatusMeta: () => ({
+      getUpiCredentialMembershipRowStatusMeta: () => ({}),
+    }),
+    buildMembershipViewModelRows: (rows) => rows,
+    getMembershipCredentialFormatHelpers: () => ({
+      isLikelyTimestamp: () => false,
+    }),
+    ...overrides,
+  });
+}
+
 test('account records credential parser exposes the expected factory helpers', () => {
   const parser = globalThis.SidepanelAccountRecordsCredentialParser.createAccountRecordsCredentialParser({
     getMembershipCredentialFormatHelpers: () => require('../shared/membership-credential-format.js'),
@@ -53,6 +66,45 @@ test('account records credential parser exposes the expected factory helpers', (
   assert.equal(typeof parser.parseUpiCredentialMembershipParts, 'function');
   assert.equal(typeof parser.normalizeUpiCredentialMembershipTotpSecret, 'function');
   assert.equal(typeof parser.parseUpiCredentialMembershipPasskeyMarker, 'function');
+});
+
+test('display model does not backfill source passkey state when result already enables passkey', () => {
+  const displayModel = createDisplayModel();
+
+  const merged = displayModel.mergeUpiCredentialMembershipDisplayCredentialResult(
+    {
+      email: 'alpha@example.com',
+      passkeyEnabled: true,
+      passkeyCredentialId: 'credential-passkey',
+      passkeyFactorId: 'source-factor',
+      persisted: true,
+    },
+    {
+      email: 'alpha@example.com',
+      passkeyEnabled: true,
+      twoFactorEnabled: false,
+    }
+  );
+
+  assert.equal(merged.twoFactorEnabled, false);
+  assert.equal(merged.passkeyApiPersisted, undefined);
+});
+
+test('display model marks deleted row keys as seen before filtering duplicates', () => {
+  const displayModel = createDisplayModel({
+    getUpiCredentialMembershipPoolRows: () => [
+      { email: 'duplicate@example.com', source: 'pool' },
+    ],
+    getUpiCredentialMembershipCheckResults: () => ({
+      items: [
+        { email: 'duplicate@example.com', source: 'results', status: 'active' },
+      ],
+    }),
+    buildUpiCredentialMembershipDisplayRowKey: (row, email) => String(row.email || email || '').trim().toLowerCase(),
+    isRedeemPlusDeletedDisplayRow: (row) => row.source === 'pool',
+  });
+
+  assert.deepEqual(displayModel.buildUpiCredentialMembershipDisplayRows(), []);
 });
 
 test('createAccountRecordsManager fails loudly when redeem progress module is unavailable', () => {
