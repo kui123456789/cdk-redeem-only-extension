@@ -181,6 +181,11 @@ function checkCoreFiles() {
     'background/bootstrap/auto-run-session.js',
     'background/bootstrap/auto-run-timer-plan.js',
     'background/bootstrap/auto-run-status.js',
+    'background/auto-run/summary-builder.js',
+    'background/auto-run/log-snapshot.js',
+    'background/auto-run/retry-policy.js',
+    'background/auto-run/session-runner.js',
+    'background/auto-run-controller.js',
     'background/bootstrap/state-patch-helpers.js',
     'background/bootstrap/content-script-registry.js',
     'background/bootstrap/runtime-listeners.js',
@@ -190,14 +195,44 @@ function checkCoreFiles() {
     'background/membership/login-session-executor.js',
     'background/membership/redeem-status-sync.js',
     'background/membership/result-state.js',
+    'background/membership/results-store.js',
+    'background/membership/trial-eligibility-service.js',
+    'background/membership/membership-result-sync.js',
+    'background/membership/access-token-supplement-service.js',
+    'background/membership/free-pool-service.js',
+    'background/membership/redeem-candidate-service.js',
+    'background/membership/credential-pool-service.js',
+    'background/membership/import-export-service.js',
+    'background/membership/credential-backup-format.js',
+    'background/membership/plus-verification-service.js',
+    'background/membership/failed-redeem-retry-service.js',
+    'background/membership/redeem-service.js',
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
+    'background/routes/settings-routes.js',
+    'background/routes/account-record-routes.js',
+    'background/routes/email-pool-routes.js',
     'shared/redeem-channel-state.js',
     'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
+    'background/router/redeem-refresh-service.js',
+    'background/router/node-protocol-service.js',
+    'background/router/payment-session-service.js',
+    'background/router/core-routes.js',
+    'background/router/message-dispatcher.js',
+    'background/steps/upi-redeem/session-material.js',
+    'background/steps/upi-redeem/free-entry.js',
+    'background/steps/upi-redeem/channel-submission.js',
+    'background/steps/upi-redeem/status-polling.js',
+    'background/steps/upi-redeem/finalize.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
+    'background/verification/assurivo-time.js',
+    'background/verification/verification-keywords.js',
+    'background/verification/code-extractor.js',
+    'background/verification/assurivo-feed-client.js',
+    'background/verification/resend-controller.js',
     'background/verification-flow.js',
     'content/auth-page-detectors.js',
     'content/signup-dom-utils.js',
@@ -229,15 +264,55 @@ function checkCoreFiles() {
     'sidepanel/config-menu-controller.js',
     'sidepanel/workflow-action-bindings.js',
     'sidepanel/settings-field-bindings.js',
+    'sidepanel/app-state.js',
+    'sidepanel/settings-controller.js',
+    'sidepanel/runtime-message-controller.js',
+    'sidepanel/upi-redeem-cdk-state.js',
+    'sidepanel/upi-redeem-cdk-status-view.js',
+    'sidepanel/upi-redeem-cdk-controller.js',
+    'sidepanel/account-records-panel-controller.js',
+    'sidepanel/panel-display-controller.js',
+    'sidepanel/removed-payment-worker-controller.js',
+    'sidepanel/auto-run-status-controller.js',
+    'sidepanel/operation-delay-controller.js',
+    'sidepanel/sidepanel-bootstrap.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
     'sidepanel/download-service.js',
     'sidepanel/settings-transfer-manager.js',
+    'sidepanel/mail-provider-state.js',
+    'sidepanel/sidepanel-runtime-bridge.js',
+    'sidepanel/cloudflare-domain-ui.js',
     'sidepanel/cdk-pool-manager.js',
     'sidepanel/membership-row-policy.js',
     'sidepanel/membership-renderer.js',
     'sidepanel/membership-redeem-progress.js',
     'sidepanel/account-records-view-model.js',
+    'sidepanel/account-records-export.js',
+    'sidepanel/account-records-subscription.js',
+    'sidepanel/account-records-membership-groups.js',
+    'sidepanel/account-records-redeem-status.js',
+    'sidepanel/account-records-cdk-pool-text.js',
+    'sidepanel/account-records-deletion-state.js',
+    'sidepanel/account-records-export-builders.js',
+    'sidepanel/account-records-redeem-policy.js',
+    'sidepanel/account-records-passkey-helpers.js',
+    'sidepanel/account-records-credential-parser.js',
+    'sidepanel/account-records-status-meta.js',
+    'sidepanel/account-records-display-model.js',
+    'sidepanel/account-records-flow-view.js',
+    'sidepanel/account-records-renderer.js',
+    'sidepanel/account-records-membership-helpers.js',
+    'sidepanel/account-records-membership-pool-ops.js',
+    'sidepanel/account-records-membership-result-ops.js',
+    'sidepanel/account-records-panel-events.js',
+    'sidepanel/account-records-membership-actions.js',
+    'sidepanel/account-records-redeem-actions.js',
+    'sidepanel/account-records-dom-helpers.js',
+    'sidepanel/account-records-membership-state-sync.js',
+    'sidepanel/account-records-trial-eligibility.js',
+    'sidepanel/account-records-run-history.js',
+    'sidepanel/account-records-settings-payload.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -274,6 +349,11 @@ function checkStaticContracts() {
   const autoRunSession = readText('background/bootstrap/auto-run-session.js');
   const autoRunTimerPlan = readText('background/bootstrap/auto-run-timer-plan.js');
   const autoRunStatus = readText('background/bootstrap/auto-run-status.js');
+  const autoRunSummaryBuilder = readText('background/auto-run/summary-builder.js');
+  const autoRunLogSnapshot = readText('background/auto-run/log-snapshot.js');
+  const autoRunRetryPolicy = readText('background/auto-run/retry-policy.js');
+  const autoRunSessionRunner = readText('background/auto-run/session-runner.js');
+  const autoRunController = readText('background/auto-run-controller.js');
   const statePatchHelpers = readText('background/bootstrap/state-patch-helpers.js');
   const contentScriptRegistry = readText('background/bootstrap/content-script-registry.js');
   readText('background/bootstrap/runtime-listeners.js');
@@ -283,10 +363,42 @@ function checkStaticContracts() {
   const membershipLoginSessionExecutor = readText('background/membership/login-session-executor.js');
   const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
   const membershipResultState = readText('background/membership/result-state.js');
+  const membershipResultsStore = readText('background/membership/results-store.js');
+  const trialEligibilityService = readText('background/membership/trial-eligibility-service.js');
+  const membershipResultSync = readText('background/membership/membership-result-sync.js');
+  const accessTokenSupplementService = readText('background/membership/access-token-supplement-service.js');
+  const freePoolService = readText('background/membership/free-pool-service.js');
+  const redeemCandidateService = readText('background/membership/redeem-candidate-service.js');
+  const credentialPoolService = readText('background/membership/credential-pool-service.js');
+  const membershipImportExportService = readText('background/membership/import-export-service.js');
+  const membershipCredentialBackupFormat = readText('background/membership/credential-backup-format.js');
+  const membershipPlusVerificationService = readText('background/membership/plus-verification-service.js');
+  const membershipFailedRedeemRetryService = readText('background/membership/failed-redeem-retry-service.js');
+  const membershipRedeemService = readText('background/membership/redeem-service.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
+  const routerRedeemRefreshService = readText('background/router/redeem-refresh-service.js');
+  const routerNodeProtocolService = readText('background/router/node-protocol-service.js');
+  const routerPaymentSessionService = readText('background/router/payment-session-service.js');
+  const routerCoreRoutes = readText('background/router/core-routes.js');
+  const routerMessageDispatcher = readText('background/router/message-dispatcher.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
+  const sidepanelAppState = readText('sidepanel/app-state.js');
+  const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
+  const sidepanelRuntimeMessageDataHandler = readText('sidepanel/runtime-message-data-handler.js');
+  const sidepanelRuntimeMessageHandlers = readText('sidepanel/runtime-message-handlers.js');
+  const sidepanelRuntimeMessageController = readText('sidepanel/runtime-message-controller.js');
+  const sidepanelUpiRedeemCdkState = readText('sidepanel/upi-redeem-cdk-state.js');
+  const sidepanelUpiRedeemCdkStatusView = readText('sidepanel/upi-redeem-cdk-status-view.js');
+  const sidepanelUpiRedeemCdkController = readText('sidepanel/upi-redeem-cdk-controller.js');
+  const sidepanelAccountRecordsPanelController = readText('sidepanel/account-records-panel-controller.js');
+  const sidepanelPanelDisplayController = readText('sidepanel/panel-display-controller.js');
+  const sidepanelRemovedPaymentWorkerController = readText('sidepanel/removed-payment-worker-controller.js');
+  const sidepanelAutoRunStatusController = readText('sidepanel/auto-run-status-controller.js');
+  const sidepanelOperationDelayController = readText('sidepanel/operation-delay-controller.js');
+  const sidepanelAppController = readText('sidepanel/sidepanel-app-controller.js');
+  const sidepanelBootstrap = readText('sidepanel/sidepanel-bootstrap.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
   const domBindings = readText('sidepanel/dom-bindings.js');
   const toastService = readText('sidepanel/toast-service.js');
@@ -294,6 +406,7 @@ function checkStaticContracts() {
   const workflowStateView = readText('sidepanel/workflow-state-view.js');
   const workflowButtonState = readText('sidepanel/workflow-button-state.js');
   const workflowStatusDisplay = readText('sidepanel/workflow-status-display.js');
+  const workflowController = readText('sidepanel/workflow-controller.js');
   const autoRunNormalizers = readText('sidepanel/auto-run-normalizers.js');
   const sidepanelCdkPoolState = readText('sidepanel/cdk-pool-state.js');
   const sidepanelSettingsNormalization = readText('sidepanel/settings-normalization.js');
@@ -305,8 +418,37 @@ function checkStaticContracts() {
   const workflowActionBindings = readText('sidepanel/workflow-action-bindings.js');
   const downloadService = readText('sidepanel/download-service.js');
   const settingsTransferManager = readText('sidepanel/settings-transfer-manager.js');
+  const mailProviderState = readText('sidepanel/mail-provider-state.js');
+  const sidepanelRuntimeBridge = readText('sidepanel/sidepanel-runtime-bridge.js');
+  const cloudflareDomainUi = readText('sidepanel/cloudflare-domain-ui.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecordsViewModel = readText('sidepanel/account-records-view-model.js');
+  const accountRecordsExport = readText('sidepanel/account-records-export.js');
+  const accountRecordsSubscription = readText('sidepanel/account-records-subscription.js');
+  const accountRecordsMembershipGroups = readText('sidepanel/account-records-membership-groups.js');
+  const accountRecordsRedeemStatus = readText('sidepanel/account-records-redeem-status.js');
+  const accountRecordsCdkPoolText = readText('sidepanel/account-records-cdk-pool-text.js');
+  const accountRecordsDeletionState = readText('sidepanel/account-records-deletion-state.js');
+  const accountRecordsExportBuilders = readText('sidepanel/account-records-export-builders.js');
+  const accountRecordsRedeemPolicy = readText('sidepanel/account-records-redeem-policy.js');
+  const accountRecordsPasskeyHelpers = readText('sidepanel/account-records-passkey-helpers.js');
+  const accountRecordsCredentialParser = readText('sidepanel/account-records-credential-parser.js');
+  const accountRecordsStatusMeta = readText('sidepanel/account-records-status-meta.js');
+  const accountRecordsDisplayModel = readText('sidepanel/account-records-display-model.js');
+  const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
+  const accountRecordsMembershipResultsRenderer = readText('sidepanel/account-records-membership-results-renderer.js');
+  const accountRecordsRenderer = readText('sidepanel/account-records-renderer.js');
+  const accountRecordsMembershipHelpers = readText('sidepanel/account-records-membership-helpers.js');
+  const accountRecordsMembershipPoolOps = readText('sidepanel/account-records-membership-pool-ops.js');
+  const accountRecordsMembershipResultOps = readText('sidepanel/account-records-membership-result-ops.js');
+  const accountRecordsPanelEvents = readText('sidepanel/account-records-panel-events.js');
+  const accountRecordsMembershipActions = readText('sidepanel/account-records-membership-actions.js');
+  const accountRecordsRedeemActions = readText('sidepanel/account-records-redeem-actions.js');
+  const accountRecordsDomHelpers = readText('sidepanel/account-records-dom-helpers.js');
+  const accountRecordsMembershipStateSync = readText('sidepanel/account-records-membership-state-sync.js');
+  const accountRecordsTrialEligibility = readText('sidepanel/account-records-trial-eligibility.js');
+  const accountRecordsRunHistory = readText('sidepanel/account-records-run-history.js');
+  const accountRecordsSettingsPayload = readText('sidepanel/account-records-settings-payload.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -315,8 +457,22 @@ function checkStaticContracts() {
   const membershipRoutes = readText('background/routes/membership-routes.js');
   const cdkRoutes = readText('background/routes/cdkey-routes.js');
   const workflowRoutes = readText('background/routes/workflow-routes.js');
+  const settingsRoutes = readText('background/routes/settings-routes.js');
+  const accountRecordRoutes = readText('background/routes/account-record-routes.js');
+  const emailPoolRoutes = readText('background/routes/email-pool-routes.js');
+  const upiRedeemSessionMaterial = readText('background/steps/upi-redeem/session-material.js');
+  const upiRedeemFreeEntry = readText('background/steps/upi-redeem/free-entry.js');
+  const upiRedeemChannelSubmission = readText('background/steps/upi-redeem/channel-submission.js');
+  const upiRedeemStatusPolling = readText('background/steps/upi-redeem/status-polling.js');
+  const upiRedeemFinalize = readText('background/steps/upi-redeem/finalize.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
+  const verificationAssurivoTime = readText('background/verification/assurivo-time.js');
+  const verificationKeywords = readText('background/verification/verification-keywords.js');
+  const verificationCodeExtractor = readText('background/verification/code-extractor.js');
+  const verificationAssurivoFeedClient = readText('background/verification/assurivo-feed-client.js');
+  const verificationResendController = readText('background/verification/resend-controller.js');
+  const verificationFlow = readText('background/verification-flow.js');
   const authPageDetectors = readText('content/auth-page-detectors.js');
   const signupDomUtils = readText('content/signup-dom-utils.js');
   const signupEntryPage = readText('content/signup-entry-page.js');
@@ -330,16 +486,50 @@ function checkStaticContracts() {
   const gitignore = readText('.gitignore');
 
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
-  assertIncludes(sidepanel, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel step delay default');
-  assertIncludes(sidepanel, 'requestTextFileSaveTarget', 'sidepanel export picker support');
+  assertIncludes(sidepanelAppController, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel app controller step delay default');
+  assertIncludes(sidepanelAppController, 'requestTextFileSaveTarget', 'sidepanel app controller export picker support');
+  assertIncludes(sidepanel, 'SidepanelBootstrap?.createSidepanelApp', 'sidepanel compatibility entrypoint bootstrap wiring');
+  assertIncludes(sidepanelAppState, 'createSidepanelAppState', 'sidepanel app state factory');
+  assertIncludes(sidepanelSettingsController, 'createSettingsController', 'sidepanel settings controller factory');
+  assertIncludes(sidepanelRuntimeMessageDataHandler, 'SidepanelRuntimeMessageDataHandler', 'sidepanel runtime message data handler global');
+  assertIncludes(sidepanelRuntimeMessageDataHandler, 'createRuntimeMessageDataHandler', 'sidepanel runtime message data handler factory');
+  assertIncludes(sidepanelRuntimeMessageHandlers, 'SidepanelRuntimeMessageHandlers', 'sidepanel runtime message handlers global');
+  assertIncludes(sidepanelRuntimeMessageHandlers, 'createRuntimeMessageHandlers', 'sidepanel runtime message handlers factory');
+  assertIncludes(sidepanelRuntimeMessageController, 'SidepanelRuntimeMessageController', 'sidepanel runtime message controller global');
+  assertIncludes(sidepanelRuntimeMessageController, 'createRuntimeMessageController', 'sidepanel runtime message controller factory');
+  assertIncludes(sidepanelUpiRedeemCdkState, 'SidepanelUpiRedeemCdkState', 'sidepanel UPI redeem CDK state global');
+  assertIncludes(sidepanelUpiRedeemCdkState, 'createUpiRedeemCdkState', 'sidepanel UPI redeem CDK state factory');
+  assertIncludes(sidepanelUpiRedeemCdkStatusView, 'SidepanelUpiRedeemCdkStatusView', 'sidepanel UPI redeem CDK status view global');
+  assertIncludes(sidepanelUpiRedeemCdkStatusView, 'createUpiRedeemCdkStatusView', 'sidepanel UPI redeem CDK status view factory');
+  assertIncludes(sidepanelUpiRedeemCdkController, 'SidepanelUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller global');
+  assertIncludes(sidepanelUpiRedeemCdkController, 'createUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller factory');
+  assertIncludes(sidepanelAccountRecordsPanelController, 'SidepanelAccountRecordsPanelController', 'sidepanel account records panel controller global');
+  assertIncludes(sidepanelAccountRecordsPanelController, 'createAccountRecordsPanelController', 'sidepanel account records panel controller factory');
+  assertIncludes(sidepanelPanelDisplayController, 'SidepanelPanelDisplayController', 'sidepanel panel display controller global');
+  assertIncludes(sidepanelPanelDisplayController, 'createPanelDisplayController', 'sidepanel panel display controller factory');
+  assertIncludes(sidepanelRemovedPaymentWorkerController, 'SidepanelRemovedPaymentWorkerController', 'sidepanel RemovedPaymentWorker controller global');
+  assertIncludes(sidepanelRemovedPaymentWorkerController, 'createRemovedPaymentWorkerController', 'sidepanel RemovedPaymentWorker controller factory');
+  assertIncludes(sidepanelAutoRunStatusController, 'SidepanelAutoRunStatusController', 'sidepanel auto-run status controller global');
+  assertIncludes(sidepanelAutoRunStatusController, 'createAutoRunStatusController', 'sidepanel auto-run status controller factory');
+  assertIncludes(sidepanelOperationDelayController, 'SidepanelOperationDelayController', 'sidepanel operation delay controller global');
+  assertIncludes(sidepanelOperationDelayController, 'createOperationDelayController', 'sidepanel operation delay controller factory');
+  assertIncludes(sidepanelAppController, 'SidepanelAppController', 'sidepanel app controller global');
+  assertIncludes(sidepanelAppController, 'createSidepanelApp', 'sidepanel app controller factory');
+  assertIncludes(workflowController, 'SidepanelWorkflowController', 'sidepanel workflow controller global');
+  assertIncludes(workflowController, 'createWorkflowController', 'sidepanel workflow controller factory');
+  assertIncludes(sidepanelBootstrap, 'createSidepanelApp', 'sidepanel bootstrap app factory');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
+  assertIncludes(sidepanelHtml, 'src="mail-provider-state.js"', 'sidepanel mail provider state script load');
+  assertIncludes(sidepanelHtml, 'src="sidepanel-runtime-bridge.js"', 'sidepanel runtime bridge script load');
+  assertIncludes(sidepanelHtml, 'src="cloudflare-domain-ui.js"', 'sidepanel Cloudflare domain UI script load');
   assertIncludes(sidepanelHtml, 'src="dom-bindings.js"', 'sidepanel DOM bindings script load');
   assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
   assertIncludes(sidepanelHtml, 'src="workflow-state-view.js"', 'sidepanel workflow state view script load');
   assertIncludes(sidepanelHtml, 'src="workflow-button-state.js"', 'sidepanel workflow button state script load');
   assertIncludes(sidepanelHtml, 'src="workflow-status-display.js"', 'sidepanel workflow status display script load');
+  assertIncludes(sidepanelHtml, 'src="workflow-controller.js"', 'sidepanel workflow controller script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-state.js"', 'sidepanel CDK pool state script load');
   assertIncludes(sidepanelHtml, 'src="settings-normalization.js"', 'sidepanel settings normalization script load');
@@ -350,12 +540,28 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="config-menu-controller.js"', 'sidepanel config menu controller script load');
   assertIncludes(sidepanelHtml, 'src="workflow-action-bindings.js"', 'sidepanel workflow action bindings script load');
   assertIncludes(sidepanelHtml, 'src="settings-field-bindings.js"', 'sidepanel settings field bindings script load');
+  assertIncludes(sidepanelHtml, 'src="app-state.js"', 'sidepanel app state script load');
+  assertIncludes(sidepanelHtml, 'src="settings-controller.js"', 'sidepanel settings controller script load');
+  assertIncludes(sidepanelHtml, 'src="runtime-message-data-handler.js"', 'sidepanel runtime message data handler script load');
+  assertIncludes(sidepanelHtml, 'src="runtime-message-handlers.js"', 'sidepanel runtime message handlers script load');
+  assertIncludes(sidepanelHtml, 'src="runtime-message-controller.js"', 'sidepanel runtime message controller script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'sidepanel UPI redeem CDK state script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK status view script load');
+  assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK controller script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-panel-controller.js"', 'sidepanel account records panel controller script load');
+  assertIncludes(sidepanelHtml, 'src="panel-display-controller.js"', 'sidepanel panel display controller script load');
+  assertIncludes(sidepanelHtml, 'src="removed-payment-worker-controller.js"', 'sidepanel RemovedPaymentWorker controller script load');
+  assertIncludes(sidepanelHtml, 'src="auto-run-status-controller.js"', 'sidepanel auto-run status controller script load');
+  assertIncludes(sidepanelHtml, 'src="operation-delay-controller.js"', 'sidepanel operation delay controller script load');
+  assertIncludes(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'sidepanel app controller script load');
+  assertIncludes(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'sidepanel bootstrap script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="toast-service.js"', 'src="sidepanel.js"', 'sidepanel toast service must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="log-panel-manager.js"', 'src="sidepanel.js"', 'sidepanel log manager must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-state-view.js"', 'src="sidepanel.js"', 'sidepanel workflow view must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-button-state.js"', 'src="sidepanel.js"', 'sidepanel workflow button state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-status-display.js"', 'src="sidepanel.js"', 'sidepanel workflow status display must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="workflow-controller.js"', 'src="sidepanel.js"', 'sidepanel workflow controller must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="cdk-pool-state.js"', 'src="sidepanel.js"', 'sidepanel CDK pool state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-normalization.js"', 'src="sidepanel.js"', 'sidepanel settings normalization must load before sidepanel.js');
@@ -366,6 +572,24 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="workflow-action-bindings.js"', 'src="sidepanel.js"', 'sidepanel workflow action bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-field-bindings.js"', 'src="sidepanel.js"', 'sidepanel settings field bindings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="app-state.js"', 'src="settings-controller.js"', 'sidepanel app state must load before settings controller');
+  assertBefore(sidepanelHtml, 'src="settings-controller.js"', 'src="runtime-message-controller.js"', 'sidepanel settings controller must load before runtime controller');
+  assertBefore(sidepanelHtml, 'src="runtime-message-data-handler.js"', 'src="runtime-message-handlers.js"', 'sidepanel runtime message data handler must load before runtime handlers');
+  assertBefore(sidepanelHtml, 'src="runtime-message-handlers.js"', 'src="runtime-message-controller.js"', 'sidepanel runtime message handlers must load before runtime controller');
+  assertBefore(sidepanelHtml, 'src="runtime-message-controller.js"', 'src="upi-redeem-cdk-state.js"', 'sidepanel runtime controller must load before UPI redeem CDK state');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK state must load before status view');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK status view must load before controller');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'src="account-records-panel-controller.js"', 'sidepanel UPI redeem CDK controller must load before account records panel controller');
+  assertBefore(sidepanelHtml, 'src="account-records-panel-controller.js"', 'src="panel-display-controller.js"', 'sidepanel account records panel controller must load before panel display controller');
+  assertBefore(sidepanelHtml, 'src="panel-display-controller.js"', 'src="removed-payment-worker-controller.js"', 'sidepanel panel display controller must load before RemovedPaymentWorker controller');
+  assertBefore(sidepanelHtml, 'src="removed-payment-worker-controller.js"', 'src="auto-run-status-controller.js"', 'sidepanel RemovedPaymentWorker controller must load before auto-run status controller');
+  assertBefore(sidepanelHtml, 'src="auto-run-status-controller.js"', 'src="operation-delay-controller.js"', 'sidepanel auto-run status controller must load before operation delay controller');
+  assertBefore(sidepanelHtml, 'src="operation-delay-controller.js"', 'src="sidepanel-app-controller.js"', 'sidepanel operation delay controller must load before app controller');
+  assertBefore(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'src="sidepanel-bootstrap.js"', 'sidepanel app controller must load before bootstrap');
+  assertBefore(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'src="sidepanel.js"', 'sidepanel bootstrap must load before compatibility entrypoint');
+  assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="sidepanel-runtime-bridge.js"', 'src="sidepanel.js"', 'sidepanel runtime bridge must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="cloudflare-domain-ui.js"', 'src="sidepanel.js"', 'sidepanel Cloudflare domain UI must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
@@ -376,11 +600,137 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
   assertIncludes(sidepanelHtml, 'src="membership-redeem-progress.js"', 'membership redeem progress script load');
   assertIncludes(sidepanelHtml, 'src="account-records-view-model.js"', 'account records view model script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-export.js"', 'account records export script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-subscription.js"', 'account records subscription script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-groups.js"', 'account records membership groups script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-redeem-status.js"', 'account records redeem status script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'account records CDK pool text script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-deletion-state.js"', 'account records deletion state script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-export-builders.js"', 'account records export builders script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'account records redeem policy script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'account records passkey helpers script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-credential-parser.js"', 'account records credential parser script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-status-meta.js"', 'account records status meta script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-renderer.js"', 'account records renderer script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-flow-view.js"', 'account records flow view script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-helpers.js"', 'account records membership helpers script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-pool-ops.js"', 'account records membership pool ops script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-result-ops.js"', 'account records membership result ops script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-panel-events.js"', 'account records panel events script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-actions.js"', 'account records membership actions script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'account records redeem actions script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'account records DOM helpers script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-state-sync.js"', 'account records membership state sync script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-trial-eligibility.js"', 'account records trial eligibility script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-run-history.js"', 'account records run history script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-settings-payload.js"', 'account records settings payload script load');
+  assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
+  assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
+  assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
+  assertIncludes(accountRecordsSubscription, 'createAccountRecordsSubscriptionHelpers', 'account records subscription helper factory');
+  assertIncludes(accountRecordsMembershipGroups, 'SidepanelAccountRecordsMembershipGroups', 'account records membership groups global');
+  assertIncludes(accountRecordsMembershipGroups, 'createAccountRecordsMembershipGroupHelpers', 'account records membership groups helper factory');
+  assertIncludes(accountRecordsRedeemStatus, 'SidepanelAccountRecordsRedeemStatus', 'account records redeem status global');
+  assertIncludes(accountRecordsRedeemStatus, 'createAccountRecordsRedeemStatusHelpers', 'account records redeem status helper factory');
+  assertIncludes(accountRecordsCdkPoolText, 'SidepanelAccountRecordsCdkPoolText', 'account records CDK pool text global');
+  assertIncludes(accountRecordsCdkPoolText, 'createAccountRecordsCdkPoolTextHelpers', 'account records CDK pool text helper factory');
+  assertIncludes(accountRecordsDeletionState, 'SidepanelAccountRecordsDeletionState', 'account records deletion state global');
+  assertIncludes(accountRecordsDeletionState, 'createAccountRecordsDeletionStateHelpers', 'account records deletion state helper factory');
+  assertIncludes(accountRecordsExportBuilders, 'SidepanelAccountRecordsExportBuilders', 'account records export builders global');
+  assertIncludes(accountRecordsExportBuilders, 'createAccountRecordsExportBuilders', 'account records export builders factory');
+  assertIncludes(accountRecordsRedeemPolicy, 'SidepanelAccountRecordsRedeemPolicy', 'account records redeem policy global');
+  assertIncludes(accountRecordsRedeemPolicy, 'createAccountRecordsRedeemPolicy', 'account records redeem policy factory');
+  assertIncludes(accountRecordsPasskeyHelpers, 'SidepanelAccountRecordsPasskeyHelpers', 'account records passkey helpers global');
+  assertIncludes(accountRecordsCredentialParser, 'SidepanelAccountRecordsCredentialParser', 'account records credential parser global');
+  assertIncludes(accountRecordsCredentialParser, 'createAccountRecordsCredentialParser', 'account records credential parser factory');
+  assertIncludes(accountRecordsStatusMeta, 'SidepanelAccountRecordsStatusMeta', 'account records status meta global');
+  assertIncludes(accountRecordsStatusMeta, 'createAccountRecordsStatusMeta', 'account records status meta factory');
+  assertIncludes(accountRecordsDisplayModel, 'SidepanelAccountRecordsDisplayModel', 'account records display model global');
+  assertIncludes(accountRecordsDisplayModel, 'createAccountRecordsDisplayModel', 'account records display model factory');
+  assertIncludes(accountRecordsFlowView, 'SidepanelAccountRecordsFlowView', 'account records flow view global');
+  assertIncludes(accountRecordsFlowView, 'createAccountRecordsFlowView', 'account records flow view factory');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'account records membership results renderer script load');
+  assertIncludes(accountRecordsMembershipResultsRenderer, 'SidepanelAccountRecordsMembershipResultsRenderer', 'account records membership results renderer global');
+  assertIncludes(accountRecordsMembershipResultsRenderer, 'createAccountRecordsMembershipResultsRenderer', 'account records membership results renderer factory');
+  assertIncludes(accountRecordsMembershipHelpers, 'SidepanelAccountRecordsMembershipHelpers', 'account records membership helpers global');
+  assertIncludes(accountRecordsMembershipHelpers, 'createAccountRecordsMembershipHelpers', 'account records membership helpers factory');
+  assertIncludes(accountRecordsMembershipPoolOps, 'SidepanelAccountRecordsMembershipPoolOps', 'account records membership pool ops global');
+  assertIncludes(accountRecordsMembershipPoolOps, 'createAccountRecordsMembershipPoolOps', 'account records membership pool ops factory');
+  assertIncludes(accountRecordsMembershipResultOps, 'SidepanelAccountRecordsMembershipResultOps', 'account records membership result ops global');
+  assertIncludes(accountRecordsMembershipResultOps, 'createAccountRecordsMembershipResultOps', 'account records membership result ops factory');
+  assertIncludes(accountRecordsPanelEvents, 'SidepanelAccountRecordsPanelEvents', 'account records panel events global');
+  assertIncludes(accountRecordsPanelEvents, 'createAccountRecordsPanelEvents', 'account records panel events factory');
+  assertIncludes(accountRecordsMembershipActions, 'SidepanelAccountRecordsMembershipActions', 'account records membership actions global');
+  assertIncludes(accountRecordsMembershipActions, 'createAccountRecordsMembershipActions', 'account records membership actions factory');
+  assertIncludes(accountRecordsMembershipActions, 'module.exports', 'account records membership actions CommonJS export');
+  assertIncludes(accountRecordsRedeemActions, 'SidepanelAccountRecordsRedeemActions', 'account records redeem actions global');
+  assertIncludes(accountRecordsRedeemActions, 'createAccountRecordsRedeemActions', 'account records redeem actions factory');
+  assertIncludes(accountRecordsRedeemActions, 'module.exports', 'account records redeem actions CommonJS export');
+  assertIncludes(accountRecordsDomHelpers, 'SidepanelAccountRecordsDomHelpers', 'account records DOM helpers global');
+  assertIncludes(accountRecordsDomHelpers, 'createAccountRecordsDomHelpers', 'account records DOM helpers factory');
+  assertIncludes(accountRecordsDomHelpers, 'module.exports', 'account records DOM helpers CommonJS export');
+  assertIncludes(accountRecordsMembershipStateSync, 'SidepanelAccountRecordsMembershipStateSync', 'account records membership state sync global');
+  assertIncludes(accountRecordsMembershipStateSync, 'createAccountRecordsMembershipStateSync', 'account records membership state sync factory');
+  assertIncludes(accountRecordsMembershipStateSync, 'module.exports', 'account records membership state sync CommonJS export');
+  assertIncludes(accountRecordsTrialEligibility, 'SidepanelAccountRecordsTrialEligibility', 'account records trial eligibility global');
+  assertIncludes(accountRecordsTrialEligibility, 'createAccountRecordsTrialEligibility', 'account records trial eligibility factory');
+  assertIncludes(accountRecordsTrialEligibility, 'module.exports', 'account records trial eligibility CommonJS export');
+  assertIncludes(accountRecordsRunHistory, 'SidepanelAccountRecordsRunHistory', 'account records run history global');
+  assertIncludes(accountRecordsRunHistory, 'createAccountRecordsRunHistory', 'account records run history factory');
+  assertIncludes(accountRecordsRunHistory, 'module.exports', 'account records run history CommonJS export');
+  assertIncludes(accountRecordsSettingsPayload, 'SidepanelAccountRecordsSettingsPayload', 'account records settings payload global');
+  assertIncludes(accountRecordsSettingsPayload, 'createAccountRecordsSettingsPayload', 'account records settings payload factory');
+  assertIncludes(accountRecordsSettingsPayload, 'module.exports', 'account records settings payload CommonJS export');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="account-records-manager.js"', 'membership renderer must load before account records manager');
   assertBefore(sidepanelHtml, 'src="account-records-view-model.js"', 'src="account-records-manager.js"', 'account records view model must load before account records manager');
+  assertBefore(sidepanelHtml, 'src="account-records-view-model.js"', 'src="account-records-export.js"', 'account records view model must load before export helpers');
+  assertBefore(sidepanelHtml, 'src="account-records-export.js"', 'src="account-records-manager.js"', 'account records export helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-export.js"', 'src="account-records-subscription.js"', 'account records export helpers must load before subscription helpers');
+  assertBefore(sidepanelHtml, 'src="account-records-subscription.js"', 'src="account-records-manager.js"', 'account records subscription helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-subscription.js"', 'src="account-records-membership-groups.js"', 'account records subscription helpers must load before membership groups');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-groups.js"', 'src="account-records-manager.js"', 'account records membership groups must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-groups.js"', 'src="account-records-redeem-status.js"', 'account records membership groups must load before redeem status');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-status.js"', 'src="account-records-manager.js"', 'account records redeem status helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-status.js"', 'src="account-records-cdk-pool-text.js"', 'account records redeem status helpers must load before CDK pool text');
+  assertBefore(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'src="account-records-manager.js"', 'account records CDK pool text helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'src="account-records-deletion-state.js"', 'account records CDK pool text helpers must load before deletion state');
+  assertBefore(sidepanelHtml, 'src="account-records-deletion-state.js"', 'src="account-records-manager.js"', 'account records deletion state helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-deletion-state.js"', 'src="account-records-export-builders.js"', 'account records deletion state helpers must load before export builders');
+  assertBefore(sidepanelHtml, 'src="account-records-export-builders.js"', 'src="account-records-manager.js"', 'account records export builders must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-export-builders.js"', 'src="account-records-redeem-policy.js"', 'account records export builders must load before redeem policy');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-manager.js"', 'account records redeem policy must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-credential-parser.js"', 'account records redeem policy must load before credential parser');
+  assertBefore(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'src="account-records-credential-parser.js"', 'account records passkey helpers must load before credential parser');
+  assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-manager.js"', 'account records credential parser must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-display-model.js"', 'account records credential parser must load before display model');
+  assertBefore(sidepanelHtml, 'src="account-records-status-meta.js"', 'src="account-records-display-model.js"', 'account records status meta must load before display model');
+  assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-flow-view.js"', 'account records display model must load before flow view');
+  assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-renderer.js"', 'account records flow view must load before renderer');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'src="account-records-renderer.js"', 'account records membership results renderer must load before renderer');
+  assertBefore(sidepanelHtml, 'src="account-records-renderer.js"', 'src="account-records-manager.js"', 'account records renderer must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-helpers.js"', 'src="account-records-manager.js"', 'account records membership helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-pool-ops.js"', 'src="account-records-manager.js"', 'account records membership pool ops must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-result-ops.js"', 'src="account-records-manager.js"', 'account records membership result ops must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-panel-events.js"', 'src="account-records-manager.js"', 'account records panel events must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-actions.js"', 'src="account-records-manager.js"', 'account records membership actions must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'src="account-records-manager.js"', 'account records redeem actions must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'src="account-records-manager.js"', 'account records DOM helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-state-sync.js"', 'src="account-records-manager.js"', 'account records membership state sync must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-trial-eligibility.js"', 'src="account-records-manager.js"', 'account records trial eligibility must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-run-history.js"', 'src="account-records-manager.js"', 'account records run history must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-settings-payload.js"', 'src="account-records-manager.js"', 'account records settings payload must load before manager');
+  assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipHelpers', 'account records manager membership helpers dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipPoolOps', 'account records manager membership pool ops dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipResultOps', 'account records manager membership result ops dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsPanelEvents', 'account records manager panel events dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipActions', 'account records manager membership actions dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsRedeemActions', 'account records manager redeem actions dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsDomHelpers', 'account records manager DOM helpers dependency');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -433,16 +783,26 @@ function checkStaticContracts() {
   assertIncludes(configMenuController, 'createConfigMenuController', 'sidepanel config menu controller factory');
   assertIncludes(workflowActionBindings, 'SidepanelWorkflowActionBindings', 'sidepanel workflow action bindings global');
   assertIncludes(workflowActionBindings, 'createWorkflowActionBindings', 'sidepanel workflow action bindings factory');
-  assertIncludes(sidepanel, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel workflow action bindings wiring');
-  assertBefore(sidepanel, 'renderStepsList();\ninitializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel must render workflow steps before binding init actions');
+  assertIncludes(workflowController, 'createWorkflowActionBindings', 'sidepanel workflow controller action bindings wiring');
+  assertBefore(sidepanelAppController, 'renderStepsList();', 'bindConfigMenuEvents();', 'sidepanel app controller must render workflow steps before binding init actions');
+  assertBefore(sidepanelAppController, 'initializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel app controller must initialize manual step actions before binding config menu events');
   assertIncludes(sidepanelHtml, '<span id="steps-progress" class="steps-progress">0 / 0</span>', 'sidepanel workflow progress placeholder must not hard-code stale step count');
-  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareDomains(values)', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
-  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareTempEmailDomains(values)', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
+  assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareDomains?.(values) || []', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
+  assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareTempEmailDomains?.(values) || []', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
   assertIncludes(settingsTransferManager, "type: 'EXPORT_SETTINGS'", 'settings export route lives in transfer manager');
   assertIncludes(settingsTransferManager, "type: 'IMPORT_SETTINGS'", 'settings import route lives in transfer manager');
+  assertIncludes(mailProviderState, 'SidepanelMailProviderState', 'sidepanel mail provider state global');
+  assertIncludes(mailProviderState, 'createMailProviderState', 'sidepanel mail provider state factory');
+  assertIncludes(sidepanelAppController, 'SidepanelMailProviderState.createMailProviderState', 'sidepanel app controller mail provider state wiring');
+  assertIncludes(sidepanelRuntimeBridge, 'SidepanelRuntimeBridge', 'sidepanel runtime bridge global');
+  assertIncludes(sidepanelRuntimeBridge, 'createSidepanelRuntimeBridge', 'sidepanel runtime bridge factory');
+  assertIncludes(sidepanelAppController, 'SidepanelRuntimeBridge.createSidepanelRuntimeBridge', 'sidepanel app controller runtime bridge wiring');
+  assertIncludes(cloudflareDomainUi, 'SidepanelCloudflareDomainUi', 'sidepanel Cloudflare domain UI global');
+  assertIncludes(cloudflareDomainUi, 'createCloudflareDomainUi', 'sidepanel Cloudflare domain UI factory');
+  assertIncludes(sidepanelAppController, 'SidepanelCloudflareDomainUi.createCloudflareDomainUi', 'sidepanel app controller Cloudflare domain UI wiring');
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
   assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
@@ -473,6 +833,11 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/bootstrap/auto-run-session.js'", 'background auto-run session script load');
   assertIncludes(background, "'background/bootstrap/auto-run-timer-plan.js'", 'background auto-run timer plan script load');
   assertIncludes(background, "'background/bootstrap/auto-run-status.js'", 'background auto-run status script load');
+  assertIncludes(background, "'background/auto-run/summary-builder.js'", 'background auto-run summary builder script load');
+  assertIncludes(background, "'background/auto-run/log-snapshot.js'", 'background auto-run log snapshot script load');
+  assertIncludes(background, "'background/auto-run/retry-policy.js'", 'background auto-run retry policy script load');
+  assertIncludes(background, "'background/auto-run/session-runner.js'", 'background auto-run session runner script load');
+  assertIncludes(background, "'background/auto-run-controller.js'", 'background auto-run controller script load');
   assertIncludes(background, "'background/bootstrap/state-patch-helpers.js'", 'background state patch helpers script load');
   assertIncludes(background, 'background/bootstrap/content-script-registry.js', 'content script registry import');
   assertIncludes(background, 'MultiPageBackgroundSettingsTransfer.createSettingsTransfer', 'background settings transfer wiring');
@@ -510,20 +875,159 @@ function checkStaticContracts() {
   assertIncludes(autoRunStatus, 'MultiPageBackgroundAutoRunStatus', 'background auto-run status global');
   assertIncludes(autoRunStatus, 'createAutoRunStatusManager', 'background auto-run status factory');
   assertIncludes(autoRunStatus, 'isAutoRunLockedState', 'background auto-run status locked predicate');
+  assertIncludes(autoRunSummaryBuilder, 'MultiPageBackgroundAutoRunSummaryBuilder', 'background auto-run summary builder global');
+  assertIncludes(autoRunSummaryBuilder, 'createAutoRunSummaryBuilder', 'background auto-run summary builder factory');
+  assertIncludes(autoRunSummaryBuilder, 'logAutoRunFinalSummary', 'background auto-run summary builder summary logger');
+  assertIncludes(autoRunLogSnapshot, 'MultiPageBackgroundAutoRunLogSnapshot', 'background auto-run log snapshot global');
+  assertIncludes(autoRunLogSnapshot, 'createAutoRunLogSnapshot', 'background auto-run log snapshot factory');
+  assertIncludes(autoRunLogSnapshot, 'replayPreviousSuccessfulAutoRunRoundLogSnapshot', 'background auto-run log snapshot replay helper');
+  assertIncludes(autoRunRetryPolicy, 'MultiPageBackgroundAutoRunRetryPolicy', 'background auto-run retry policy global');
+  assertIncludes(autoRunRetryPolicy, 'createAutoRunRetryPolicy', 'background auto-run retry policy factory');
+  assertIncludes(autoRunRetryPolicy, 'evaluateAttemptFailure', 'background auto-run retry policy classifier');
+  assertIncludes(autoRunSessionRunner, 'MultiPageBackgroundAutoRunSessionRunner', 'background auto-run session runner global');
+  assertIncludes(autoRunSessionRunner, 'createAutoRunSessionRunner', 'background auto-run session runner factory');
+  assertIncludes(autoRunSessionRunner, 'autoRunLoop', 'background auto-run session runner loop');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunSummaryBuilder', 'background auto-run controller summary builder dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunLogSnapshot', 'background auto-run controller log snapshot dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunRetryPolicy', 'background auto-run controller retry policy dependency');
+  assertIncludes(autoRunController, 'MultiPageBackgroundAutoRunSessionRunner', 'background auto-run controller session runner dependency');
+  assertIncludes(autoRunController, 'createAutoRunController', 'background auto-run controller factory');
   assertIncludes(background, "'background/email/provider-registry.js'", 'background email provider registry script load');
   assertIncludes(emailProviderRegistry, 'MultiPageEmailProviderRegistry', 'email provider registry global');
   assertIncludes(emailProviderRegistry, 'normalizeEmailGenerator', 'email provider generator normalizer');
   assertIncludes(background, "'background/membership/redeem-status-sync.js'", 'background redeem status sync script load');
+  assertIncludes(background, "'background/router/redeem-refresh-service.js'", 'background router redeem refresh service script load');
+  assertIncludes(background, "'background/router/node-protocol-service.js'", 'background router node protocol service script load');
+  assertIncludes(background, "'background/router/payment-session-service.js'", 'background router payment session service script load');
+  assertIncludes(background, "'background/router/core-routes.js'", 'background router core routes script load');
+  assertIncludes(background, "'background/router/message-dispatcher.js'", 'background router message dispatcher script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
+  assertIncludes(background, "'background/membership/results-store.js'", 'background membership results-store script load');
+  assertIncludes(background, "'background/membership/trial-eligibility-service.js'", 'background trial eligibility service script load');
+  assertIncludes(background, "'background/membership/membership-result-sync.js'", 'background membership result sync service script load');
+  assertIncludes(background, "'background/membership/access-token-supplement-service.js'", 'background access-token supplement service script load');
+  assertIncludes(background, "'background/membership/free-pool-service.js'", 'background Free pool service script load');
+  assertIncludes(background, "'background/membership/redeem-candidate-service.js'", 'background redeem candidate service script load');
+  assertIncludes(background, "'background/membership/credential-pool-service.js'", 'background credential pool service script load');
+  assertIncludes(background, "'background/membership/import-export-service.js'", 'background import/export service script load');
+  assertIncludes(background, "'background/membership/credential-backup-format.js'", 'background credential backup format script load');
+  assertIncludes(background, "'background/membership/plus-verification-service.js'", 'background Plus verification service script load');
+  assertIncludes(background, "'background/membership/failed-redeem-retry-service.js'", 'background failed redeem retry service script load');
+  assertIncludes(background, "'background/membership/redeem-service.js'", 'background membership redeem service script load');
+  assertIncludes(background, "'background/steps/upi-redeem/session-material.js'", 'background UPI redeem session material script load');
+  assertIncludes(background, "'background/steps/upi-redeem/free-entry.js'", 'background UPI redeem Free entry script load');
+  assertIncludes(background, "'background/steps/upi-redeem/channel-submission.js'", 'background UPI redeem channel submission script load');
+  assertIncludes(background, "'background/steps/upi-redeem/status-polling.js'", 'background UPI redeem status polling script load');
+  assertIncludes(background, "'background/steps/upi-redeem/finalize.js'", 'background UPI redeem finalize script load');
+  assertIncludes(background, "'background/verification/assurivo-time.js'", 'background verification Assurivo time script load');
+  assertIncludes(background, "'background/verification/verification-keywords.js'", 'background verification keywords script load');
+  assertIncludes(background, "'background/verification/code-extractor.js'", 'background verification code extractor script load');
+  assertIncludes(background, "'background/verification/assurivo-feed-client.js'", 'background verification Assurivo feed client script load');
+  assertIncludes(background, "'background/verification/resend-controller.js'", 'background verification resend controller script load');
+  assertIncludes(upiRedeemSessionMaterial, 'MultiPageUpiRedeemSessionMaterial', 'UPI redeem session material global');
+  assertIncludes(upiRedeemSessionMaterial, 'createUpiRedeemSessionMaterial', 'UPI redeem session material factory');
+  assertIncludes(upiRedeemFreeEntry, 'MultiPageUpiRedeemFreeEntry', 'UPI redeem Free entry global');
+  assertIncludes(upiRedeemFreeEntry, 'createUpiRedeemFreeEntry', 'UPI redeem Free entry factory');
+  assertIncludes(upiRedeemChannelSubmission, 'MultiPageUpiRedeemChannelSubmission', 'UPI redeem channel submission global');
+  assertIncludes(upiRedeemChannelSubmission, 'createUpiRedeemChannelSubmission', 'UPI redeem channel submission factory');
+  assertIncludes(upiRedeemStatusPolling, 'MultiPageUpiRedeemStatusPolling', 'UPI redeem status polling global');
+  assertIncludes(upiRedeemStatusPolling, 'createUpiRedeemStatusPolling', 'UPI redeem status polling factory');
+  assertIncludes(upiRedeemFinalize, 'MultiPageUpiRedeemFinalize', 'UPI redeem finalize global');
+  assertIncludes(upiRedeemFinalize, 'createUpiRedeemFinalize', 'UPI redeem finalize factory');
+  assertIncludes(verificationAssurivoTime, 'MultiPageVerificationAssurivoTime', 'verification Assurivo time global');
+  assertIncludes(verificationAssurivoTime, 'createVerificationAssurivoTime', 'verification Assurivo time factory');
+  assertIncludes(verificationKeywords, 'MultiPageVerificationKeywords', 'verification keywords global');
+  assertIncludes(verificationKeywords, 'createVerificationKeywords', 'verification keywords factory');
+  assertIncludes(verificationCodeExtractor, 'MultiPageVerificationCodeExtractor', 'verification code extractor global');
+  assertIncludes(verificationCodeExtractor, 'createVerificationCodeExtractor', 'verification code extractor factory');
+  assertIncludes(verificationAssurivoFeedClient, 'MultiPageAssurivoFeedClient', 'verification Assurivo feed client global');
+  assertIncludes(verificationAssurivoFeedClient, 'createAssurivoFeedClient', 'verification Assurivo feed client factory');
+  assertIncludes(verificationResendController, 'MultiPageVerificationResendController', 'verification resend controller global');
+  assertIncludes(verificationResendController, 'createVerificationResendController', 'verification resend controller factory');
+  assertIncludes(verificationFlow, 'MultiPageBackgroundVerificationFlow', 'verification flow facade global');
+  assertIncludes(verificationFlow, 'createVerificationFlowHelpers', 'verification flow facade factory');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
+  assertBefore(background, "'background/router/redeem-refresh-service.js'", "'background/message-router.js'", 'router redeem refresh service must load before message router');
+  assertBefore(background, "'background/router/node-protocol-service.js'", "'background/message-router.js'", 'router node protocol service must load before message router');
+  assertBefore(background, "'background/router/payment-session-service.js'", "'background/message-router.js'", 'router payment session service must load before message router');
+  assertBefore(background, "'background/router/core-routes.js'", "'background/message-router.js'", 'router core routes must load before message router');
+  assertBefore(background, "'background/router/message-dispatcher.js'", "'background/message-router.js'", 'router message dispatcher must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
   assertBefore(background, "'background/membership/result-state.js'", "'background/upi-credential-membership-checker.js'", 'membership result-state must load before membership checker');
+  assertBefore(background, "'background/auto-run/summary-builder.js'", "'background/auto-run-controller.js'", 'auto-run summary builder must load before controller');
+  assertBefore(background, "'background/auto-run/log-snapshot.js'", "'background/auto-run-controller.js'", 'auto-run log snapshot must load before controller');
+  assertBefore(background, "'background/auto-run/retry-policy.js'", "'background/auto-run-controller.js'", 'auto-run retry policy must load before controller');
+  assertBefore(background, "'background/auto-run/session-runner.js'", "'background/auto-run-controller.js'", 'auto-run session runner must load before controller');
+  [
+    'trial-eligibility-service.js',
+    'membership-result-sync.js',
+    'access-token-supplement-service.js',
+    'free-pool-service.js',
+    'redeem-candidate-service.js',
+    'credential-pool-service.js',
+    'import-export-service.js',
+    'credential-backup-format.js',
+    'plus-verification-service.js',
+    'failed-redeem-retry-service.js',
+    'redeem-service.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/membership/${file}'`,
+      "'background/upi-credential-membership-checker.js'",
+      `background ${file} must load before membership checker`
+    );
+  });
+  [
+    'session-material.js',
+    'free-entry.js',
+    'channel-submission.js',
+    'status-polling.js',
+    'finalize.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/steps/upi-redeem/${file}'`,
+      "'background/steps/upi-redeem.js'",
+      `background UPI redeem ${file} must load before UPI redeem facade`
+    );
+  });
+  [
+    'assurivo-time.js',
+    'verification-keywords.js',
+    'code-extractor.js',
+    'assurivo-feed-client.js',
+    'resend-controller.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/verification/${file}'`,
+      "'background/verification-flow.js'",
+      `background verification ${file} must load before verification facade`
+    );
+  });
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
   assertIncludes(membershipRedeemStatusSync, 'buildPendingUpiCredentialMembershipRedeemRefreshTargets', 'membership redeem refresh target helper');
+  assertIncludes(routerRedeemRefreshService, 'MultiPageRouterRedeemRefreshService', 'router redeem refresh service global');
+  assertIncludes(routerRedeemRefreshService, 'createRouterRedeemRefreshService', 'router redeem refresh service factory');
+  assertIncludes(routerRedeemRefreshService, 'module.exports', 'router redeem refresh service CommonJS export');
+  assertIncludes(routerNodeProtocolService, 'MultiPageRouterNodeProtocolService', 'router node protocol service global');
+  assertIncludes(routerNodeProtocolService, 'createRouterNodeProtocolService', 'router node protocol service factory');
+  assertIncludes(routerNodeProtocolService, 'module.exports', 'router node protocol service CommonJS export');
+  assertIncludes(routerPaymentSessionService, 'MultiPageRouterPaymentSessionService', 'router payment session service global');
+  assertIncludes(routerPaymentSessionService, 'createRouterPaymentSessionService', 'router payment session service factory');
+  assertIncludes(routerPaymentSessionService, 'module.exports', 'router payment session service CommonJS export');
+  assertIncludes(routerMessageDispatcher, 'MultiPageRouterMessageDispatcher', 'router message dispatcher global');
+  assertIncludes(routerMessageDispatcher, 'createRouterMessageDispatcher', 'router message dispatcher factory');
+  assertIncludes(routerMessageDispatcher, 'module.exports', 'router message dispatcher CommonJS export');
+  assertIncludes(router, 'getRouterPaymentSessionServiceModule()', 'message router payment session service module accessor');
+  assertIncludes(router, 'createRouterPaymentSessionService', 'message router payment session service factory dependency');
+  assertIncludes(router, 'getRouterMessageDispatcherModule()', 'message router dispatcher module accessor');
+  assertIncludes(router, 'createRouterMessageDispatcher', 'message router dispatcher factory dependency');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
   assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
   assertIncludes(membershipLoginSessionExecutor, 'MultiPageMembershipLoginSessionExecutor', 'membership login session executor global');
@@ -531,10 +1035,59 @@ function checkStaticContracts() {
   assertIncludes(membershipResultState, 'MultiPageMembershipResultState', 'membership result-state global');
   assertIncludes(membershipResultState, 'normalizeResultsPayload', 'membership result-state payload normalizer');
   assertIncludes(membershipResultState, 'buildResultExportRows', 'membership result-state export rows helper');
+  assertIncludes(membershipResultsStore, 'MultiPageMembershipResultsStore', 'membership results-store global');
+  assertIncludes(membershipResultsStore, 'createMembershipResultsStore', 'membership results-store factory');
+  assertIncludes(trialEligibilityService, 'MultiPageTrialEligibilityService', 'trial eligibility service global');
+  assertIncludes(trialEligibilityService, 'createTrialEligibilityService', 'trial eligibility service factory');
+  assertIncludes(trialEligibilityService, 'checkUpiCredentialMembershipTrialEligibility', 'trial eligibility service checker flow');
+  assertIncludes(membershipResultSync, 'MultiPageMembershipResultSync', 'membership result sync global');
+  assertIncludes(membershipResultSync, 'createMembershipResultSync', 'membership result sync factory');
+  assertIncludes(membershipResultSync, 'getFreshUpiRedeemRuntimeState', 'membership result sync runtime state helper');
+  assertIncludes(accessTokenSupplementService, 'MultiPageAccessTokenSupplementService', 'access-token supplement service global');
+  assertIncludes(accessTokenSupplementService, 'createAccessTokenSupplementService', 'access-token supplement service factory');
+  assertIncludes(accessTokenSupplementService, 'fillUpiCredentialMembershipFreeAccessTokens', 'access-token supplement flow');
+  assertIncludes(freePoolService, 'MultiPageFreePoolService', 'Free pool service global');
+  assertIncludes(freePoolService, 'createFreePoolService', 'Free pool service factory');
+  assertIncludes(freePoolService, 'pruneIneligibleFreeUpiCredentialMembership', 'Free pool no-trial pruning flow');
+  assertIncludes(redeemCandidateService, 'MultiPageRedeemCandidateService', 'redeem candidate service global');
+  assertIncludes(redeemCandidateService, 'createRedeemCandidateService', 'redeem candidate service factory');
+  assertIncludes(redeemCandidateService, 'buildAutoContinuationRedeemCandidates', 'redeem candidate continuation helper');
+  assertIncludes(credentialPoolService, 'MultiPageMembershipCredentialPoolService', 'credential pool service global');
+  assertIncludes(credentialPoolService, 'createCredentialPoolService', 'credential pool service factory');
+  assertIncludes(credentialPoolService, 'deleteUpiCredentialMembershipCheckResults', 'credential pool check-result deletion flow');
+  assertIncludes(membershipImportExportService, 'MultiPageMembershipImportExportService', 'membership import/export service global');
+  assertIncludes(membershipImportExportService, 'createImportExportService', 'membership import/export service factory');
+  assertIncludes(membershipImportExportService, 'exportUpiCredentialMembershipCheckResults', 'membership import/export export flow');
+  assertIncludes(membershipCredentialBackupFormat, 'MultiPageMembershipCredentialBackupFormat', 'membership credential backup format global');
+  assertIncludes(membershipCredentialBackupFormat, 'createCredentialBackupFormat', 'membership credential backup format factory');
+  assertIncludes(membershipCredentialBackupFormat, 'parseCredentialBackupText', 'membership credential backup parser');
+  assertIncludes(membershipPlusVerificationService, 'MultiPageMembershipPlusVerificationService', 'membership Plus verification service global');
+  assertIncludes(membershipPlusVerificationService, 'createPlusVerificationService', 'membership Plus verification service factory');
+  assertIncludes(membershipPlusVerificationService, 'identifyUpiCredentialMembershipFreePlus', 'membership Plus identification flow');
+  assertIncludes(membershipFailedRedeemRetryService, 'MultiPageMembershipFailedRedeemRetryService', 'membership failed redeem retry service global');
+  assertIncludes(membershipFailedRedeemRetryService, 'createFailedRedeemRetryService', 'membership failed redeem retry service factory');
+  assertIncludes(membershipFailedRedeemRetryService, 'retryFailedUpiRedeemCdkey', 'membership failed redeem retry flow');
+  assertIncludes(membershipRedeemService, 'MultiPageMembershipRedeemService', 'membership redeem service global');
+  assertIncludes(membershipRedeemService, 'createMembershipRedeemService', 'membership redeem service factory');
+  assertIncludes(membershipRedeemService, 'redeemUpiCredentialMembershipFree', 'membership redeem flow');
   assertIncludes(checker, 'getMembershipResultStateHelper', 'membership checker result-state wrapper');
+  assertIncludes(checker, 'getMembershipTrialEligibilityServiceModule', 'membership checker trial service wrapper');
+  assertIncludes(checker, 'getMembershipResultSyncModule', 'membership checker result sync wrapper');
+  assertIncludes(checker, 'getMembershipAccessTokenSupplementServiceModule', 'membership checker AT supplement wrapper');
+  assertIncludes(checker, 'getMembershipFreePoolServiceModule', 'membership checker Free pool wrapper');
+  assertIncludes(checker, 'getMembershipRedeemCandidateServiceModule', 'membership checker redeem candidate wrapper');
+  assertIncludes(checker, 'getMembershipCredentialPoolServiceModule', 'membership checker credential pool wrapper');
+  assertIncludes(checker, 'getMembershipImportExportServiceModule', 'membership checker import/export wrapper');
+  assertIncludes(checker, 'getMembershipCredentialBackupFormatModule', 'membership checker credential backup format wrapper');
+  assertIncludes(checker, 'getMembershipPlusVerificationServiceModule', 'membership checker Plus verification wrapper');
+  assertIncludes(checker, 'getMembershipFailedRedeemRetryServiceModule', 'membership checker failed redeem retry wrapper');
+  assertIncludes(checker, 'getMembershipRedeemServiceModule', 'membership checker redeem service wrapper');
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
+  assertIncludes(background, "'background/routes/settings-routes.js'", 'background settings routes script load');
+  assertIncludes(background, "'background/routes/account-record-routes.js'", 'background account record routes script load');
+  assertIncludes(background, "'background/routes/email-pool-routes.js'", 'background email pool routes script load');
   assertBefore(
     background,
     "'background/routes/membership-routes.js'",
@@ -553,14 +1106,55 @@ function checkStaticContracts() {
     "'background/message-router.js'",
     'background workflow routes must load before message router'
   );
+  assertBefore(
+    background,
+    "'background/routes/settings-routes.js'",
+    "'background/message-router.js'",
+    'background settings routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/account-record-routes.js'",
+    "'background/message-router.js'",
+    'background account record routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/email-pool-routes.js'",
+    "'background/message-router.js'",
+    'background email pool routes must load before message router'
+  );
   assertIncludes(membershipRoutes, 'createMembershipRoutes', 'membership routes factory');
   assertIncludes(membershipRoutes, 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH', 'membership trial batch route');
   assertIncludes(cdkRoutes, 'createCdkeyRoutes', 'CDK routes factory');
   assertIncludes(cdkRoutes, 'REFRESH_UPI_REDEEM_CDKEY_STATUSES', 'remote CDK status refresh route');
   assertIncludes(workflowRoutes, 'createWorkflowRoutes', 'workflow routes factory');
   assertIncludes(workflowRoutes, 'EXECUTE_NODE', 'workflow execute node route');
-  assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
-  assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
+  assertIncludes(settingsRoutes, 'MultiPageSettingsRoutes', 'settings routes global');
+  assertIncludes(settingsRoutes, 'createSettingsRoutes', 'settings routes factory');
+  assertIncludes(settingsRoutes, 'SAVE_SETTING', 'settings save route');
+  assertIncludes(settingsRoutes, 'IMPORT_SETTINGS', 'settings import route');
+  assertIncludes(accountRecordRoutes, 'MultiPageAccountRecordRoutes', 'account record routes global');
+  assertIncludes(accountRecordRoutes, 'createAccountRecordRoutes', 'account record routes factory');
+  assertIncludes(accountRecordRoutes, 'DELETE_ACCOUNT_RUN_HISTORY_RECORDS', 'account record delete route');
+  assertIncludes(emailPoolRoutes, 'MultiPageEmailPoolRoutes', 'email pool routes global');
+  assertIncludes(emailPoolRoutes, 'createEmailPoolRoutes', 'email pool routes factory');
+  assertIncludes(emailPoolRoutes, 'FETCH_DUCK_EMAIL', 'email pool Duck route');
+  assertIncludes(emailPoolRoutes, 'DELETE_USED_ICLOUD_ALIASES', 'email pool iCloud cleanup route');
+  assertIncludes(routerCoreRoutes, 'MultiPageRouterCoreRoutes', 'router core routes global');
+  assertIncludes(routerCoreRoutes, 'createRouterCoreRoutes', 'router core routes factory');
+  assertIncludes(routerCoreRoutes, 'const routeHandlers = {', 'router core routes handler table');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'router core routes CDK route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageSettingsRoutes?.createSettingsRoutes', 'router core routes settings route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes', 'router core routes account record route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageEmailPoolRoutes?.createEmailPoolRoutes', 'router core routes email pool route registration');
+  assertIncludes(router, 'getRouterRedeemRefreshServiceModule', 'message router redeem refresh helper module lookup');
+  assertIncludes(router, 'createRouterRedeemRefreshService', 'message router redeem refresh service wiring');
+  assertIncludes(router, 'getRouterNodeProtocolServiceModule', 'message router node protocol helper module lookup');
+  assertIncludes(router, 'createRouterNodeProtocolService', 'message router node protocol service wiring');
+  assertIncludes(router, 'getRouterCoreRoutesModule', 'message router core routes helper module lookup');
+  assertIncludes(router, 'createRouterCoreRoutes', 'message router core routes factory wiring');
+  assertIncludes(routerMessageDispatcher, 'routeHandlers[type]', 'message dispatcher delegated route dispatch');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
   assertBefore(
@@ -582,8 +1176,8 @@ function checkStaticContracts() {
   assertIncludes(upiRedeem, 'getRedeemCdkeyUsageHelpers()', 'UPI redeem CDK usage wrapper');
   assertIncludes(checker, 'getRedeemChannelStateHelpers()', 'membership checker channel state wrapper');
   assertIncludes(checker, 'getRedeemCdkeyUsageHelpers()', 'membership checker CDK usage wrapper');
-  assertIncludes(router, 'getRedeemChannelStateHelpers()', 'router channel state wrapper');
-  assertIncludes(router, 'getRedeemCdkeyUsageHelpers()', 'router CDK usage wrapper');
+  assertIncludes(routerRedeemRefreshService, 'getRedeemChannelStateHelpers()', 'router redeem refresh channel state wrapper');
+  assertIncludes(routerRedeemRefreshService, 'getRedeemCdkeyUsageHelpers()', 'router redeem refresh CDK usage wrapper');
   assertIncludes(contentScriptRegistry, "'content/auth-page-detectors.js'", 'background auth page detectors injection');
   assertIncludes(contentScriptRegistry, "'content/signup-dom-utils.js'", 'background signup DOM utils injection');
   assertIncludes(contentScriptRegistry, "'content/signup-entry-page.js'", 'background signup entry page injection');
@@ -676,10 +1270,10 @@ function checkStaticContracts() {
     assertIncludes(sidepanelHtml, `id="${id}"`, `sidepanel HTML DOM contract for ${id}`);
   });
 
-  assertIncludes(accountRecords, 'redeemPlusDeletedEmailsByChannel', 'Plus delete tombstones');
-  assertIncludes(accountRecords, "normalizeRedeemChannel(channel) === 'ideal'", 'IDEAL channel UI support');
+  assertIncludes(accountRecordsMembershipStateSync, 'redeemPlusDeletedEmailsByChannel', 'Plus delete tombstones');
+  assertIncludes(accountRecordsRedeemPolicy, "normalizeRedeemChannel(channel) === 'ideal'", 'IDEAL channel UI support');
   assertIncludes(
-    accountRecords,
+    accountRecordsMembershipPoolOps,
     'const credentials = getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);',
     'CDK import resume must use channel-specific Free candidates'
   );
@@ -694,27 +1288,27 @@ function checkStaticContracts() {
     'IDEAL CDK import button must resume queued Free redeem'
   );
   assertNotMatch(
-    sidepanel,
+    sidepanelBootstrap,
     /btnImport(?:Ideal)?CdkPool\?\.addEventListener/,
     'CDK import event binding must live in sidepanel/cdk-pool-manager.js'
   );
   assertNotMatch(
-    sidepanel,
+    sidepanelBootstrap,
     /importCdkPoolFromTextarea\(\{\s*channel:\s*['"](upi|ideal)['"]\s*\}\)/,
     'CDK import entrypoints must not skip autoResume'
   );
   assertMatch(
-    accountRecords,
+    accountRecordsMembershipPoolOps + accountRecordsMembershipResultOps,
     /await helpers\.downloadTextFile\(/,
     'account record exports must await async download helper'
   );
   assertMatch(
-    accountRecords,
-    /deletedEmails\.forEach\(\(email\) => disabledUpiCredentialMembershipEmails\.delete\(email\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
+    accountRecordsMembershipResultOps,
+    /deletedEmails\.forEach\(\([^)]*\)\s*=>\s*removeDisabledUpiCredentialMembershipEmail\([^)]*\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus delete must not remove local backup pool rows'
   );
   assertNotMatch(
-    accountRecords,
+    accountRecordsMembershipResultOps,
     /else if\s*\(deleteStatus === 'paid' && deleteChannel\)\s*\{[^{}]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus paid delete must not mutate local backup pool rows'
   );
@@ -723,7 +1317,7 @@ function checkStaticContracts() {
     /const credentials = getEnabledFreeUpiCredentialMembershipRows\(\);\s+if \(!credentials\.length\)/,
     'CDK import resume must not use merged UPI/IDEAL candidates'
   );
-  assertIncludes(router, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
+  assertIncludes(routerRedeemRefreshService, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
   assertMatch(
     background,
     /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*true;\s*nextEntry\.lastUsedAt\s*=\s*entry\.lastUsedAt\s*\|\|\s*Date\.now\(\);/s,
@@ -735,7 +1329,7 @@ function checkStaticContracts() {
     'custom email pool trial-ineligible marking must not depend on current generator selection'
   );
   assertMatch(
-    sidepanel,
+    sidepanelRuntimeMessageDataHandler,
     /const restoredCustomEmailPoolEntries\s*=\s*restoreCustomEmailPoolEntriesFromState\(\{[\s\S]*?setCustomEmailPoolEntriesState\(restoredCustomEmailPoolEntries\);\s*renderCustomEmailPoolEntries\(restoredCustomEmailPoolEntries\);/,
     'custom email pool DATA_UPDATED messages must immediately re-render visible entries'
   );
@@ -743,7 +1337,7 @@ function checkStaticContracts() {
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
   assertIncludes(upiRedeem, 'autoRedeemQueuedFreeCredentialsForChannel', 'main flow queued Free auto redeem');
   assertIncludes(checker, 'REDEEM_GROUP_CONTINUATION_IDLE_WAIT_MS = 5000', 'group continuation CDK refresh interval');
-  assertIncludes(checker, 'disableGroupContinuation', 'controlled group continuation flag');
+  assertIncludes(membershipRedeemService, 'disableGroupContinuation', 'controlled group continuation flag');
 
   assertIncludes(gitignore, 'used-*-email-password-2fa*.txt', 'sensitive used-email exports ignore rule');
   assertIncludes(gitignore, '/config.json', 'local config ignore rule');
@@ -751,7 +1345,7 @@ function checkStaticContracts() {
 
 function checkModuleSizeGuard() {
   readText('scripts/module-size-report.mjs');
-  assertFileLineCountAtMost('sidepanel/sidepanel.js', 9800, 'sidepanel composition root growth guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel.js', 1500, 'sidepanel compatibility entrypoint growth guard');
   assertFileLineCountAtMost('sidepanel/sidepanel.css', 2500, 'sidepanel base stylesheet growth guard');
   assertFileLineCountAtMost('sidepanel/styles/settings.css', 1800, 'settings stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/styles/cdk-pools.css', 500, 'CDK pools stylesheet size guard');
@@ -770,23 +1364,106 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/config-menu-controller.js', 220, 'sidepanel config menu controller size guard');
   assertFileLineCountAtMost('sidepanel/workflow-action-bindings.js', 80, 'sidepanel workflow action bindings size guard');
   assertFileLineCountAtMost('sidepanel/settings-field-bindings.js', 120, 'sidepanel settings field bindings size guard');
+  assertFileLineCountAtMost('sidepanel/app-state.js', 250, 'sidepanel app state size guard');
+  assertFileLineCountAtMost('sidepanel/settings-controller.js', 700, 'sidepanel settings controller size guard');
+  assertFileLineCountAtMost('sidepanel/workflow-controller.js', 400, 'sidepanel workflow controller size guard');
+  assertFileLineCountAtMost('sidepanel/runtime-message-data-handler.js', 700, 'sidepanel runtime message data handler size guard');
+  assertFileLineCountAtMost('sidepanel/runtime-message-handlers.js', 700, 'sidepanel runtime message handlers size guard');
+  assertFileLineCountAtMost('sidepanel/runtime-message-controller.js', 700, 'sidepanel runtime message controller size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-state.js', 250, 'sidepanel UPI redeem CDK state size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-status-view.js', 250, 'sidepanel UPI redeem CDK status view size guard');
+  assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-controller.js', 700, 'sidepanel UPI redeem CDK controller size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-panel-controller.js', 250, 'sidepanel account records panel controller size guard');
+  assertFileLineCountAtMost('sidepanel/panel-display-controller.js', 250, 'sidepanel panel display controller size guard');
+  assertFileLineCountAtMost('sidepanel/removed-payment-worker-controller.js', 700, 'sidepanel RemovedPaymentWorker controller size guard');
+  assertFileLineCountAtMost('sidepanel/auto-run-status-controller.js', 250, 'sidepanel auto-run status controller size guard');
+  assertFileLineCountAtMost('sidepanel/operation-delay-controller.js', 140, 'sidepanel operation delay controller size guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7650, 'sidepanel app controller decomposition guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-bootstrap.js', 700, 'sidepanel bootstrap size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
+  assertFileLineCountAtMost('sidepanel/mail-provider-state.js', 260, 'mail provider state size guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-runtime-bridge.js', 140, 'sidepanel runtime bridge size guard');
+  assertFileLineCountAtMost('sidepanel/cloudflare-domain-ui.js', 180, 'Cloudflare domain UI size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-export.js', 180, 'account records export helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-subscription.js', 220, 'account records subscription helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-groups.js', 180, 'account records membership groups size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-redeem-status.js', 180, 'account records redeem status helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-cdk-pool-text.js', 120, 'account records CDK pool text helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-deletion-state.js', 120, 'account records deletion state helper size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-export-builders.js', 260, 'account records export builders size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-redeem-policy.js', 180, 'account records redeem policy size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-passkey-helpers.js', 250, 'account records passkey helpers size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-credential-parser.js', 250, 'account records credential parser size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-status-meta.js', 250, 'account records status meta size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-display-model.js', 250, 'account records display model size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-results-renderer.js', 250, 'account records membership results renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 700, 'account records renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-helpers.js', 700, 'account records membership helpers size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-pool-ops.js', 700, 'account records membership pool ops size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-result-ops.js', 700, 'account records membership result ops size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-panel-events.js', 700, 'account records panel events size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-actions.js', 320, 'account records membership actions size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-state-sync.js', 520, 'account records membership state sync size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-trial-eligibility.js', 260, 'account records trial eligibility size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-run-history.js', 250, 'account records run history size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-settings-payload.js', 120, 'account records settings payload size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 1800, 'account records manager growth guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
+  assertFileLineCountAtMost('background/message-router.js', 1200, 'message router size guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-timer-plan.js', 260, 'auto-run timer plan size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-status.js', 220, 'auto-run status size guard');
+  assertFileLineCountAtMost('background/auto-run/summary-builder.js', 180, 'auto-run summary builder size guard');
+  assertFileLineCountAtMost('background/auto-run/log-snapshot.js', 320, 'auto-run log snapshot size guard');
+  assertFileLineCountAtMost('background/auto-run/retry-policy.js', 400, 'auto-run retry policy size guard');
+  assertFileLineCountAtMost('background/auto-run/session-runner.js', 1100, 'auto-run session runner size guard');
+  assertFileLineCountAtMost('background/auto-run-controller.js', 220, 'auto-run controller facade size guard');
   assertFileLineCountAtMost('background/bootstrap/state-patch-helpers.js', 240, 'state patch helpers size guard');
   assertFileLineCountAtMost('background/bootstrap/settings-transfer.js', 380, 'settings transfer size guard');
   assertFileLineCountAtMost('background/bootstrap/content-script-registry.js', 120, 'content script registry size guard');
   assertFileLineCountAtMost('background/bootstrap/signup-executor-registry.js', 500, 'signup executor registry size guard');
   assertFileLineCountAtMost('background/bootstrap/runtime-listeners.js', 80, 'runtime listeners size guard');
+  assertFileLineCountAtMost('background/routes/settings-routes.js', 220, 'settings routes size guard');
+  assertFileLineCountAtMost('background/routes/account-record-routes.js', 80, 'account record routes size guard');
+  assertFileLineCountAtMost('background/routes/email-pool-routes.js', 150, 'email pool routes size guard');
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
+  assertFileLineCountAtMost('background/router/redeem-refresh-service.js', 1500, 'router redeem refresh service size guard');
+  assertFileLineCountAtMost('background/router/node-protocol-service.js', 700, 'router node protocol service size guard');
+  assertFileLineCountAtMost('background/router/payment-session-service.js', 500, 'router payment session service size guard');
+  assertFileLineCountAtMost('background/router/core-routes.js', 500, 'router core routes size guard');
+  assertFileLineCountAtMost('background/router/message-dispatcher.js', 1000, 'router message dispatcher size guard');
+  assertFileLineCountAtMost('background/message-router.js', 700, 'message router facade size guard');
+  assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
+  assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
+  assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');
+  assertFileLineCountAtMost('background/membership/access-token-supplement-service.js', 280, 'access-token supplement service size guard');
+  assertFileLineCountAtMost('background/membership/free-pool-service.js', 700, 'Free pool service size guard');
+  assertFileLineCountAtMost('background/membership/redeem-candidate-service.js', 850, 'redeem candidate service size guard');
+  assertFileLineCountAtMost('background/membership/credential-pool-service.js', 700, 'credential pool service size guard');
+  assertFileLineCountAtMost('background/membership/import-export-service.js', 400, 'membership import/export service size guard');
+  assertFileLineCountAtMost('background/membership/credential-backup-format.js', 300, 'membership credential backup format size guard');
+  assertFileLineCountAtMost('background/membership/plus-verification-service.js', 600, 'membership Plus verification service size guard');
+  assertFileLineCountAtMost('background/membership/failed-redeem-retry-service.js', 650, 'membership failed redeem retry service size guard');
+  assertFileLineCountAtMost('background/membership/redeem-service.js', 1600, 'membership redeem service size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/session-material.js', 750, 'UPI redeem session material size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/free-entry.js', 580, 'UPI redeem Free entry size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/channel-submission.js', 1900, 'UPI redeem channel submission size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/status-polling.js', 1150, 'UPI redeem status polling size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/finalize.js', 1150, 'UPI redeem finalize size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem.js', 1200, 'UPI redeem facade size guard');
+  assertFileLineCountAtMost('background/verification/assurivo-time.js', 380, 'verification Assurivo time size guard');
+  assertFileLineCountAtMost('background/verification/verification-keywords.js', 180, 'verification keywords size guard');
+  assertFileLineCountAtMost('background/verification/code-extractor.js', 430, 'verification code extractor size guard');
+  assertFileLineCountAtMost('background/verification/assurivo-feed-client.js', 900, 'verification Assurivo feed client size guard');
+  assertFileLineCountAtMost('background/verification/resend-controller.js', 2000, 'verification resend controller size guard');
+  assertFileLineCountAtMost('background/verification-flow.js', 380, 'verification flow facade size guard');
   assertFileLineCountAtMost('content/auth-page-detectors.js', 250, 'auth page detectors size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
@@ -797,8 +1474,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-page-detector.js', 400, 'signup detector size guard');
   assertFileLineCountAtMost('content/signup-page-orchestrator.js', 300, 'signup orchestrator size guard');
   assertFileLineCountAtMost('content/signup-page.js', 7000, 'signup content script growth guard');
-  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 6700, 'membership checker growth guard');
-  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
+  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 5200, 'membership checker growth guard');
 }
 
 function checkTrackedSourceLineWarnings() {
@@ -860,8 +1536,13 @@ function checkPhoneSmsAudit() {
 function checkDocumentationDrift() {
   const readme = readText('README.md');
   const chainDoc = readText('项目完整链路说明.md');
-  const hasIdealCode = readText('background/steps/upi-redeem.js').includes("'ideal'");
-  const hasAutoRedeemCode = readText('background/steps/upi-redeem.js').includes('自动提交兑换');
+  const upiRedeemCode = [
+    readText('background/steps/upi-redeem.js'),
+    readText('background/steps/upi-redeem/channel-submission.js'),
+    readText('background/steps/upi-redeem/finalize.js'),
+  ].join('\n');
+  const hasIdealCode = upiRedeemCode.includes("'ideal'");
+  const hasAutoRedeemCode = upiRedeemCode.includes('自动提交兑换');
   if (hasIdealCode && !/IDEAL/i.test(readme)) {
     warn('README.md does not mention IDEAL, but code contains IDEAL channel support.');
   }
