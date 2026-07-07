@@ -255,6 +255,8 @@ function checkCoreFiles() {
     'sidepanel/account-records-display-model.js',
     'sidepanel/account-records-flow-view.js',
     'sidepanel/account-records-renderer.js',
+    'sidepanel/account-records-membership-actions.js',
+    'sidepanel/account-records-redeem-actions.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -342,6 +344,8 @@ function checkStaticContracts() {
   const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
   const accountRecordsMembershipResultsRenderer = readText('sidepanel/account-records-membership-results-renderer.js');
   const accountRecordsRenderer = readText('sidepanel/account-records-renderer.js');
+  const accountRecordsMembershipActions = readText('sidepanel/account-records-membership-actions.js');
+  const accountRecordsRedeemActions = readText('sidepanel/account-records-redeem-actions.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -430,6 +434,8 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-status-meta.js"', 'account records status meta script load');
   assertIncludes(sidepanelHtml, 'src="account-records-renderer.js"', 'account records renderer script load');
   assertIncludes(sidepanelHtml, 'src="account-records-flow-view.js"', 'account records flow view script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-actions.js"', 'account records membership actions script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'account records redeem actions script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -458,6 +464,10 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'account records membership results renderer script load');
   assertIncludes(accountRecordsMembershipResultsRenderer, 'SidepanelAccountRecordsMembershipResultsRenderer', 'account records membership results renderer global');
   assertIncludes(accountRecordsMembershipResultsRenderer, 'createAccountRecordsMembershipResultsRenderer', 'account records membership results renderer factory');
+  assertIncludes(accountRecordsMembershipActions, 'SidepanelAccountRecordsMembershipActions', 'account records membership actions global');
+  assertIncludes(accountRecordsMembershipActions, 'createAccountRecordsMembershipActions', 'account records membership actions factory');
+  assertIncludes(accountRecordsRedeemActions, 'SidepanelAccountRecordsRedeemActions', 'account records redeem actions global');
+  assertIncludes(accountRecordsRedeemActions, 'createAccountRecordsRedeemActions', 'account records redeem actions factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -488,8 +498,12 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-renderer.js"', 'account records flow view must load before renderer');
   assertBefore(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'src="account-records-renderer.js"', 'account records membership results renderer must load before renderer');
   assertBefore(sidepanelHtml, 'src="account-records-renderer.js"', 'src="account-records-manager.js"', 'account records renderer must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-actions.js"', 'src="account-records-manager.js"', 'account records membership actions must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'src="account-records-manager.js"', 'account records redeem actions must load before manager');
   assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipActions', 'account records manager membership actions dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsRedeemActions', 'account records manager redeem actions dependency');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -908,6 +922,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-display-model.js', 250, 'account records display model size guard');
   assertFileLineCountAtMost('sidepanel/account-records-membership-results-renderer.js', 250, 'account records membership results renderer size guard');
   assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 700, 'account records renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-actions.js', 320, 'account records membership actions size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');

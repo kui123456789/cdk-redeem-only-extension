@@ -17,6 +17,8 @@ delete globalThis.SidepanelAccountRecordsDisplayModel;
 delete globalThis.SidepanelAccountRecordsFlowView;
 delete globalThis.SidepanelAccountRecordsMembershipResultsRenderer;
 delete globalThis.SidepanelAccountRecordsRenderer;
+delete globalThis.SidepanelAccountRecordsMembershipActions;
+delete globalThis.SidepanelAccountRecordsRedeemActions;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -34,6 +36,8 @@ delete require.cache[require.resolve('../sidepanel/account-records-display-model
 delete require.cache[require.resolve('../sidepanel/account-records-flow-view.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-membership-results-renderer.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-renderer.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-membership-actions.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-redeem-actions.js')];
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
@@ -52,6 +56,8 @@ require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-flow-view.js');
 require('../sidepanel/account-records-membership-results-renderer.js');
 require('../sidepanel/account-records-renderer.js');
+require('../sidepanel/account-records-membership-actions.js');
+require('../sidepanel/account-records-redeem-actions.js');
 require('../sidepanel/account-records-manager.js');
 
 function createDisplayModel(overrides = {}) {
@@ -158,6 +164,11 @@ test('account records renderer exposes the expected factory helpers', () => {
   assert.equal(typeof renderer.updateHeader, 'function');
   assert.equal(typeof renderer.updateStats, 'function');
   assert.equal(typeof renderer.updatePagination, 'function');
+});
+
+test('account records runtime action modules expose the expected factory helpers', () => {
+  assert.equal(typeof globalThis.SidepanelAccountRecordsMembershipActions?.createAccountRecordsMembershipActions, 'function');
+  assert.equal(typeof globalThis.SidepanelAccountRecordsRedeemActions?.createAccountRecordsRedeemActions, 'function');
 });
 
 test('display model does not backfill source passkey state when result already enables passkey', () => {

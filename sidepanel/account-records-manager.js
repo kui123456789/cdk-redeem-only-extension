@@ -206,6 +206,14 @@
     if (typeof accountRecordsRenderer.createAccountRecordsRenderer !== 'function') {
       throw new Error('Account records renderer module is not loaded.');
     }
+    const accountRecordsMembershipActions = globalScope.SidepanelAccountRecordsMembershipActions || {};
+    if (typeof accountRecordsMembershipActions.createAccountRecordsMembershipActions !== 'function') {
+      throw new Error('Account records membership actions module is not loaded.');
+    }
+    const accountRecordsRedeemActions = globalScope.SidepanelAccountRecordsRedeemActions || {};
+    if (typeof accountRecordsRedeemActions.createAccountRecordsRedeemActions !== 'function') {
+      throw new Error('Account records redeem actions module is not loaded.');
+    }
     const {
       buildUpiCredentialMembershipResultLookup,
       sanitizeUpiCredentialMembershipDisplayRow,
@@ -1906,72 +1914,62 @@
       };
     }
 
-    async function refreshUpiCredentialMembershipRedeemStatuses() {
-      if (upiCredentialMembershipRedeemStatusRefreshBusy) {
-        helpers.showToast?.('兑换状态正在刷新，请稍候。', 'info', 1800);
-        return;
-      }
-      const results = getUpiCredentialMembershipCheckResults();
-      const rows = buildUpiCredentialMembershipDisplayRows(results);
-      const targets = buildUpiCredentialMembershipRedeemStatusRefreshTargets(rows);
-      if (!targets.emailCount) {
-        helpers.showToast?.('当前没有可刷新的邮箱状态。', 'warn', 2200);
-        return;
-      }
-      if (!targets.cdkCount) {
-        helpers.showToast?.('当前可刷新账号没有可查询的 CDK，可能尚未发起兑换或绑定已被清理。', 'warn', 3200);
-        return;
-      }
-
-      const refreshedParts = [];
-      const errorParts = [];
-      try {
-        upiCredentialMembershipRedeemStatusRefreshBusy = true;
-        render();
-        for (const channel of ['upi', 'ideal']) {
-          const cdkeys = targets[channel];
-          if (!cdkeys.length) {
-            continue;
-          }
-          const latest = state.getLatestState();
-          const response = await runtime.sendMessage({
-            type: 'REFRESH_UPI_REDEEM_CDKEY_STATUSES',
-            source: 'sidepanel',
-            payload: {
-              cdkeys,
-              cdkeyEmailMap: targets.emailMap[channel],
-              channel,
-              autoRefresh: true,
-              skipAutoRetry: true,
-              cdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-              upiRedeemCdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-              upiRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'upi'),
-              idealRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'ideal'),
-            },
-          });
-          if (response?.error) {
-            errorParts.push(`${getRedeemChannelLabel(channel)}：${response.error}`);
-            continue;
-          }
-          if (response?.updates) {
-            state.syncLatestState(response.updates);
-          }
-          refreshedParts.push(`${getRedeemChannelLabel(channel)} CDK ${response?.checkedCount || cdkeys.length} 条`);
-        }
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        if (errorParts.length) {
-          helpers.showToast?.(`刷新完成但有错误：${errorParts.join('；')}`, refreshedParts.length ? 'warn' : 'error', 5000);
-        } else {
-          helpers.showToast?.(`已刷新邮箱状态：账号 ${targets.emailCount} 个；查询 ${refreshedParts.join('，')}。`, 'success', 3000);
-        }
-      } catch (error) {
-        helpers.showToast?.(`刷新兑换状态失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipRedeemStatusRefreshBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        render();
-      }
-    }
+    const redeemActions = accountRecordsRedeemActions.createAccountRecordsRedeemActions({
+      state,
+      helpers,
+      runtime,
+      normalizeRedeemChannel,
+      getRedeemChannelLabel: (channel) => getRedeemChannelLabel(channel),
+      normalizeUpiCredentialMembershipEmail,
+      getUpiCredentialMembershipCheckResults: (currentState) => getUpiCredentialMembershipCheckResults(currentState),
+      refreshUpiCredentialMembershipCheckResults: (...args) => refreshUpiCredentialMembershipCheckResults(...args),
+      getMembershipCheckSettingsPayload: () => getMembershipCheckSettingsPayload(),
+      mergeManualFreeMembershipOverridesIntoResults: (results) => mergeManualFreeMembershipOverridesIntoResults(results),
+      getEnabledFreeUpiCredentialMembershipRowsForChannel: (channel) => getEnabledFreeUpiCredentialMembershipRowsForChannel(channel),
+      buildNoRedeemableForChannelMessage: (channel) => buildNoRedeemableForChannelMessage(channel),
+      getAvailableUpiRedeemCdkeyCount: (currentState, channel) => getAvailableUpiRedeemCdkeyCount(currentState, channel),
+      getIdealFallbackUpiCredentialMembershipRows: () => getIdealFallbackUpiCredentialMembershipRows(),
+      getUpiCredentialMembershipPoolRows: () => upiCredentialMembershipPoolRows,
+      setUpiCredentialMembershipPoolRows: (rows, source) => setUpiCredentialMembershipPoolRows(rows, source),
+      getUpiCredentialMembershipPoolSource: () => upiCredentialMembershipPoolSource,
+      deleteDisabledUpiCredentialMembershipEmail: (email) => disabledUpiCredentialMembershipEmails.delete(email),
+      getUpiCredentialMembershipSingleRedeemRow: (email) => getUpiCredentialMembershipSingleRedeemRow(email),
+      isRedeemableFreeUpiCredentialMembershipRow: (row) => isRedeemableFreeUpiCredentialMembershipRow(row),
+      getNotRedeemableFreeUpiCredentialMembershipReason: (row) => getNotRedeemableFreeUpiCredentialMembershipReason(row),
+      isRedeemableFreeUpiCredentialMembershipRowForChannel: (row, channel) => isRedeemableFreeUpiCredentialMembershipRowForChannel(row, channel),
+      buildUpiCredentialMembershipRedeemCredential: (row) => buildUpiCredentialMembershipRedeemCredential(row),
+      getUpiCredentialMembershipDisplayRowByEmail: (email) => getUpiCredentialMembershipDisplayRowByEmail(email),
+      getUpiCredentialMembershipRedeemCdkey: (row) => getUpiCredentialMembershipRedeemCdkey(row),
+      getStoredCdkPoolText: (currentState, channel) => getStoredCdkPoolText(currentState, channel),
+      buildUpiCredentialMembershipRedeemStatusRefreshTargets: (results) => (
+        buildUpiCredentialMembershipRedeemStatusRefreshTargets(
+          buildUpiCredentialMembershipDisplayRows(results || getUpiCredentialMembershipCheckResults())
+        )
+      ),
+      getUpiCredentialMembershipCheckBusy: () => upiCredentialMembershipCheckBusy,
+      setUpiCredentialMembershipRedeemBusy: (value) => {
+        upiCredentialMembershipRedeemBusy = value === true;
+      },
+      getUpiCredentialMembershipRedeemBusy: () => upiCredentialMembershipRedeemBusy,
+      setUpiCredentialMembershipAllRedeemBusy: (value) => {
+        upiCredentialMembershipAllRedeemBusy = value === true;
+      },
+      getUpiCredentialMembershipAllRedeemBusy: () => upiCredentialMembershipAllRedeemBusy,
+      setUpiCredentialMembershipRedeemStatusRefreshBusy: (value) => {
+        upiCredentialMembershipRedeemStatusRefreshBusy = value === true;
+      },
+      getUpiCredentialMembershipRedeemStatusRefreshBusy: () => upiCredentialMembershipRedeemStatusRefreshBusy,
+      setExportButtonsBusy,
+      isAutoRunRecordDisplayRunning: (currentState) => isAutoRunRecordDisplayRunning(currentState),
+      render: () => render(),
+    });
+    const {
+      refreshUpiCredentialMembershipRedeemStatuses,
+      startUpiCredentialMembershipFreeRedeem,
+      startUpiCredentialMembershipAllRedeem,
+      startSingleUpiCredentialMembershipFreeRedeem,
+      cancelUpiCredentialMembershipRedeemJob,
+    } = redeemActions;
 
     async function refreshRemoteRedeemStatusesForExport(records = []) {
       const cdkeys = getUpiRedeemSuccessExportCdkeys(records);
@@ -2142,37 +2140,45 @@
       };
     }
 
-    async function refreshUpiCredentialMembershipCheckResults() {
-      const response = await runtime.sendMessage({
-        type: 'GET_UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS',
-        source: 'sidepanel',
-        payload: {},
-      });
-      if (response?.error) {
-        throw new Error(response.error);
-      }
-      if (response?.results) {
-        state.syncLatestState({
-          upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-        });
-        upiCredentialMembershipCheckBusy = response.results.running === true;
-        upiCredentialMembershipRedeemBusy = response.results.redeeming === true;
-      }
-      return response?.results || null;
-    }
-
-    async function waitForUpiCredentialMembershipRedeemIdle(timeoutMs = 5000) {
-      const deadline = Date.now() + Math.max(1000, Math.floor(Number(timeoutMs) || 5000));
-      while (Date.now() < deadline) {
-        const latestResults = await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        const results = latestResults || getUpiCredentialMembershipCheckResults();
-        if (results.redeeming !== true && !upiCredentialMembershipRedeemBusy) {
-          return true;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      return false;
-    }
+    const membershipActions = accountRecordsMembershipActions.createAccountRecordsMembershipActions({
+      state,
+      helpers,
+      runtime,
+      getMembershipCheckSettingsPayload: () => getMembershipCheckSettingsPayload(),
+      getUpiCredentialMembershipCheckResults: (currentState) => getUpiCredentialMembershipCheckResults(currentState),
+      mergeManualFreeMembershipOverridesIntoResults: (results) => mergeManualFreeMembershipOverridesIntoResults(results),
+      getEnabledFreeUpiCredentialMembershipRowsMissingAt: () => getEnabledFreeUpiCredentialMembershipRowsMissingAt(),
+      getEnabledFreeUpiCredentialMembershipRowsWithAt: () => getEnabledFreeUpiCredentialMembershipRowsWithAt(),
+      getEnabledPlusUpiCredentialMembershipRowsWithAt: () => getEnabledPlusUpiCredentialMembershipRowsWithAt(),
+      normalizeUpiCredentialMembershipText,
+      normalizeUpiCredentialMembershipEmail,
+      getUpiCredentialMembershipDisplayRowByEmail: (email) => getUpiCredentialMembershipDisplayRowByEmail(email),
+      hasUpiCredentialMembershipLoginMaterial: (row) => hasUpiCredentialMembershipLoginMaterial(row),
+      buildUpiCredentialMembershipActionCredential: (row) => buildUpiCredentialMembershipActionCredential(row),
+      mergeUpiCredentialMembershipResultItem: (item) => mergeUpiCredentialMembershipResultItem(item),
+      renderUpiCredentialMembershipCheckResults: () => renderUpiCredentialMembershipCheckResults(),
+      getUpiCredentialMembershipCheckingEmail: () => upiCredentialMembershipCheckingEmail,
+      getUpiCredentialMembershipLoginEmail: () => upiCredentialMembershipLoginEmail,
+      setUpiCredentialMembershipLoginEmail: (value) => {
+        upiCredentialMembershipLoginEmail = value || '';
+      },
+      setUpiCredentialMembershipCheckBusy: (value) => {
+        upiCredentialMembershipCheckBusy = value === true;
+      },
+      setUpiCredentialMembershipRedeemBusy: (value) => {
+        upiCredentialMembershipRedeemBusy = value === true;
+      },
+      setExportButtonsBusy,
+      render: () => render(),
+    });
+    const {
+      refreshUpiCredentialMembershipCheckResults,
+      fillFreeUpiCredentialMembershipAccessTokens,
+      identifyFreeUpiCredentialMembershipPlus,
+      verifyPlusUpiCredentialMembershipRows,
+      loginUpiCredentialMembershipAccount,
+      moveUpiCredentialMembershipAccountGroup,
+    } = membershipActions;
 
     async function startUpiCredentialMembershipCheck(payload = {}) {
       try {
@@ -2386,493 +2392,6 @@
       }
     }
 
-    async function fillFreeUpiCredentialMembershipAccessTokens() {
-      const credentials = getEnabledFreeUpiCredentialMembershipRowsMissingAt();
-      if (!credentials.length) {
-        helpers.showToast?.('Free 分组没有缺 AT 的启用账号。', 'warn', 2000);
-        return;
-      }
-      try {
-        upiCredentialMembershipCheckBusy = true;
-        setExportButtonsBusy(false);
-        const response = await runtime.sendMessage({
-          type: 'FILL_UPI_CREDENTIAL_MEMBERSHIP_FREE_ACCESS_TOKENS',
-          source: 'sidepanel',
-          payload: {
-            source: 'free-fill-at',
-            credentials,
-            settings: getMembershipCheckSettingsPayload(),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        const skippedReason = Array.isArray(response?.skipped) && response.skipped.length
-          ? normalizeUpiCredentialMembershipText(response.skipped[0]?.reason || '')
-          : '';
-        const failedReason = Array.isArray(response?.failed) && response.failed.length
-          ? normalizeUpiCredentialMembershipText(response.failed[0]?.reason || '')
-          : '';
-        const detailText = [
-          skippedReason ? `跳过原因：${skippedReason}` : '',
-          failedReason ? `失败原因：${failedReason}` : '',
-        ].filter(Boolean).join('；');
-        helpers.showToast?.(
-          `补充 AT 完成：成功 ${response?.filled?.length || 0}，跳过 ${response?.skipped?.length || 0}，失败 ${response?.failed?.length || 0}${detailText ? `。${detailText}` : '。'}`,
-          'success',
-          4200
-        );
-      } catch (error) {
-        helpers.showToast?.(`补充 AT 失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipCheckBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        setExportButtonsBusy(false);
-        render();
-      }
-    }
-
-    async function identifyFreeUpiCredentialMembershipPlus(options = {}) {
-      const credentials = getEnabledFreeUpiCredentialMembershipRowsWithAt();
-      if (!credentials.length) {
-        helpers.showToast?.('Free 分组没有带 AT 的启用账号。', 'warn', 2000);
-        return;
-      }
-      const allowDuringAutoRun = options.allowDuringAutoRun === true;
-      const source = allowDuringAutoRun ? 'free-refresh-email-statuses' : 'free-identify-plus';
-      try {
-        upiCredentialMembershipCheckBusy = true;
-        setExportButtonsBusy(false);
-        const response = await runtime.sendMessage({
-          type: 'IDENTIFY_UPI_CREDENTIAL_MEMBERSHIP_FREE_PLUS',
-          source: 'sidepanel',
-          payload: {
-            source,
-            allowDuringAutoRun,
-            credentials,
-            settings: getMembershipCheckSettingsPayload(),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        helpers.showToast?.(
-          `已刷新邮箱状态：Plus ${response?.paid?.length || 0}，仍 Free ${response?.free?.length || 0}，失败 ${response?.failed?.length || 0}，跳过 ${response?.skipped?.length || 0}。`,
-          'success',
-          2600
-        );
-      } catch (error) {
-        helpers.showToast?.(`识别 Plus 失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipCheckBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        setExportButtonsBusy(false);
-        render();
-      }
-    }
-
-    async function verifyPlusUpiCredentialMembershipRows() {
-      const credentials = getEnabledPlusUpiCredentialMembershipRowsWithAt();
-      if (!credentials.length) {
-        helpers.showToast?.('Plus 分组没有带 AT 的启用账号。', 'warn', 2000);
-        return;
-      }
-      try {
-        upiCredentialMembershipCheckBusy = true;
-        setExportButtonsBusy(false);
-        const response = await runtime.sendMessage({
-          type: 'VERIFY_UPI_CREDENTIAL_MEMBERSHIP_PLUS',
-          source: 'sidepanel',
-          payload: {
-            source: 'plus-verify',
-            credentials,
-            settings: getMembershipCheckSettingsPayload(),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        helpers.showToast?.(
-          `验证 Plus 完成：仍 Plus ${response?.paid?.length || 0}，转 Free ${response?.free?.length || 0}，失败 ${response?.failed?.length || 0}。`,
-          'success',
-          2600
-        );
-      } catch (error) {
-        helpers.showToast?.(`验证 Plus 失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipCheckBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        setExportButtonsBusy(false);
-        render();
-      }
-    }
-
-    async function loginUpiCredentialMembershipAccount(email = '') {
-      const normalizedEmail = normalizeUpiCredentialMembershipEmail(email);
-      if (!normalizedEmail || upiCredentialMembershipCheckingEmail || upiCredentialMembershipLoginEmail) {
-        return;
-      }
-      const row = getUpiCredentialMembershipDisplayRowByEmail(normalizedEmail);
-      if (!row) {
-        helpers.showToast?.(`未找到账号 ${normalizedEmail}`, 'warn', 1800);
-        return;
-      }
-      if (!hasUpiCredentialMembershipLoginMaterial(row)) {
-        helpers.showToast?.(`账号 ${normalizedEmail} 缺少密码或 2FA，无法登录。`, 'error');
-        return;
-      }
-      upiCredentialMembershipLoginEmail = normalizedEmail;
-      upiCredentialMembershipCheckBusy = true;
-      render();
-      try {
-        const response = await runtime.sendMessage({
-          type: 'LOGIN_UPI_CREDENTIAL_MEMBERSHIP_ACCOUNT',
-          source: 'sidepanel',
-          payload: {
-            email: normalizedEmail,
-            source: 'row-login',
-            readAccessToken: false,
-            credential: buildUpiCredentialMembershipActionCredential(row),
-            settings: getMembershipCheckSettingsPayload(),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        if (response?.item) {
-          mergeUpiCredentialMembershipResultItem(response.item);
-        }
-        helpers.showToast?.(`${normalizedEmail} 登录完成。`, 'success', 2200);
-      } catch (error) {
-        helpers.showToast?.(`登录 ${normalizedEmail} 失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipLoginEmail = '';
-        upiCredentialMembershipCheckBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        render();
-      }
-    }
-
-    async function moveUpiCredentialMembershipAccountGroup(email = '', targetStatus = '') {
-      const normalizedEmail = normalizeUpiCredentialMembershipEmail(email);
-      const normalizedTarget = String(targetStatus || '').trim().toLowerCase() === 'paid' ? 'paid' : 'free';
-      if (!normalizedEmail) {
-        return;
-      }
-      const row = getUpiCredentialMembershipDisplayRowByEmail(normalizedEmail);
-      if (!row) {
-        helpers.showToast?.(`未找到账号 ${normalizedEmail}`, 'warn', 1800);
-        return;
-      }
-      try {
-        upiCredentialMembershipCheckBusy = true;
-        const response = await runtime.sendMessage({
-          type: 'MOVE_UPI_CREDENTIAL_MEMBERSHIP_ACCOUNT_GROUP',
-          source: 'sidepanel',
-          payload: {
-            email: normalizedEmail,
-            targetStatus: normalizedTarget,
-            credential: buildUpiCredentialMembershipActionCredential(row),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        if (response?.item) {
-          mergeUpiCredentialMembershipResultItem(response.item);
-        }
-        helpers.showToast?.(
-          `${normalizedEmail} 已移到 ${normalizedTarget === 'paid' ? 'Plus' : 'Free'} 组。`,
-          'success',
-          1800
-        );
-      } catch (error) {
-        helpers.showToast?.(`移动 ${normalizedEmail} 分组失败：${error.message}`, 'error');
-      } finally {
-        upiCredentialMembershipCheckBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        render();
-      }
-    }
-
-    async function startUpiCredentialMembershipFreeRedeem(inputCredentials = null, options = {}) {
-      const redeemChannel = normalizeRedeemChannel(options.channel || options.redeemChannel);
-      const redeemChannelLabel = getRedeemChannelLabel(redeemChannel);
-      const suppressToast = options.suppressToast === true;
-      const outcome = {
-        ok: false,
-        channel: redeemChannel,
-        executed: false,
-        skipped: false,
-        stopped: false,
-        reason: '',
-        error: null,
-        results: null,
-      };
-      if (upiCredentialMembershipAllRedeemBusy && options.fromAll !== true) {
-        outcome.skipped = true;
-        outcome.reason = '全部兑换正在运行';
-        if (!suppressToast) {
-          helpers.showToast?.('全部兑换正在运行，请等待完成或先停止兑换。', 'warn', 2200);
-        }
-        return outcome;
-      }
-      const credentials = Array.isArray(inputCredentials)
-        ? inputCredentials
-        : getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);
-      const singleEmail = normalizeUpiCredentialMembershipEmail(options.singleEmail || '');
-      if (!credentials.length) {
-        const noRedeemableReason = buildNoRedeemableForChannelMessage(redeemChannel);
-        outcome.skipped = true;
-        outcome.reason = singleEmail ? `${singleEmail} 当前不可兑换` : (noRedeemableReason || '没有启用的 Free 账号可兑换');
-        if (!suppressToast) {
-          helpers.showToast?.(singleEmail ? `${singleEmail} 当前不可兑换。` : `${outcome.reason}。`, 'warn', 3000);
-        }
-        return outcome;
-      }
-      try {
-        outcome.executed = true;
-        upiCredentialMembershipRedeemBusy = true;
-        setExportButtonsBusy(false);
-        const response = await runtime.sendMessage({
-          type: 'REDEEM_UPI_CREDENTIAL_MEMBERSHIP_FREE',
-          source: 'sidepanel',
-          payload: {
-            source: options.source || (singleEmail ? 'free-single' : 'free-selected'),
-            channel: redeemChannel,
-            manualTrigger: true,
-            credentials,
-            deleteBackups: upiCredentialMembershipPoolSource !== 'txt' && upiCredentialMembershipPoolSource !== 'txt-free',
-            settings: getMembershipCheckSettingsPayload(),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.results) {
-          state.syncLatestState({
-            upiCredentialMembershipCheckResults: mergeManualFreeMembershipOverridesIntoResults(response.results),
-          });
-        }
-        let results = response?.results || getUpiCredentialMembershipCheckResults();
-        let idealFallbackText = '';
-        const autoDeletedEmails = (Array.isArray(results.redeemAutoDeletedEmails) ? results.redeemAutoDeletedEmails : [])
-          .map(normalizeUpiCredentialMembershipEmail)
-          .filter(Boolean);
-        if (autoDeletedEmails.length) {
-          const deletedSet = new Set(autoDeletedEmails);
-          setUpiCredentialMembershipPoolRows(
-            upiCredentialMembershipPoolRows.filter((item) => !deletedSet.has(normalizeUpiCredentialMembershipEmail(item.email))),
-            upiCredentialMembershipPoolSource
-          );
-          autoDeletedEmails.forEach((email) => disabledUpiCredentialMembershipEmails.delete(email));
-        }
-        if (
-          redeemChannel === 'upi'
-          && options.fromAll !== true
-          && options.allowIdealFallback !== false
-          && !results.redeemStoppedAt
-        ) {
-          await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-          const fallbackCredentials = getIdealFallbackUpiCredentialMembershipRows();
-          const idealCdkeyCount = getAvailableUpiRedeemCdkeyCount(state.getLatestState(), 'ideal');
-          if (fallbackCredentials.length && idealCdkeyCount > 0) {
-            const idealOutcome = await startUpiCredentialMembershipFreeRedeem(fallbackCredentials, {
-              source: 'free-upi-to-ideal',
-              channel: 'ideal',
-              suppressToast: true,
-              allowIdealFallback: false,
-            });
-            results = idealOutcome.results || getUpiCredentialMembershipCheckResults();
-            idealFallbackText = idealOutcome.error
-              ? `；IDEAL 自动接力失败：${idealOutcome.reason || idealOutcome.error.message}`
-              : idealOutcome.stopped
-                ? `；IDEAL 自动接力已停止：${idealOutcome.reason || ''}`
-                : `；UPI 满 3 次失败账号已自动接力 IDEAL ${Math.min(fallbackCredentials.length, idealCdkeyCount)} 个`;
-          } else if (fallbackCredentials.length) {
-            idealFallbackText = '；UPI 满 3 次失败账号等待 IDEAL 卡密';
-          }
-        }
-        const summaryText = `Plus ${results.paidCount || 0}，Free ${results.freeCount || 0}，失败 ${results.failedCount || 0}`;
-        outcome.results = results;
-        if (results.redeemStoppedAt) {
-          const stoppedEmail = normalizeUpiCredentialMembershipEmail(results.flowStageEmail || singleEmail);
-          const stoppedItem = (Array.isArray(results.items) ? results.items : [])
-            .find((item) => normalizeUpiCredentialMembershipEmail(item?.email) === stoppedEmail) || null;
-          const stoppedReason = String(stoppedItem?.redeemReason || stoppedItem?.reason || '').trim();
-          outcome.stopped = true;
-          outcome.reason = stoppedReason || summaryText;
-          if (!suppressToast) {
-            helpers.showToast?.(
-              `${stoppedEmail || singleEmail || `${redeemChannelLabel} Free 兑换`} 已停止：${stoppedReason || summaryText}。`,
-              'warn',
-              5000
-            );
-          }
-        } else {
-          outcome.ok = true;
-          outcome.reason = summaryText;
-          if (!suppressToast) {
-            helpers.showToast?.(singleEmail ? `${singleEmail} ${redeemChannelLabel} 兑换完成：${summaryText}${idealFallbackText}。` : `${redeemChannelLabel} 兑换完成：${summaryText}${idealFallbackText}。`, 'success', 3000);
-          }
-        }
-      } catch (error) {
-        outcome.error = error;
-        outcome.reason = error.message || String(error || '');
-        if (!suppressToast) {
-          helpers.showToast?.(singleEmail ? `${singleEmail} ${redeemChannelLabel} 兑换失败：${error.message}` : `${redeemChannelLabel} Free 账号兑换失败：${error.message}`, 'error');
-        }
-      } finally {
-        upiCredentialMembershipRedeemBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        setExportButtonsBusy(false);
-        render();
-      }
-      return outcome;
-    }
-
-    async function refreshUpiCredentialMembershipRedeemStateAfterChannel(channel = 'upi') {
-      await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-      if (typeof helpers.refreshUpiRedeemCdkeyStatuses === 'function') {
-        await helpers.refreshUpiRedeemCdkeyStatuses({
-          channel,
-          silent: true,
-          skipAutoRetry: true,
-        }).catch(() => null);
-      }
-      await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-    }
-
-    function buildUpiCredentialMembershipRedeemAllSummary(results = getUpiCredentialMembershipCheckResults()) {
-      return `Plus ${results.paidCount || 0}，Free ${results.freeCount || 0}，失败 ${results.failedCount || 0}`;
-    }
-
-    async function startUpiCredentialMembershipAllRedeem() {
-      const results = getUpiCredentialMembershipCheckResults();
-      if (
-        upiCredentialMembershipAllRedeemBusy
-        || upiCredentialMembershipCheckBusy
-        || upiCredentialMembershipRedeemBusy
-        || results.running === true
-        || results.redeeming === true
-      ) {
-        helpers.showToast?.('当前已有核验或兑换任务正在运行，请等待完成或先停止。', 'warn', 2200);
-        return;
-      }
-
-      const initialUpiCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('upi');
-      const initialIdealCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('ideal');
-      if (!initialUpiCredentials.length && !initialIdealCredentials.length) {
-        helpers.showToast?.('没有启用的 Free 账号可兑换。', 'warn', 2000);
-        return;
-      }
-
-      const initialState = state.getLatestState();
-      const initialUpiCdkeyCount = getAvailableUpiRedeemCdkeyCount(initialState, 'upi');
-      const initialIdealCdkeyCount = getAvailableUpiRedeemCdkeyCount(initialState, 'ideal');
-      if (initialUpiCdkeyCount + initialIdealCdkeyCount <= 0) {
-        helpers.showToast?.('UPI 和 IDEAL 都没有可用 CDK，请先导入或启用卡密。', 'warn', 2400);
-        return;
-      }
-
-      const summaryParts = [];
-      try {
-        upiCredentialMembershipAllRedeemBusy = true;
-        setExportButtonsBusy(false);
-        render();
-
-        if (initialUpiCdkeyCount > 0 && initialUpiCredentials.length) {
-          const upiOutcome = await startUpiCredentialMembershipFreeRedeem(initialUpiCredentials, {
-            source: 'free-all-upi',
-            channel: 'upi',
-            fromAll: true,
-            suppressToast: true,
-          });
-          if (upiOutcome.stopped) {
-            helpers.showToast?.(`全部兑换已停止：UPI 已停止，IDEAL 未执行。${upiOutcome.reason ? ` ${upiOutcome.reason}` : ''}`, 'warn', 5000);
-            return;
-          }
-          if (upiOutcome.error) {
-            helpers.showToast?.(`全部兑换已停止：UPI 兑换失败，IDEAL 未执行：${upiOutcome.reason || upiOutcome.error.message}`, 'error');
-            return;
-          }
-          summaryParts.push('UPI 已执行');
-          await refreshUpiCredentialMembershipRedeemStateAfterChannel('upi');
-          const idle = await waitForUpiCredentialMembershipRedeemIdle(6000);
-          if (!idle) {
-            helpers.showToast?.('全部兑换已暂停：UPI 状态仍显示兑换中，IDEAL 未执行；请刷新状态后再继续。', 'warn', 5000);
-            return;
-          }
-        } else {
-          summaryParts.push(initialUpiCredentials.length
-            ? 'UPI 已跳过（无可用 CDK）'
-            : `UPI 已跳过（${buildNoRedeemableForChannelMessage('upi') || '无可兑换账号'}）`);
-        }
-
-        const remainingCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('ideal');
-        const latestIdealCdkeyCount = getAvailableUpiRedeemCdkeyCount(state.getLatestState(), 'ideal');
-        if (!remainingCredentials.length) {
-          summaryParts.push('IDEAL 已跳过（无剩余 Free）');
-        } else if (latestIdealCdkeyCount <= 0) {
-          summaryParts.push('IDEAL 已跳过（无可用 CDK）');
-        } else {
-          const idealOutcome = await startUpiCredentialMembershipFreeRedeem(remainingCredentials, {
-            source: 'free-all-ideal',
-            channel: 'ideal',
-            fromAll: true,
-            suppressToast: true,
-          });
-          if (idealOutcome.stopped) {
-            helpers.showToast?.(`全部兑换已停止：${summaryParts.join('；')}；IDEAL 已停止。${idealOutcome.reason ? ` ${idealOutcome.reason}` : ''}`, 'warn', 5000);
-            return;
-          }
-          if (idealOutcome.error) {
-            helpers.showToast?.(`全部兑换已停止：${summaryParts.join('；')}；IDEAL 兑换失败：${idealOutcome.reason || idealOutcome.error.message}`, 'error');
-            return;
-          }
-          summaryParts.push('IDEAL 已执行');
-          await refreshUpiCredentialMembershipRedeemStateAfterChannel('ideal');
-        }
-
-        const finalResults = getUpiCredentialMembershipCheckResults();
-        helpers.showToast?.(
-          `全部兑换完成：${summaryParts.join('；')}；${buildUpiCredentialMembershipRedeemAllSummary(finalResults)}。`,
-          'success',
-          5000
-        );
-      } finally {
-        upiCredentialMembershipAllRedeemBusy = false;
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        setExportButtonsBusy(false);
-        render();
-      }
-    }
-
     async function resumeFreeRedeemAfterCdkImport(options = {}) {
       const currentState = state.getLatestState();
       const results = getUpiCredentialMembershipCheckResults();
@@ -2901,34 +2420,6 @@
       return { started: true, count: credentials.length };
     }
 
-    async function startSingleUpiCredentialMembershipFreeRedeem(email = '') {
-      const normalizedEmail = normalizeUpiCredentialMembershipEmail(email);
-      if (!normalizedEmail || upiCredentialMembershipRedeemBusy || upiCredentialMembershipAllRedeemBusy || upiCredentialMembershipCheckBusy) {
-        return;
-      }
-      const row = getUpiCredentialMembershipSingleRedeemRow(normalizedEmail);
-      if (!row) {
-        helpers.showToast?.(`未找到账号 ${normalizedEmail}`, 'warn', 1800);
-        return;
-      }
-      if (!isRedeemableFreeUpiCredentialMembershipRow(row)) {
-        const reason = getNotRedeemableFreeUpiCredentialMembershipReason(row);
-        helpers.showToast?.(`${normalizedEmail} ${reason}。`, 'warn', 2200);
-        return;
-      }
-      const redeemChannel = isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'upi') ? 'upi' : 'ideal';
-      const credential = buildUpiCredentialMembershipRedeemCredential(row);
-      if (!credential.password || !credential.totpMfaSecret) {
-        helpers.showToast?.(`账号 ${normalizedEmail} 缺少密码或 2FA，无法兑换。`, 'error');
-        return;
-      }
-      await startUpiCredentialMembershipFreeRedeem([credential], {
-        singleEmail: normalizedEmail,
-        source: 'free-click',
-        channel: redeemChannel,
-      });
-    }
-
     async function stopUpiCredentialMembershipRedeem() {
       try {
         const response = await runtime.sendMessage({
@@ -2950,63 +2441,6 @@
         helpers.showToast?.(`停止兑换失败：${error.message}`, 'error');
       } finally {
         setExportButtonsBusy(false);
-        render();
-      }
-    }
-
-    function getUpiRedeemCdkeyJobOperationResultItem(response = {}, cdkey = '') {
-      const normalizedCdkey = String(cdkey || '').trim().toLowerCase();
-      return (Array.isArray(response?.items) ? response.items : [])
-        .find((item) => String(item?.cdkey || item?.cdk || '').trim().toLowerCase() === normalizedCdkey)
-        || null;
-    }
-
-    async function cancelUpiCredentialMembershipRedeemJob(email = '', explicitCdkey = '', channel = 'upi') {
-      const normalizedEmail = normalizeUpiCredentialMembershipEmail(email);
-      const row = getUpiCredentialMembershipDisplayRowByEmail(normalizedEmail);
-      const redeemChannel = normalizeRedeemChannel(channel || row?.redeemChannel);
-      const cdkey = String(explicitCdkey || getUpiCredentialMembershipRedeemCdkey(row || {})).trim();
-      if (!normalizedEmail || !row) {
-        helpers.showToast?.(`未找到账号 ${normalizedEmail || email}`, 'warn', 1800);
-        return;
-      }
-      if (!cdkey) {
-        helpers.showToast?.(`${normalizedEmail} 暂未绑定可取消的 CDK。`, 'warn', 2200);
-        return;
-      }
-
-      try {
-        const latest = state.getLatestState();
-        const response = await runtime.sendMessage({
-          type: 'CANCEL_UPI_REDEEM_CDKEY_JOBS',
-          source: 'sidepanel',
-          payload: {
-            cdkeys: [cdkey],
-            cdkeyEmailMap: { [cdkey]: normalizedEmail },
-            channel: redeemChannel,
-            cdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-            upiRedeemCdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-            upiRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'upi'),
-            idealRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'ideal'),
-          },
-        });
-        if (response?.error) {
-          throw new Error(response.error);
-        }
-        if (response?.updates) {
-          state.syncLatestState(response.updates);
-        }
-        const resultItem = getUpiRedeemCdkeyJobOperationResultItem(response, cdkey);
-        if (resultItem?.cancelled === true || resultItem?.canceled === true) {
-          helpers.showToast?.(`${normalizedEmail} 的 CDK 任务已提交取消。`, 'success', 2200);
-        } else {
-          const reason = String(resultItem?.reason || '').trim();
-          helpers.showToast?.(`取消兑换未完成：${reason || '后端未返回成功结果。'}`, 'warn', 2600);
-        }
-        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-      } catch (error) {
-        helpers.showToast?.(`取消兑换失败：${error.message}`, 'error');
-      } finally {
         render();
       }
     }
