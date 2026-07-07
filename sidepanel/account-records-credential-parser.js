@@ -2,6 +2,15 @@
   function createAccountRecordsCredentialParser(context = {}) {
     const normalizeEmail = context.normalizeEmail || ((value = '') => String(value || '').trim().toLowerCase());
     const normalizeText = context.normalizeText || ((value = '') => String(value || '').trim());
+    const getPasskeyHelpers = typeof context.getPasskeyHelpers === 'function'
+      ? context.getPasskeyHelpers
+      : () => {
+        const helpers = globalScope.SidepanelAccountRecordsPasskeyHelpers;
+        if (!helpers || typeof helpers.createAccountRecordsPasskeyHelpers !== 'function') {
+          throw new Error('Account records passkey helper module is not loaded.');
+        }
+        return helpers.createAccountRecordsPasskeyHelpers({ normalizeText });
+      };
     const getMembershipCredentialFormatHelpers = typeof context.getMembershipCredentialFormatHelpers === 'function'
       ? context.getMembershipCredentialFormatHelpers
       : () => {
@@ -11,107 +20,40 @@
         }
         return helpers;
       };
-
-    function readFirstUpiCredentialMembershipNumericMetadataValue(values = []) {
-      for (const value of values) {
-        if (value === undefined || value === null) continue;
-        if (typeof value === 'string' && value.trim() === '') continue;
-        const numeric = Number(value);
-        if (Number.isFinite(numeric)) return numeric;
-      }
-      return undefined;
-    }
-
-    function readUpiCredentialMembershipPasskeySignCount(...sources) {
-      const numeric = readFirstUpiCredentialMembershipNumericMetadataValue(sources.flatMap((source) => (
-        source && typeof source === 'object' && !Array.isArray(source)
-          ? [source.passkeySignCount, source.signCount, source.sign_count]
-          : [source]
-      )));
-      return numeric === undefined ? undefined : Math.max(0, Math.floor(numeric));
-    }
-
-    function readUpiCredentialMembershipPasskeyAlg(...sources) {
-      return readFirstUpiCredentialMembershipNumericMetadataValue(sources.flatMap((source) => (
-        source && typeof source === 'object' && !Array.isArray(source)
-          ? [source.passkeyAlg, source.alg]
-          : [source]
-      )));
-    }
-
-    function buildUpiCredentialMembershipPasskeyNumericMetadataPatch(...sources) {
-      const signCount = readUpiCredentialMembershipPasskeySignCount(...sources);
-      const alg = readUpiCredentialMembershipPasskeyAlg(...sources);
-      return {
-        ...(signCount !== undefined ? { passkeySignCount: signCount } : {}),
-        ...(alg !== undefined ? { passkeyAlg: alg } : {}),
-      };
-    }
+    const passkeyHelpers = getPasskeyHelpers();
 
     function normalizeUpiCredentialMembershipTotpSecret(value = '') {
       return normalizeText(value).replace(/\s+/g, '').toUpperCase();
     }
-
     function isLikelyUpiCredentialMembershipTimestamp(value = '') {
       const text = normalizeText(value);
-      if (!text || !/[\d:T年月日/-]/.test(text)) {
-        return false;
-      }
-      return Number.isFinite(Date.parse(text));
+      return Boolean(text && /[\d:T年月日/-]/.test(text) && Number.isFinite(Date.parse(text)));
     }
-
     function isLikelyUpiCredentialMembershipVerificationUrl(value = '') {
       return /^https?:\/\//i.test(normalizeText(value));
     }
-
+    function buildUpiCredentialMembershipPasskeyNumericMetadataPatch(...sources) {
+      return passkeyHelpers.buildUpiCredentialMembershipPasskeyNumericMetadataPatch(...sources);
+    }
     function isUpiCredentialMembershipPasskeyMarker(value = '') {
-      return /^PASSKEY(?::|$)/i.test(normalizeText(value));
+      return passkeyHelpers.isUpiCredentialMembershipPasskeyMarker(value);
     }
-
-    function getUpiCredentialMembershipPasskeyCredentialId(value = '') {
-      return parseUpiCredentialMembershipPasskeyMarker(value).credentialId || '';
-    }
-
     function parseUpiCredentialMembershipPasskeyMarker(value = '') {
-      const marker = normalizeText(value);
-      if (!isUpiCredentialMembershipPasskeyMarker(marker)) {
-        return { credentialId: '' };
-      }
-      const [credentialIdPart, ...metadataParts] = marker.replace(/^PASSKEY:?/i, '').trim().split(';');
-      const metadata = {};
-      metadataParts.forEach((part) => {
-        const separatorIndex = part.indexOf('=');
-        if (separatorIndex <= 0) return;
-        const key = normalizeText(part.slice(0, separatorIndex)).toLowerCase();
-        const rawValue = normalizeText(part.slice(separatorIndex + 1));
-        if (!rawValue) return;
-        if (key === 'signcount' || key === 'sign_count') {
-          metadata.signCount = rawValue;
-        } else if (key === 'alg') {
-          metadata.alg = rawValue;
-        }
-      });
-      return {
-        credentialId: normalizeText(credentialIdPart),
-        ...buildUpiCredentialMembershipPasskeyNumericMetadataPatch(metadata),
-      };
+      return passkeyHelpers.parseUpiCredentialMembershipPasskeyMarker(value);
     }
-
-    function getMembershipCredentialFormat() {
-      return getMembershipCredentialFormatHelpers();
+    function getUpiCredentialMembershipPasskeyCredentialId(value = '') {
+      return passkeyHelpers.getUpiCredentialMembershipPasskeyCredentialId(value);
     }
+    function getMembershipCredentialFormat() { return getMembershipCredentialFormatHelpers(); }
 
     function parseUpiCredentialMembershipParts(parts = []) {
       const helpers = getMembershipCredentialFormatHelpers();
-      if (typeof helpers.parseCredentialParts === 'function') {
-        return helpers.parseCredentialParts(parts, { source: 'txt', nowMs: Date.now() });
-      }
+      if (typeof helpers.parseCredentialParts === 'function') return helpers.parseCredentialParts(parts, { source: 'txt', nowMs: Date.now() });
       return helpers.parseCredentialLine((Array.isArray(parts) ? parts : []).join('---'), {
         source: 'txt',
         nowMs: Date.now(),
       });
     }
-
     function parseUpiCredentialMembershipPartsFallback(parts = []) {
       if (parts.length === 4 && isLikelyUpiCredentialMembershipVerificationUrl(parts[1])) {
         const recordedAt = Math.max(0, Math.floor(Number(parts[3]) || Date.parse(normalizeText(parts[3])) || Date.now()));
@@ -207,16 +149,11 @@
         source: 'txt',
       };
     }
-
     function normalizeUpiCredentialMembershipCredential(rawItem = {}, fallbackSource = '') {
       const source = rawItem && typeof rawItem === 'object' && !Array.isArray(rawItem) ? rawItem : {};
       const formatHelpers = getMembershipCredentialFormatHelpers();
-      const normalizeValue = typeof formatHelpers.normalizeText === 'function'
-        ? formatHelpers.normalizeText
-        : normalizeText;
-      const normalizeEmailValue = typeof formatHelpers.normalizeEmail === 'function'
-        ? formatHelpers.normalizeEmail
-        : normalizeEmail;
+      const normalizeValue = typeof formatHelpers.normalizeText === 'function' ? formatHelpers.normalizeText : normalizeText;
+      const normalizeEmailValue = typeof formatHelpers.normalizeEmail === 'function' ? formatHelpers.normalizeEmail : normalizeEmail;
       const normalizeTotpSecret = typeof formatHelpers.normalizeTotpSecret === 'function'
         ? formatHelpers.normalizeTotpSecret
         : normalizeUpiCredentialMembershipTotpSecret;
@@ -224,9 +161,7 @@
         ? formatHelpers.isLikelyTimestamp
         : isLikelyUpiCredentialMembershipTimestamp;
       const email = normalizeEmailValue(source.email || source.accountIdentifier);
-      if (!email) {
-        return null;
-      }
+      if (!email) return null;
       const rawAccessToken = normalizeValue(
         source.accessToken
         || source.token
@@ -235,16 +170,12 @@
         || ''
       );
       const rawAccessTokenUpdatedAt = normalizeValue(source.accessTokenUpdatedAt || source.checkedAt || '');
-      const accessTokenIsTimestamp = rawAccessToken
-        && !rawAccessTokenUpdatedAt
-        && isLikelyTimestamp(rawAccessToken);
+      const accessTokenIsTimestamp = rawAccessToken && !rawAccessTokenUpdatedAt && isLikelyTimestamp(rawAccessToken);
       const accessToken = accessTokenIsTimestamp ? '' : rawAccessToken;
       const accessTokenUpdatedAt = rawAccessTokenUpdatedAt || (accessTokenIsTimestamp ? rawAccessToken : '');
       const no2faFreeRoute = source.no2faFreeRoute === true;
       const passkeyCredentialId = normalizeValue(source.passkeyCredentialId || source.credentialId || source.credential_id || '');
-      const passkeyEnabled = no2faFreeRoute ? false : (
-        source.passkeyEnabled === true || Boolean(passkeyCredentialId)
-      );
+      const passkeyEnabled = !no2faFreeRoute && (source.passkeyEnabled === true || Boolean(passkeyCredentialId));
       const passkeyNumericMetadataPatch = buildUpiCredentialMembershipPasskeyNumericMetadataPatch(source);
       return {
         ...source,
@@ -277,11 +208,11 @@
         passkeyPublicKeyCose: normalizeValue(source.passkeyPublicKeyCose || source.publicKeyCose || source.public_key_cose || ''),
         ...passkeyNumericMetadataPatch,
         passkeyApiPersisted: source.passkeyApiPersisted === true || source.persisted === true,
-        twoFactorEnabled: no2faFreeRoute
-          ? false
-          : (source.twoFactorEnabled === true
-            || Boolean(normalizeTotpSecret(source.totpMfaSecret || source.totpSecret || source.twoFactorSecret || ''))
-            || passkeyEnabled),
+        twoFactorEnabled: no2faFreeRoute ? false : (
+          source.twoFactorEnabled === true
+          || Boolean(normalizeTotpSecret(source.totpMfaSecret || source.totpSecret || source.twoFactorSecret || ''))
+          || passkeyEnabled
+        ),
         accessToken,
         accessTokenMasked: accessToken ? normalizeValue(source.accessTokenMasked || '') : '',
         accessTokenUpdatedAt,
@@ -289,7 +220,6 @@
         source: normalizeValue(fallbackSource || source.source),
       };
     }
-
     function parseUpiCredentialMembershipText(text = '') {
       const formatHelpers = getMembershipCredentialFormatHelpers();
       const seen = new Set();
@@ -298,32 +228,16 @@
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line && !line.startsWith('#'))
-        .map((line) => {
-          return normalizeUpiCredentialMembershipCredential(
-            formatHelpers.parseCredentialLine(line, { source: 'txt', nowMs: Date.now() }),
-            'txt'
-          );
-        })
-        .filter((item) => {
-          if (!item?.email || seen.has(item.email)) {
-            return false;
-          }
-          seen.add(item.email);
-          return true;
-        });
+        .map((line) => normalizeUpiCredentialMembershipCredential(
+          formatHelpers.parseCredentialLine(line, { source: 'txt', nowMs: Date.now() }),
+          'txt'
+        ))
+        .filter((item) => item?.email && !seen.has(item.email) && Boolean(seen.add(item.email)));
     }
-
     return {
-      normalizeEmail,
-      normalizeText,
-      parseUpiCredentialMembershipParts,
-      normalizeUpiCredentialMembershipCredential,
-      parseUpiCredentialMembershipText,
-      normalizeUpiCredentialMembershipTotpSecret,
-      parseUpiCredentialMembershipPasskeyMarker,
-      getMembershipCredentialFormat,
-      parseUpiCredentialMembershipPartsFallback,
-      getUpiCredentialMembershipPasskeyCredentialId,
+      normalizeEmail, normalizeText, parseUpiCredentialMembershipParts, normalizeUpiCredentialMembershipCredential,
+      parseUpiCredentialMembershipText, normalizeUpiCredentialMembershipTotpSecret, parseUpiCredentialMembershipPasskeyMarker,
+      getMembershipCredentialFormat, parseUpiCredentialMembershipPartsFallback, getUpiCredentialMembershipPasskeyCredentialId,
     };
   }
   const api = { createAccountRecordsCredentialParser };

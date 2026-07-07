@@ -249,6 +249,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-deletion-state.js',
     'sidepanel/account-records-export-builders.js',
     'sidepanel/account-records-redeem-policy.js',
+    'sidepanel/account-records-passkey-helpers.js',
     'sidepanel/account-records-credential-parser.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
@@ -330,6 +331,7 @@ function checkStaticContracts() {
   const accountRecordsDeletionState = readText('sidepanel/account-records-deletion-state.js');
   const accountRecordsExportBuilders = readText('sidepanel/account-records-export-builders.js');
   const accountRecordsRedeemPolicy = readText('sidepanel/account-records-redeem-policy.js');
+  const accountRecordsPasskeyHelpers = readText('sidepanel/account-records-passkey-helpers.js');
   const accountRecordsCredentialParser = readText('sidepanel/account-records-credential-parser.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
@@ -414,6 +416,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-deletion-state.js"', 'account records deletion state script load');
   assertIncludes(sidepanelHtml, 'src="account-records-export-builders.js"', 'account records export builders script load');
   assertIncludes(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'account records redeem policy script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'account records passkey helpers script load');
   assertIncludes(sidepanelHtml, 'src="account-records-credential-parser.js"', 'account records credential parser script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
@@ -431,6 +434,7 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsExportBuilders, 'createAccountRecordsExportBuilders', 'account records export builders factory');
   assertIncludes(accountRecordsRedeemPolicy, 'SidepanelAccountRecordsRedeemPolicy', 'account records redeem policy global');
   assertIncludes(accountRecordsRedeemPolicy, 'createAccountRecordsRedeemPolicy', 'account records redeem policy factory');
+  assertIncludes(accountRecordsPasskeyHelpers, 'SidepanelAccountRecordsPasskeyHelpers', 'account records passkey helpers global');
   assertIncludes(accountRecordsCredentialParser, 'SidepanelAccountRecordsCredentialParser', 'account records credential parser global');
   assertIncludes(accountRecordsCredentialParser, 'createAccountRecordsCredentialParser', 'account records credential parser factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
@@ -455,6 +459,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-export-builders.js"', 'src="account-records-redeem-policy.js"', 'account records export builders must load before redeem policy');
   assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-manager.js"', 'account records redeem policy must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-credential-parser.js"', 'account records redeem policy must load before credential parser');
+  assertBefore(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'src="account-records-credential-parser.js"', 'account records passkey helpers must load before credential parser');
   assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-manager.js"', 'account records credential parser must load before manager');
   assertBefore(
     sidepanelHtml,
@@ -868,7 +873,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-deletion-state.js', 120, 'account records deletion state helper size guard');
   assertFileLineCountAtMost('sidepanel/account-records-export-builders.js', 260, 'account records export builders size guard');
   assertFileLineCountAtMost('sidepanel/account-records-redeem-policy.js', 180, 'account records redeem policy size guard');
-  assertFileLineCountAtMost('sidepanel/account-records-credential-parser.js', 340, 'account records credential parser size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-passkey-helpers.js', 250, 'account records passkey helpers size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-credential-parser.js', 250, 'account records credential parser size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
