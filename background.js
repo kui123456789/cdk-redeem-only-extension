@@ -36,6 +36,7 @@ importScripts(
   'background/membership/redeem-status-sync.js',
   'background/router/redeem-refresh-service.js',
   'background/router/node-protocol-service.js',
+  'background/router/payment-session-service.js',
   'background/membership/access-token-refresh.js',
   'background/membership/login-session-executor.js',
   'background/passkey-login-core.js',

@@ -212,6 +212,7 @@ function checkCoreFiles() {
     'background/redeem/redeem-cdkey-usage.js',
     'background/router/redeem-refresh-service.js',
     'background/router/node-protocol-service.js',
+    'background/router/payment-session-service.js',
     'background/steps/upi-redeem/session-material.js',
     'background/steps/upi-redeem/free-entry.js',
     'background/steps/upi-redeem/channel-submission.js',
@@ -360,6 +361,7 @@ function checkStaticContracts() {
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
   const routerRedeemRefreshService = readText('background/router/redeem-refresh-service.js');
   const routerNodeProtocolService = readText('background/router/node-protocol-service.js');
+  const routerPaymentSessionService = readText('background/router/payment-session-service.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelAppState = readText('sidepanel/app-state.js');
   const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
@@ -844,6 +846,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/membership/redeem-status-sync.js'", 'background redeem status sync script load');
   assertIncludes(background, "'background/router/redeem-refresh-service.js'", 'background router redeem refresh service script load');
   assertIncludes(background, "'background/router/node-protocol-service.js'", 'background router node protocol service script load');
+  assertIncludes(background, "'background/router/payment-session-service.js'", 'background router payment session service script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
@@ -888,6 +891,7 @@ function checkStaticContracts() {
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
   assertBefore(background, "'background/router/redeem-refresh-service.js'", "'background/message-router.js'", 'router redeem refresh service must load before message router');
   assertBefore(background, "'background/router/node-protocol-service.js'", "'background/message-router.js'", 'router node protocol service must load before message router');
+  assertBefore(background, "'background/router/payment-session-service.js'", "'background/message-router.js'", 'router payment session service must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
@@ -946,6 +950,11 @@ function checkStaticContracts() {
   assertIncludes(routerNodeProtocolService, 'MultiPageRouterNodeProtocolService', 'router node protocol service global');
   assertIncludes(routerNodeProtocolService, 'createRouterNodeProtocolService', 'router node protocol service factory');
   assertIncludes(routerNodeProtocolService, 'module.exports', 'router node protocol service CommonJS export');
+  assertIncludes(routerPaymentSessionService, 'MultiPageRouterPaymentSessionService', 'router payment session service global');
+  assertIncludes(routerPaymentSessionService, 'createRouterPaymentSessionService', 'router payment session service factory');
+  assertIncludes(routerPaymentSessionService, 'module.exports', 'router payment session service CommonJS export');
+  assertIncludes(router, 'getRouterPaymentSessionServiceModule()', 'message router payment session service module accessor');
+  assertIncludes(router, 'createRouterPaymentSessionService', 'message router payment session service factory dependency');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
   assertIncludes(membershipAccessTokenRefresh, 'isAccessTokenInvalidMembershipError', 'membership access token invalid classifier');
   assertIncludes(membershipLoginSessionExecutor, 'MultiPageMembershipLoginSessionExecutor', 'membership login session executor global');
@@ -1321,6 +1330,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
   assertFileLineCountAtMost('background/router/redeem-refresh-service.js', 1500, 'router redeem refresh service size guard');
   assertFileLineCountAtMost('background/router/node-protocol-service.js', 700, 'router node protocol service size guard');
+  assertFileLineCountAtMost('background/router/payment-session-service.js', 500, 'router payment session service size guard');
   assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
   assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
   assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');
