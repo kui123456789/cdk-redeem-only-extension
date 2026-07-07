@@ -194,6 +194,10 @@
     if (typeof accountRecordsDisplayModel.createAccountRecordsDisplayModel !== 'function') {
       throw new Error('Account records display model module is not loaded.');
     }
+    const accountRecordsStatusMeta = globalScope.SidepanelAccountRecordsStatusMeta || {};
+    if (typeof accountRecordsStatusMeta.createAccountRecordsStatusMeta !== 'function') {
+      throw new Error('Account records status meta module is not loaded.');
+    }
     const {
       buildUpiCredentialMembershipResultLookup,
       sanitizeUpiCredentialMembershipDisplayRow,
@@ -203,6 +207,7 @@
     } = accountRecordsDisplayModel.createAccountRecordsDisplayModel({
       normalizeEmail: (value) => normalizeUpiCredentialMembershipEmail(value),
       normalizeText: (value) => normalizeUpiCredentialMembershipText(value),
+      createAccountRecordsStatusMeta: (displayContext) => accountRecordsStatusMeta.createAccountRecordsStatusMeta(displayContext),
       getMembershipCredentialFormatHelpers,
       collectPasskeyNumericMetadataPatch: (...sources) => collectUpiCredentialMembershipPasskeyNumericMetadataPatch(...sources),
       getUpiCredentialMembershipCheckResults: (currentState) => getUpiCredentialMembershipCheckResults(currentState),
