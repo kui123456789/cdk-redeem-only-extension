@@ -190,6 +190,12 @@ function checkCoreFiles() {
     'background/membership/login-session-executor.js',
     'background/membership/redeem-status-sync.js',
     'background/membership/result-state.js',
+    'background/membership/results-store.js',
+    'background/membership/trial-eligibility-service.js',
+    'background/membership/membership-result-sync.js',
+    'background/membership/access-token-supplement-service.js',
+    'background/membership/free-pool-service.js',
+    'background/membership/redeem-candidate-service.js',
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
@@ -321,6 +327,12 @@ function checkStaticContracts() {
   const membershipLoginSessionExecutor = readText('background/membership/login-session-executor.js');
   const membershipRedeemStatusSync = readText('background/membership/redeem-status-sync.js');
   const membershipResultState = readText('background/membership/result-state.js');
+  const membershipResultsStore = readText('background/membership/results-store.js');
+  const trialEligibilityService = readText('background/membership/trial-eligibility-service.js');
+  const membershipResultSync = readText('background/membership/membership-result-sync.js');
+  const accessTokenSupplementService = readText('background/membership/access-token-supplement-service.js');
+  const freePoolService = readText('background/membership/free-pool-service.js');
+  const redeemCandidateService = readText('background/membership/redeem-candidate-service.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
@@ -776,11 +788,31 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
+  assertIncludes(background, "'background/membership/results-store.js'", 'background membership results-store script load');
+  assertIncludes(background, "'background/membership/trial-eligibility-service.js'", 'background trial eligibility service script load');
+  assertIncludes(background, "'background/membership/membership-result-sync.js'", 'background membership result sync service script load');
+  assertIncludes(background, "'background/membership/access-token-supplement-service.js'", 'background access-token supplement service script load');
+  assertIncludes(background, "'background/membership/free-pool-service.js'", 'background Free pool service script load');
+  assertIncludes(background, "'background/membership/redeem-candidate-service.js'", 'background redeem candidate service script load');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
   assertBefore(background, "'background/membership/result-state.js'", "'background/upi-credential-membership-checker.js'", 'membership result-state must load before membership checker');
+  [
+    'trial-eligibility-service.js',
+    'membership-result-sync.js',
+    'access-token-supplement-service.js',
+    'free-pool-service.js',
+    'redeem-candidate-service.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/membership/${file}'`,
+      "'background/upi-credential-membership-checker.js'",
+      `background ${file} must load before membership checker`
+    );
+  });
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
   assertIncludes(membershipRedeemStatusSync, 'buildPendingUpiCredentialMembershipRedeemRefreshTargets', 'membership redeem refresh target helper');
   assertIncludes(membershipAccessTokenRefresh, 'MultiPageMembershipAccessTokenRefresh', 'membership access token refresh global');
@@ -790,7 +822,29 @@ function checkStaticContracts() {
   assertIncludes(membershipResultState, 'MultiPageMembershipResultState', 'membership result-state global');
   assertIncludes(membershipResultState, 'normalizeResultsPayload', 'membership result-state payload normalizer');
   assertIncludes(membershipResultState, 'buildResultExportRows', 'membership result-state export rows helper');
+  assertIncludes(membershipResultsStore, 'MultiPageMembershipResultsStore', 'membership results-store global');
+  assertIncludes(membershipResultsStore, 'createMembershipResultsStore', 'membership results-store factory');
+  assertIncludes(trialEligibilityService, 'MultiPageTrialEligibilityService', 'trial eligibility service global');
+  assertIncludes(trialEligibilityService, 'createTrialEligibilityService', 'trial eligibility service factory');
+  assertIncludes(trialEligibilityService, 'checkUpiCredentialMembershipTrialEligibility', 'trial eligibility service checker flow');
+  assertIncludes(membershipResultSync, 'MultiPageMembershipResultSync', 'membership result sync global');
+  assertIncludes(membershipResultSync, 'createMembershipResultSync', 'membership result sync factory');
+  assertIncludes(membershipResultSync, 'getFreshUpiRedeemRuntimeState', 'membership result sync runtime state helper');
+  assertIncludes(accessTokenSupplementService, 'MultiPageAccessTokenSupplementService', 'access-token supplement service global');
+  assertIncludes(accessTokenSupplementService, 'createAccessTokenSupplementService', 'access-token supplement service factory');
+  assertIncludes(accessTokenSupplementService, 'fillUpiCredentialMembershipFreeAccessTokens', 'access-token supplement flow');
+  assertIncludes(freePoolService, 'MultiPageFreePoolService', 'Free pool service global');
+  assertIncludes(freePoolService, 'createFreePoolService', 'Free pool service factory');
+  assertIncludes(freePoolService, 'pruneIneligibleFreeUpiCredentialMembership', 'Free pool no-trial pruning flow');
+  assertIncludes(redeemCandidateService, 'MultiPageRedeemCandidateService', 'redeem candidate service global');
+  assertIncludes(redeemCandidateService, 'createRedeemCandidateService', 'redeem candidate service factory');
+  assertIncludes(redeemCandidateService, 'buildAutoContinuationRedeemCandidates', 'redeem candidate continuation helper');
   assertIncludes(checker, 'getMembershipResultStateHelper', 'membership checker result-state wrapper');
+  assertIncludes(checker, 'getMembershipTrialEligibilityServiceModule', 'membership checker trial service wrapper');
+  assertIncludes(checker, 'getMembershipResultSyncModule', 'membership checker result sync wrapper');
+  assertIncludes(checker, 'getMembershipAccessTokenSupplementServiceModule', 'membership checker AT supplement wrapper');
+  assertIncludes(checker, 'getMembershipFreePoolServiceModule', 'membership checker Free pool wrapper');
+  assertIncludes(checker, 'getMembershipRedeemCandidateServiceModule', 'membership checker redeem candidate wrapper');
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
@@ -1124,6 +1178,12 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');
+  assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
+  assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
+  assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');
+  assertFileLineCountAtMost('background/membership/access-token-supplement-service.js', 280, 'access-token supplement service size guard');
+  assertFileLineCountAtMost('background/membership/free-pool-service.js', 700, 'Free pool service size guard');
+  assertFileLineCountAtMost('background/membership/redeem-candidate-service.js', 850, 'redeem candidate service size guard');
   assertFileLineCountAtMost('content/auth-page-detectors.js', 250, 'auth page detectors size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
@@ -1134,7 +1194,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-page-detector.js', 400, 'signup detector size guard');
   assertFileLineCountAtMost('content/signup-page-orchestrator.js', 300, 'signup orchestrator size guard');
   assertFileLineCountAtMost('content/signup-page.js', 7000, 'signup content script growth guard');
-  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 6700, 'membership checker growth guard');
+  assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 5200, 'membership checker growth guard');
 }
 
 function checkTrackedSourceLineWarnings() {
