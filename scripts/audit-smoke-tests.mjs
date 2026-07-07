@@ -205,6 +205,11 @@ function checkCoreFiles() {
     'shared/redeem-channel-state.js',
     'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
+    'background/steps/upi-redeem/session-material.js',
+    'background/steps/upi-redeem/free-entry.js',
+    'background/steps/upi-redeem/channel-submission.js',
+    'background/steps/upi-redeem/status-polling.js',
+    'background/steps/upi-redeem/finalize.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
     'background/verification-flow.js',
@@ -408,6 +413,11 @@ function checkStaticContracts() {
   const settingsRoutes = readText('background/routes/settings-routes.js');
   const accountRecordRoutes = readText('background/routes/account-record-routes.js');
   const emailPoolRoutes = readText('background/routes/email-pool-routes.js');
+  const upiRedeemSessionMaterial = readText('background/steps/upi-redeem/session-material.js');
+  const upiRedeemFreeEntry = readText('background/steps/upi-redeem/free-entry.js');
+  const upiRedeemChannelSubmission = readText('background/steps/upi-redeem/channel-submission.js');
+  const upiRedeemStatusPolling = readText('background/steps/upi-redeem/status-polling.js');
+  const upiRedeemFinalize = readText('background/steps/upi-redeem/finalize.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
   const authPageDetectors = readText('content/auth-page-detectors.js');
@@ -794,6 +804,21 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/membership/access-token-supplement-service.js'", 'background access-token supplement service script load');
   assertIncludes(background, "'background/membership/free-pool-service.js'", 'background Free pool service script load');
   assertIncludes(background, "'background/membership/redeem-candidate-service.js'", 'background redeem candidate service script load');
+  assertIncludes(background, "'background/steps/upi-redeem/session-material.js'", 'background UPI redeem session material script load');
+  assertIncludes(background, "'background/steps/upi-redeem/free-entry.js'", 'background UPI redeem Free entry script load');
+  assertIncludes(background, "'background/steps/upi-redeem/channel-submission.js'", 'background UPI redeem channel submission script load');
+  assertIncludes(background, "'background/steps/upi-redeem/status-polling.js'", 'background UPI redeem status polling script load');
+  assertIncludes(background, "'background/steps/upi-redeem/finalize.js'", 'background UPI redeem finalize script load');
+  assertIncludes(upiRedeemSessionMaterial, 'MultiPageUpiRedeemSessionMaterial', 'UPI redeem session material global');
+  assertIncludes(upiRedeemSessionMaterial, 'createUpiRedeemSessionMaterial', 'UPI redeem session material factory');
+  assertIncludes(upiRedeemFreeEntry, 'MultiPageUpiRedeemFreeEntry', 'UPI redeem Free entry global');
+  assertIncludes(upiRedeemFreeEntry, 'createUpiRedeemFreeEntry', 'UPI redeem Free entry factory');
+  assertIncludes(upiRedeemChannelSubmission, 'MultiPageUpiRedeemChannelSubmission', 'UPI redeem channel submission global');
+  assertIncludes(upiRedeemChannelSubmission, 'createUpiRedeemChannelSubmission', 'UPI redeem channel submission factory');
+  assertIncludes(upiRedeemStatusPolling, 'MultiPageUpiRedeemStatusPolling', 'UPI redeem status polling global');
+  assertIncludes(upiRedeemStatusPolling, 'createUpiRedeemStatusPolling', 'UPI redeem status polling factory');
+  assertIncludes(upiRedeemFinalize, 'MultiPageUpiRedeemFinalize', 'UPI redeem finalize global');
+  assertIncludes(upiRedeemFinalize, 'createUpiRedeemFinalize', 'UPI redeem finalize factory');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
@@ -811,6 +836,20 @@ function checkStaticContracts() {
       `'background/membership/${file}'`,
       "'background/upi-credential-membership-checker.js'",
       `background ${file} must load before membership checker`
+    );
+  });
+  [
+    'session-material.js',
+    'free-entry.js',
+    'channel-submission.js',
+    'status-polling.js',
+    'finalize.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/steps/upi-redeem/${file}'`,
+      "'background/steps/upi-redeem.js'",
+      `background UPI redeem ${file} must load before UPI redeem facade`
     );
   });
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
@@ -1184,6 +1223,12 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/membership/access-token-supplement-service.js', 280, 'access-token supplement service size guard');
   assertFileLineCountAtMost('background/membership/free-pool-service.js', 700, 'Free pool service size guard');
   assertFileLineCountAtMost('background/membership/redeem-candidate-service.js', 850, 'redeem candidate service size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/session-material.js', 750, 'UPI redeem session material size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/free-entry.js', 580, 'UPI redeem Free entry size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/channel-submission.js', 1900, 'UPI redeem channel submission size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/status-polling.js', 1150, 'UPI redeem status polling size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem/finalize.js', 1150, 'UPI redeem finalize size guard');
+  assertFileLineCountAtMost('background/steps/upi-redeem.js', 1200, 'UPI redeem facade size guard');
   assertFileLineCountAtMost('content/auth-page-detectors.js', 250, 'auth page detectors size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
@@ -1256,8 +1301,13 @@ function checkPhoneSmsAudit() {
 function checkDocumentationDrift() {
   const readme = readText('README.md');
   const chainDoc = readText('项目完整链路说明.md');
-  const hasIdealCode = readText('background/steps/upi-redeem.js').includes("'ideal'");
-  const hasAutoRedeemCode = readText('background/steps/upi-redeem.js').includes('自动提交兑换');
+  const upiRedeemCode = [
+    readText('background/steps/upi-redeem.js'),
+    readText('background/steps/upi-redeem/channel-submission.js'),
+    readText('background/steps/upi-redeem/finalize.js'),
+  ].join('\n');
+  const hasIdealCode = upiRedeemCode.includes("'ideal'");
+  const hasAutoRedeemCode = upiRedeemCode.includes('自动提交兑换');
   if (hasIdealCode && !/IDEAL/i.test(readme)) {
     warn('README.md does not mention IDEAL, but code contains IDEAL channel support.');
   }
