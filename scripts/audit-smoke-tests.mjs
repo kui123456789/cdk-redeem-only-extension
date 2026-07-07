@@ -204,6 +204,7 @@ function checkCoreFiles() {
     'background/membership/credential-pool-service.js',
     'background/membership/import-export-service.js',
     'background/membership/credential-backup-format.js',
+    'background/membership/plus-verification-service.js',
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
@@ -364,6 +365,7 @@ function checkStaticContracts() {
   const credentialPoolService = readText('background/membership/credential-pool-service.js');
   const membershipImportExportService = readText('background/membership/import-export-service.js');
   const membershipCredentialBackupFormat = readText('background/membership/credential-backup-format.js');
+  const membershipPlusVerificationService = readText('background/membership/plus-verification-service.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
@@ -871,6 +873,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/membership/credential-pool-service.js'", 'background credential pool service script load');
   assertIncludes(background, "'background/membership/import-export-service.js'", 'background import/export service script load');
   assertIncludes(background, "'background/membership/credential-backup-format.js'", 'background credential backup format script load');
+  assertIncludes(background, "'background/membership/plus-verification-service.js'", 'background Plus verification service script load');
   assertIncludes(background, "'background/steps/upi-redeem/session-material.js'", 'background UPI redeem session material script load');
   assertIncludes(background, "'background/steps/upi-redeem/free-entry.js'", 'background UPI redeem Free entry script load');
   assertIncludes(background, "'background/steps/upi-redeem/channel-submission.js'", 'background UPI redeem channel submission script load');
@@ -926,6 +929,7 @@ function checkStaticContracts() {
     'credential-pool-service.js',
     'import-export-service.js',
     'credential-backup-format.js',
+    'plus-verification-service.js',
   ].forEach((file) => {
     assertBefore(
       background,
@@ -1013,6 +1017,9 @@ function checkStaticContracts() {
   assertIncludes(membershipCredentialBackupFormat, 'MultiPageMembershipCredentialBackupFormat', 'membership credential backup format global');
   assertIncludes(membershipCredentialBackupFormat, 'createCredentialBackupFormat', 'membership credential backup format factory');
   assertIncludes(membershipCredentialBackupFormat, 'parseCredentialBackupText', 'membership credential backup parser');
+  assertIncludes(membershipPlusVerificationService, 'MultiPageMembershipPlusVerificationService', 'membership Plus verification service global');
+  assertIncludes(membershipPlusVerificationService, 'createPlusVerificationService', 'membership Plus verification service factory');
+  assertIncludes(membershipPlusVerificationService, 'identifyUpiCredentialMembershipFreePlus', 'membership Plus identification flow');
   assertIncludes(checker, 'getMembershipResultStateHelper', 'membership checker result-state wrapper');
   assertIncludes(checker, 'getMembershipTrialEligibilityServiceModule', 'membership checker trial service wrapper');
   assertIncludes(checker, 'getMembershipResultSyncModule', 'membership checker result sync wrapper');
@@ -1022,6 +1029,7 @@ function checkStaticContracts() {
   assertIncludes(checker, 'getMembershipCredentialPoolServiceModule', 'membership checker credential pool wrapper');
   assertIncludes(checker, 'getMembershipImportExportServiceModule', 'membership checker import/export wrapper');
   assertIncludes(checker, 'getMembershipCredentialBackupFormatModule', 'membership checker credential backup format wrapper');
+  assertIncludes(checker, 'getMembershipPlusVerificationServiceModule', 'membership checker Plus verification wrapper');
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
@@ -1385,6 +1393,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/membership/credential-pool-service.js', 700, 'credential pool service size guard');
   assertFileLineCountAtMost('background/membership/import-export-service.js', 400, 'membership import/export service size guard');
   assertFileLineCountAtMost('background/membership/credential-backup-format.js', 300, 'membership credential backup format size guard');
+  assertFileLineCountAtMost('background/membership/plus-verification-service.js', 600, 'membership Plus verification service size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/session-material.js', 750, 'UPI redeem session material size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/free-entry.js', 580, 'UPI redeem Free entry size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/channel-submission.js', 1900, 'UPI redeem channel submission size guard');
