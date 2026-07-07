@@ -231,6 +231,10 @@
     if (typeof accountRecordsMembershipStateSync.createAccountRecordsMembershipStateSync !== 'function') {
       throw new Error('Account records membership state sync module is not loaded.');
     }
+    const accountRecordsTrialEligibility = globalScope.SidepanelAccountRecordsTrialEligibility || {};
+    if (typeof accountRecordsTrialEligibility.createAccountRecordsTrialEligibility !== 'function') {
+      throw new Error('Account records trial eligibility module is not loaded.');
+    }
     const accountRecordsMembershipHelpers = globalScope.SidepanelAccountRecordsMembershipHelpers || {};
     if (typeof accountRecordsMembershipHelpers.createAccountRecordsMembershipHelpers !== 'function') {
       throw new Error('Account records membership helpers module is not loaded.');
@@ -373,6 +377,16 @@
       findActiveUpiRedeemCdkeyUsageEntryByEmail: (email, currentState, channel) => (
         findActiveUpiRedeemCdkeyUsageEntryByEmail(email, currentState, channel)
       ),
+    });
+    const trialEligibility = accountRecordsTrialEligibility.createAccountRecordsTrialEligibility({
+      membershipRowPolicy,
+      failureLimit: REDEEM_CHANNEL_FAILURE_LIMIT,
+      normalizeEmail: (value) => normalizeUpiCredentialMembershipEmail(value),
+      normalizeText: (value) => normalizeUpiCredentialMembershipText(value),
+      normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
+      getRedeemChannelLabel: (channel) => getRedeemChannelLabel(channel),
+      getUpiCredentialMembershipCheckResults: () => getUpiCredentialMembershipCheckResults(),
+      buildUpiCredentialMembershipDisplayRows: (results) => buildUpiCredentialMembershipDisplayRows(results),
     });
 
     function escapeHtml(value) {
@@ -580,125 +594,43 @@
     }
 
     function normalizeTrialEligibilityStatus(value = '') {
-      return membershipRowPolicy.normalizeTrialEligibilityStatus?.(value) || '';
-    }
-
-    function getTrialEligibilityApiHelpers() {
-      return (typeof window !== 'undefined' ? window.MultiPageTrialEligibilityApi : null) || {};
+      return trialEligibility.normalizeTrialEligibilityStatus(value);
     }
 
     function isTrialEligibilityChannelAllowed(row = {}, channel = 'upi') {
-      const helper = getTrialEligibilityApiHelpers().isTrialEligibilityChannelAllowed;
-      if (typeof helper === 'function') {
-        return helper(row, channel);
-      }
-      return membershipRowPolicy.isTrialEligibilityChannelAllowed?.(row, channel) !== false;
+      return trialEligibility.isTrialEligibilityChannelAllowed(row, channel);
     }
 
     function getTrialEligibilityChannelBlockedDetail(row = {}, channel = 'upi') {
-      const redeemChannel = normalizeRedeemChannel(channel);
-      if (isTrialEligibilityChannelAllowed(row, redeemChannel)) {
-        return '';
-      }
-      const reasonField = redeemChannel === 'ideal'
-        ? 'idealChannelEligibilityReason'
-        : 'upiChannelEligibilityReason';
-      return normalizeUpiCredentialMembershipText(row[reasonField])
-        || `${getRedeemChannelLabel(redeemChannel)} 渠道当前不可用`;
-    }
-
-    function normalizeTrialEligibilitySummaryItem(item = {}) {
-      const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-      return {
-        email: normalizeUpiCredentialMembershipEmail(source.email),
-        reason: String(source.reason || '').trim(),
-        trialEligibilityStatus: normalizeTrialEligibilityStatus(source.trialEligibilityStatus),
-      };
+      return trialEligibility.getTrialEligibilityChannelBlockedDetail(row, channel);
     }
 
     function buildUpiCredentialMembershipTrialEligibilitySummary(results = {}, rows = []) {
-      const source = results?.trialEligibilitySummary && typeof results.trialEligibilitySummary === 'object'
-        ? results.trialEligibilitySummary
-        : {};
-      const kept = Array.isArray(source.kept) ? source.kept.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-      const skipped = Array.isArray(source.skipped) ? source.skipped.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-      const failed = Array.isArray(source.failed) ? source.failed.map(normalizeTrialEligibilitySummaryItem).filter((item) => item.email) : [];
-      const ineligibleEmails = Array.isArray(source.ineligibleEmails)
-        ? source.ineligibleEmails.map(normalizeUpiCredentialMembershipEmail).filter(Boolean)
-        : [];
-      const deletedEmails = Array.isArray(source.deletedEmails)
-        ? source.deletedEmails.map(normalizeUpiCredentialMembershipEmail).filter(Boolean)
-        : [];
-      failed.forEach((item) => {
-        if (item.trialEligibilityStatus === 'ineligible' && item.email && !ineligibleEmails.includes(item.email)) {
-          ineligibleEmails.push(item.email);
-        }
-      });
-      const rowCounts = (Array.isArray(rows) ? rows : []).reduce((counts, row) => {
-        const trialStatus = normalizeTrialEligibilityStatus(row?.trialEligibilityStatus);
-        if (trialStatus === 'eligible') counts.eligible += 1;
-        if (trialStatus === 'skipped') counts.skipped += 1;
-        if (trialStatus === 'failed') counts.failed += 1;
-        if (trialStatus === 'ineligible') counts.ineligible += 1;
-        return counts;
-      }, { eligible: 0, skipped: 0, failed: 0, ineligible: 0 });
-      const hasStoredSummary = Boolean(source.checkedAt || kept.length || skipped.length || failed.length || deletedEmails.length || ineligibleEmails.length);
-      const storedIneligibleCount = Math.max(0, Math.floor(Number(source.ineligibleCount) || ineligibleEmails.length || 0));
-      return {
-        checkedAt: String(source.checkedAt || '').trim(),
-        eligibleCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.eligibleCount) || kept.length || 0)) : rowCounts.eligible,
-        skippedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.skippedCount) || skipped.length || 0)) : rowCounts.skipped,
-        failedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.failedCount) || failed.length || 0) - storedIneligibleCount) : rowCounts.failed,
-        ineligibleCount: hasStoredSummary ? storedIneligibleCount : rowCounts.ineligible,
-        deletedCount: hasStoredSummary ? Math.max(0, Math.floor(Number(source.deletedCount) || deletedEmails.length || 0)) : 0,
-        deletedEmails,
-        ineligibleEmails,
-      };
+      return trialEligibility.buildUpiCredentialMembershipTrialEligibilitySummary(results, rows);
     }
 
     function isRedeemableFreeUpiCredentialMembershipRowForChannel(row = {}, channel = 'upi') {
-      return membershipRowPolicy.isRedeemableFreeRowForChannel?.(row, channel, {
-        isTrialEligibilityChannelAllowed,
-      }) === true;
+      return trialEligibility.isRedeemableFreeUpiCredentialMembershipRowForChannel(row, channel);
     }
 
     function isRedeemableFreeUpiCredentialMembershipRow(row = {}) {
-      return isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'upi')
-        || isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'ideal');
+      return trialEligibility.isRedeemableFreeUpiCredentialMembershipRow(row);
     }
 
     function isUpiCredentialMembershipChannelFailureLimitReached(row = {}, channel = 'upi') {
-      return membershipRowPolicy.isChannelFailureLimitReached?.(row, channel) === true;
+      return trialEligibility.isUpiCredentialMembershipChannelFailureLimitReached(row, channel);
     }
 
     function getChannelFailureLimitBlockedFreeRows(rows = [], channel = 'upi') {
-      return membershipRowPolicy.getChannelFailureLimitBlockedRows?.(rows, channel, {
-        isTrialEligibilityChannelAllowed,
-      }) || [];
+      return trialEligibility.getChannelFailureLimitBlockedFreeRows(rows, channel);
     }
 
     function buildNoRedeemableForChannelMessage(channel = 'upi') {
-      const redeemChannel = normalizeRedeemChannel(channel);
-      const results = getUpiCredentialMembershipCheckResults();
-      const allFreeRows = buildUpiCredentialMembershipDisplayRows(results)
-        .filter((row) => String(row.status || '').trim().toLowerCase() === 'free');
-      const overallRedeemableCount = allFreeRows.filter(isRedeemableFreeUpiCredentialMembershipRow).length;
-      const channelRedeemableCount = allFreeRows
-        .filter((row) => isRedeemableFreeUpiCredentialMembershipRowForChannel(row, redeemChannel))
-        .length;
-      const failureBlockedCount = getChannelFailureLimitBlockedFreeRows(allFreeRows, redeemChannel).length;
-      const label = getRedeemChannelLabel(redeemChannel);
-      if (channelRedeemableCount > 0) {
-        return '';
-      }
-      if (redeemChannel === 'ideal' && overallRedeemableCount > 0 && failureBlockedCount > 0) {
-        return `${failureBlockedCount} 个 Free 账号 IDEAL 已失败满 ${REDEEM_CHANNEL_FAILURE_LIMIT} 次并已封存，不会再参与兑换。`;
-      }
-      return `没有启用的 Free 账号可用 ${label} 兑换。`;
+      return trialEligibility.buildNoRedeemableForChannelMessage(channel);
     }
 
     function getNotRedeemableFreeUpiCredentialMembershipReason(row = {}) {
-      return membershipRowPolicy.getNotRedeemableReason?.(row) || '当前不可兑换';
+      return trialEligibility.getNotRedeemableFreeUpiCredentialMembershipReason(row);
     }
 
     function getUpiCredentialMembershipGroup(row = {}) {
