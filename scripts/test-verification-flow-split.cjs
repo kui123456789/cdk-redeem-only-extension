@@ -1,13 +1,20 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-require('../background/verification/assurivo-time.js');
+const assurivoTime = require('../background/verification/assurivo-time.js');
 const verificationKeywords = require('../background/verification/verification-keywords.js');
 const verificationCodeExtractor = require('../background/verification/code-extractor.js');
 const assurivoFeedClient = require('../background/verification/assurivo-feed-client.js');
 require('../background/verification/resend-controller.js');
 require('../background/verification-flow.js');
 const verificationFlow = globalThis.MultiPageBackgroundVerificationFlow;
+
+test('standalone parseAssurivoTimestamp treats naive Assurivo time as UTC+8', () => {
+  assert.equal(
+    new Date(assurivoTime.parseAssurivoTimestamp('2026-01-01 08:00:00')).toISOString(),
+    '2026-01-01T00:00:00.000Z'
+  );
+});
 
 test('verification flow forwards supplied poll payload builder fields', () => {
   const helpers = verificationFlow.createVerificationFlowHelpers({

@@ -292,7 +292,7 @@
         }
 
     function parseAssurivoTimestamp(value) {
-      return parseVerificationTimestampValue(value);
+      return parseAssurivoChinaTimestampString(value);
     }
 
     return {

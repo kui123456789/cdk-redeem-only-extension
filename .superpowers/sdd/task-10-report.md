@@ -68,3 +68,8 @@ Concerns:
 2026-07-08 fix follow-up:
 - Updated the standalone `fetchAssurivoFeed(options)` export to instantiate the feed client with the same default Assurivo feed/open endpoints used by the verification-flow facade, so valid `entry/state` credential inputs now build a feed URL without undefined endpoint errors.
 - Added a focused mock-fetch regression test in `scripts/test-verification-flow-split.cjs` that exercises standalone `entry/state` usage and proves the request targets `/console/feed.php` without touching the network.
+
+2026-07-08 minor follow-up:
+- Updated standalone `parseAssurivoTimestamp(value)` to use the Assurivo UTC+8 parser rather than generic local-time parsing.
+- Added a focused regression test proving `2026-01-01 08:00:00` parses to `2026-01-01T00:00:00.000Z`.
+- Verification: `node --check background\verification\assurivo-time.js`, `node --test scripts\test-verification-flow-split.cjs`, and targeted `git diff --check` all passed.
