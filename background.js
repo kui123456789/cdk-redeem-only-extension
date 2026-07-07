@@ -68,6 +68,7 @@ importScripts(
   'background/membership/import-export-service.js',
   'background/membership/credential-backup-format.js',
   'background/membership/plus-verification-service.js',
+  'background/membership/failed-redeem-retry-service.js',
   'background/upi-credential-membership-checker.js',
   'background/verification/assurivo-time.js',
   'background/verification/verification-keywords.js',
