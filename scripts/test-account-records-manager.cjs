@@ -14,6 +14,7 @@ delete globalThis.SidepanelAccountRecordsPasskeyHelpers;
 delete globalThis.SidepanelAccountRecordsCredentialParser;
 delete globalThis.SidepanelAccountRecordsStatusMeta;
 delete globalThis.SidepanelAccountRecordsDisplayModel;
+delete globalThis.SidepanelAccountRecordsFlowView;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -28,6 +29,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-passkey-helpe
 delete require.cache[require.resolve('../sidepanel/account-records-credential-parser.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-status-meta.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-display-model.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-flow-view.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
 require('../sidepanel/account-records-subscription.js');
@@ -41,6 +43,7 @@ require('../sidepanel/account-records-passkey-helpers.js');
 require('../sidepanel/account-records-credential-parser.js');
 require('../sidepanel/account-records-status-meta.js');
 require('../sidepanel/account-records-display-model.js');
+require('../sidepanel/account-records-flow-view.js');
 require('../sidepanel/account-records-manager.js');
 
 function createDisplayModel(overrides = {}) {

@@ -253,6 +253,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-credential-parser.js',
     'sidepanel/account-records-status-meta.js',
     'sidepanel/account-records-display-model.js',
+    'sidepanel/account-records-flow-view.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -337,6 +338,7 @@ function checkStaticContracts() {
   const accountRecordsCredentialParser = readText('sidepanel/account-records-credential-parser.js');
   const accountRecordsStatusMeta = readText('sidepanel/account-records-status-meta.js');
   const accountRecordsDisplayModel = readText('sidepanel/account-records-display-model.js');
+  const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -423,6 +425,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'account records passkey helpers script load');
   assertIncludes(sidepanelHtml, 'src="account-records-credential-parser.js"', 'account records credential parser script load');
   assertIncludes(sidepanelHtml, 'src="account-records-status-meta.js"', 'account records status meta script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-flow-view.js"', 'account records flow view script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -446,6 +449,8 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsStatusMeta, 'createAccountRecordsStatusMeta', 'account records status meta factory');
   assertIncludes(accountRecordsDisplayModel, 'SidepanelAccountRecordsDisplayModel', 'account records display model global');
   assertIncludes(accountRecordsDisplayModel, 'createAccountRecordsDisplayModel', 'account records display model factory');
+  assertIncludes(accountRecordsFlowView, 'SidepanelAccountRecordsFlowView', 'account records flow view global');
+  assertIncludes(accountRecordsFlowView, 'createAccountRecordsFlowView', 'account records flow view factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -472,7 +477,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-manager.js"', 'account records credential parser must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-display-model.js"', 'account records credential parser must load before display model');
   assertBefore(sidepanelHtml, 'src="account-records-status-meta.js"', 'src="account-records-display-model.js"', 'account records status meta must load before display model');
-  assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-manager.js"', 'account records display model must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-flow-view.js"', 'account records display model must load before flow view');
+  assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-manager.js"', 'account records flow view must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
