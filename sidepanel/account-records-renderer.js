@@ -68,90 +68,13 @@
     const getRecordSecondaryIdentifier = typeof context.getRecordSecondaryIdentifier === 'function'
       ? context.getRecordSecondaryIdentifier
       : () => '';
-    const getUpiCredentialMembershipCheckResults = typeof context.getUpiCredentialMembershipCheckResults === 'function'
-      ? context.getUpiCredentialMembershipCheckResults
-      : () => ({ items: [] });
-    const buildUpiCredentialMembershipDisplayRows = typeof context.buildUpiCredentialMembershipDisplayRows === 'function'
-      ? context.buildUpiCredentialMembershipDisplayRows
-      : () => [];
-    const normalizeUpiCredentialMembershipEmail = typeof context.normalizeUpiCredentialMembershipEmail === 'function'
-      ? context.normalizeUpiCredentialMembershipEmail
-      : (value = '') => String(value || '').trim().toLowerCase();
-    const normalizeUpiCredentialMembershipText = typeof context.normalizeUpiCredentialMembershipText === 'function'
-      ? context.normalizeUpiCredentialMembershipText
-      : (value = '') => String(value || '').trim();
-    const isActiveUpiCredentialMembershipRedeemRow = typeof context.isActiveUpiCredentialMembershipRedeemRow === 'function'
-      ? context.isActiveUpiCredentialMembershipRedeemRow
-      : () => false;
-    const isAutoRunRecordDisplayRunning = typeof context.isAutoRunRecordDisplayRunning === 'function'
-      ? context.isAutoRunRecordDisplayRunning
-      : () => false;
-    const summarizeMembershipViewModelRows = typeof context.summarizeMembershipViewModelRows === 'function'
-      ? context.summarizeMembershipViewModelRows
-      : () => ({ free: 0, 'upi-plus': 0, 'ideal-plus': 0 });
-    const getUpiCredentialMembershipUiGroup = typeof context.getUpiCredentialMembershipUiGroup === 'function'
-      ? context.getUpiCredentialMembershipUiGroup
-      : () => 'free';
-    const getChannelFailureLimitBlockedFreeRows = typeof context.getChannelFailureLimitBlockedFreeRows === 'function'
-      ? context.getChannelFailureLimitBlockedFreeRows
-      : () => [];
-    const isRedeemChannelDailyLimitBlocked = typeof context.isRedeemChannelDailyLimitBlocked === 'function'
-      ? context.isRedeemChannelDailyLimitBlocked
-      : () => false;
-    const isUpiCredentialMembershipRedeemLocked = typeof context.isUpiCredentialMembershipRedeemLocked === 'function'
-      ? context.isUpiCredentialMembershipRedeemLocked
-      : () => false;
-    const hasUpiCredentialMembershipLoginMaterial = typeof context.hasUpiCredentialMembershipLoginMaterial === 'function'
-      ? context.hasUpiCredentialMembershipLoginMaterial
-      : () => false;
-    const getUpiCredentialMembershipRowStatusMeta = typeof context.getUpiCredentialMembershipRowStatusMeta === 'function'
-      ? context.getUpiCredentialMembershipRowStatusMeta
-      : () => ({ className: '', label: '', detail: '' });
-    const getUpiCredentialMembershipRedeemCancelControl = typeof context.getUpiCredentialMembershipRedeemCancelControl === 'function'
-      ? context.getUpiCredentialMembershipRedeemCancelControl
-      : () => ({ visible: false, cdkey: '', channel: '', canCancel: false, disabled: true, title: '' });
-    const getUpiCredentialMembershipRedeemProgressMeta = typeof context.getUpiCredentialMembershipRedeemProgressMeta === 'function'
-      ? context.getUpiCredentialMembershipRedeemProgressMeta
-      : () => ({});
-    const renderUpiCredentialMembershipRedeemProgress = typeof context.renderUpiCredentialMembershipRedeemProgress === 'function'
-      ? context.renderUpiCredentialMembershipRedeemProgress
-      : () => '';
-    const getAvailableUpiRedeemCdkeyCount = typeof context.getAvailableUpiRedeemCdkeyCount === 'function'
-      ? context.getAvailableUpiRedeemCdkeyCount
-      : () => 0;
-    const isRedeemableFreeUpiCredentialMembershipRow = typeof context.isRedeemableFreeUpiCredentialMembershipRow === 'function'
-      ? context.isRedeemableFreeUpiCredentialMembershipRow
-      : () => false;
-    const isRedeemableFreeUpiCredentialMembershipRowForChannel = typeof context.isRedeemableFreeUpiCredentialMembershipRowForChannel === 'function'
-      ? context.isRedeemableFreeUpiCredentialMembershipRowForChannel
-      : () => false;
-    const getRedeemChannelLabel = typeof context.getRedeemChannelLabel === 'function'
-      ? context.getRedeemChannelLabel
-      : (value = '') => String(value || '').trim().toUpperCase() || 'UPI';
-    const renderUpiCredentialMembershipFlow = typeof context.renderUpiCredentialMembershipFlow === 'function'
-      ? context.renderUpiCredentialMembershipFlow
-      : () => '';
-    const getUpiCredentialMembershipFlowTitle = typeof context.getUpiCredentialMembershipFlowTitle === 'function'
-      ? context.getUpiCredentialMembershipFlowTitle
-      : () => '处理中';
-    const getUpiCredentialMembershipCheckBusy = typeof context.getUpiCredentialMembershipCheckBusy === 'function'
-      ? context.getUpiCredentialMembershipCheckBusy
-      : () => false;
-    const getUpiCredentialMembershipRedeemBusy = typeof context.getUpiCredentialMembershipRedeemBusy === 'function'
-      ? context.getUpiCredentialMembershipRedeemBusy
-      : () => false;
-    const getUpiCredentialMembershipAllRedeemBusy = typeof context.getUpiCredentialMembershipAllRedeemBusy === 'function'
-      ? context.getUpiCredentialMembershipAllRedeemBusy
-      : () => false;
-    const getUpiCredentialMembershipCheckingEmail = typeof context.getUpiCredentialMembershipCheckingEmail === 'function'
-      ? context.getUpiCredentialMembershipCheckingEmail
-      : () => '';
-    const getUpiCredentialMembershipLoginEmail = typeof context.getUpiCredentialMembershipLoginEmail === 'function'
-      ? context.getUpiCredentialMembershipLoginEmail
-      : () => '';
     const setExportButtonsBusy = typeof context.setExportButtonsBusy === 'function'
       ? context.setExportButtonsBusy
       : () => {};
+    const membershipResultsRendererApi = globalScope.SidepanelAccountRecordsMembershipResultsRenderer;
+    if (!membershipResultsRendererApi?.createAccountRecordsMembershipResultsRenderer) {
+      throw new Error('Account records membership results renderer module is not loaded.');
+    }
 
     function formatAccountRecordTime(value) {
       const date = new Date(value);
@@ -421,252 +344,42 @@
       }
     }
 
-    function renderUpiCredentialMembershipCheckResults() {
-      const container = dom.upiCredentialMembershipCheckResults;
-      if (!container) return;
-      const results = getUpiCredentialMembershipCheckResults();
-      const rows = buildUpiCredentialMembershipDisplayRows(results);
-      const hasItems = rows.length > 0;
-      const hasActivity = hasItems || results.running || results.redeeming || results.stoppedAt || results.redeemStoppedAt;
-      setNodeHidden(container, false);
-      const progress = results.running
-        ? `核验中 ${results.completed}/${results.total || results.completed}`
-        : results.redeeming
-          ? `兑换中 ${results.redeemCompleted}/${results.redeemTotal || results.redeemCompleted}`
-          : results.redeemStoppedAt
-            ? `兑换已停止 ${results.redeemCompleted}/${results.redeemTotal || results.redeemCompleted}`
-            : results.stoppedAt
-              ? `核验已停止 ${results.completed}/${results.total || results.completed}`
-              : `已核验 ${results.completed || results.items.length}/${results.total || results.items.length}`;
-      const currentFlowEmail = normalizeUpiCredentialMembershipEmail(results.flowStageEmail);
-      const currentFlowTitle = getUpiCredentialMembershipFlowTitle(results.flowStage, results);
-      const currentFlowText = currentFlowEmail
-        ? ` · 当前 ${currentFlowEmail}${currentFlowTitle ? ` · ${currentFlowTitle}` : ''}`
-        : '';
-      const enabledCount = rows.filter((row) => row.enabled !== false).length;
-      const membershipBusy = results.running
-        || results.redeeming
-        || getUpiCredentialMembershipCheckBusy()
-        || getUpiCredentialMembershipRedeemBusy()
-        || getUpiCredentialMembershipAllRedeemBusy();
-      const autoRunBusy = isAutoRunRecordDisplayRunning(state.getLatestState?.() || {});
-      const mutatingBusy = membershipBusy || autoRunBusy;
-      const redeemActionBusy = membershipBusy;
-      const importActionBusy = membershipBusy;
-      const deleteActionBusy = membershipBusy;
-      const membershipSummary = summarizeMembershipViewModelRows(rows);
-      const freeSectionRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'free');
-      const paidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) !== 'free');
-      const upiPaidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'paid-upi');
-      const idealPaidRows = rows.filter((row) => getUpiCredentialMembershipUiGroup(row) === 'paid-ideal');
-      const deletableFreeRows = freeSectionRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
-      const deletableUpiPaidRows = upiPaidRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
-      const deletableIdealPaidRows = idealPaidRows.filter((row) => !isActiveUpiCredentialMembershipRedeemRow(row, results));
-      const blockedFreeDeleteCount = Math.max(0, freeSectionRows.length - deletableFreeRows.length);
-      const blockedUpiPaidDeleteCount = Math.max(0, upiPaidRows.length - deletableUpiPaidRows.length);
-      const blockedIdealPaidDeleteCount = Math.max(0, idealPaidRows.length - deletableIdealPaidRows.length);
-      const allFreeRows = freeSectionRows.filter((row) => String(row.status || '').trim().toLowerCase() === 'free');
-      const failedRows = freeSectionRows.filter((row) => {
-        const status = String(row.status || '').trim().toLowerCase();
-        const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
-        return status === 'failed' || redeemStatus === 'failed';
-      });
-      const freeRows = allFreeRows.filter((row) => String(row.redeemStatus || '').trim().toLowerCase() !== 'failed');
-      const paidCount = membershipSummary['upi-plus'] + membershipSummary['ideal-plus'];
-      const freeCount = freeRows.length;
-      const failedCount = failedRows.length;
-      const freeSectionCount = membershipSummary.free;
-      const missingAtCount = freeSectionRows.filter((row) => row.enabled !== false && !normalizeUpiCredentialMembershipText(row.accessToken)).length;
-      const identifyPlusCount = freeSectionRows.filter((row) => row.enabled !== false && normalizeUpiCredentialMembershipText(row.accessToken)).length;
-      const redeemableFreeRows = allFreeRows.filter(isRedeemableFreeUpiCredentialMembershipRow);
-      const redeemableUpiFreeRows = allFreeRows.filter((row) => isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'upi'));
-      const redeemableIdealFreeRows = allFreeRows.filter((row) => isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'ideal'));
-      const redeemableFreeCount = redeemableFreeRows.length;
-      const redeemableUpiFreeCount = redeemableUpiFreeRows.length;
-      const redeemableIdealFreeCount = redeemableIdealFreeRows.length;
-      const idealFailureBlockedFreeCount = getChannelFailureLimitBlockedFreeRows(allFreeRows, 'ideal').length;
-      const upiDailyLimitBlockedFreeCount = allFreeRows.filter((row) => isRedeemChannelDailyLimitBlocked(row, 'upi')).length;
-      const lockedRedeemCount = allFreeRows.filter(isUpiCredentialMembershipRedeemLocked).length;
-      const deletableFailedFreeCount = deletableFreeRows.filter((row) => {
-        const status = String(row.status || '').trim().toLowerCase();
-        const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
-        return status === 'failed' || redeemStatus === 'failed';
-      }).length;
-      const deletableLockedFreeCount = deletableFreeRows.filter((row) => (
-        String(row.status || '').trim().toLowerCase() === 'free' && isUpiCredentialMembershipRedeemLocked(row)
-      )).length;
-      const deletableFreeTitle = [
-        `删除 Free/失败组中非兑换中的账号 ${deletableFreeRows.length} 条`,
-        `可兑换账号 ${redeemableFreeCount} 条`,
-        deletableLockedFreeCount ? `含封存账号 ${deletableLockedFreeCount} 条` : '',
-        deletableFailedFreeCount ? `含失败账号 ${deletableFailedFreeCount} 条` : '',
-        blockedFreeDeleteCount ? `将跳过 ${blockedFreeDeleteCount} 条正在兑换或等待远端结果的账号` : '',
-      ].filter(Boolean).join('；');
-      const availableUpiCdkeyCount = getAvailableUpiRedeemCdkeyCount(state.getLatestState?.() || {}, 'upi');
-      const availableIdealCdkeyCount = getAvailableUpiRedeemCdkeyCount(state.getLatestState?.() || {}, 'ideal');
-      const redeemUpiNowCount = Math.min(redeemableUpiFreeCount, availableUpiCdkeyCount);
-      const redeemIdealNowCount = Math.min(redeemableIdealFreeCount, availableIdealCdkeyCount);
-      const redeemAllUpiEmailSet = new Set(redeemableUpiFreeRows
-        .slice(0, redeemUpiNowCount)
-        .map((row) => normalizeUpiCredentialMembershipEmail(row.email))
-        .filter(Boolean));
-      const redeemAllIdealRemainingCount = redeemableIdealFreeRows
-        .filter((row) => !redeemAllUpiEmailSet.has(normalizeUpiCredentialMembershipEmail(row.email)))
-        .length;
-      const redeemAllIdealNowCount = Math.min(redeemAllIdealRemainingCount, availableIdealCdkeyCount);
-      const redeemAllNowCount = redeemUpiNowCount + redeemAllIdealNowCount;
-      const redeemUpiTitle = `UPI 可用 CDK ${availableUpiCdkeyCount}；UPI 候选 ${redeemableUpiFreeCount}；总可兑换 ${redeemableFreeCount}；普通 UPI 失败不会禁用 UPI${upiDailyLimitBlockedFreeCount ? `；${upiDailyLimitBlockedFreeCount} 个账号明确返回今日提交次数上限，已转 IDEAL 候选` : ''}`;
-      const redeemIdealTitle = `IDEAL 可用 CDK ${availableIdealCdkeyCount}；IDEAL 候选 ${redeemableIdealFreeCount}；总可兑换 ${redeemableFreeCount}${idealFailureBlockedFreeCount ? `；${idealFailureBlockedFreeCount} 个账号 IDEAL 已失败满 ${redeemChannelFailureLimit} 次或已封存` : ''}`;
-      const redeemAllTitle = `先兑换 UPI ${redeemUpiNowCount}/${redeemableFreeCount}，完成后再兑换剩余 IDEAL ${redeemAllIdealNowCount}/${redeemableFreeCount}；只有明确返回今日提交次数上限的账号会跳过 UPI 并进入 IDEAL 候选`;
-      const verifyPlusCount = paidRows.filter((row) => row.enabled !== false && normalizeUpiCredentialMembershipText(row.accessToken)).length;
-      const verifyPlusTotalCount = paidRows.filter((row) => row.enabled !== false).length;
-      const verifyPlusMissingAtCount = Math.max(0, verifyPlusTotalCount - verifyPlusCount);
-      const verifyPlusButtonText = verifyPlusMissingAtCount
-        ? `一键验证全部 Plus(${verifyPlusCount}/${verifyPlusTotalCount})`
-        : `一键验证全部 Plus(${verifyPlusCount})`;
-      const verifyPlusTitle = verifyPlusMissingAtCount
-        ? `当前可验证 ${verifyPlusCount}/${verifyPlusTotalCount} 个 Plus；${verifyPlusMissingAtCount} 个缺少 AT，需要先补 AT 或重新登录后才能验证。`
-        : '一键验证全部 Plus';
-      const refreshEmailStatusCount = identifyPlusCount;
-      const refreshEmailStatusTitle = missingAtCount
-        ? `按已保存 AT 检测 Free/失败组邮箱会员状态；当前可刷新 ${refreshEmailStatusCount} 个，${missingAtCount} 个缺少 AT。`
-        : '按已保存 AT 检测 Free/失败组邮箱会员状态';
-      const previousFreeScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="free"]')?.scrollTop || 0;
-      const previousUpiPaidScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-upi"]')?.scrollTop || 0;
-      const previousIdealPaidScrollTop = container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-ideal"]')?.scrollTop || 0;
-      const renderRows = (groupRows = [], group = 'free') => `
-        <div class="upi-membership-check-status-header">
-          <span>启用</span>
-          <span>邮箱</span>
-          <span>状态</span>
-          <span>登录</span>
-          <span>移动</span>
-          <span>兑换</span>
-          <span>删除</span>
-        </div>
-        <div class="upi-membership-check-list" data-upi-membership-list="${escapeHtml(group)}">
-          ${groupRows.length ? groupRows.map((row) => {
-            const meta = getUpiCredentialMembershipRowStatusMeta(row, results);
-            const email = normalizeUpiCredentialMembershipEmail(row.email);
-            const isRowChecking = normalizeUpiCredentialMembershipEmail(getUpiCredentialMembershipCheckingEmail()) === email;
-            const isRowLoggingIn = normalizeUpiCredentialMembershipEmail(getUpiCredentialMembershipLoginEmail()) === email;
-            const disableLogin = mutatingBusy || isRowLoggingIn || row.enabled === false || !hasUpiCredentialMembershipLoginMaterial(row);
-            const isFreeGroup = group === 'free';
-            const deleteChannel = group === 'paid-ideal'
-              ? 'ideal'
-              : group === 'paid-upi'
-                ? 'upi'
-                : normalizeUpiCredentialMembershipText(row.redeemChannel || row.channel);
-            const targetMoveStatus = isFreeGroup ? 'paid' : 'free';
-            const moveLabel = isFreeGroup ? '移到 Plus' : '移到 Free';
-            const deleteLockedByRedeem = isActiveUpiCredentialMembershipRedeemRow(row, results);
-            const disableDelete = deleteActionBusy || deleteLockedByRedeem;
-            const deleteTitle = deleteLockedByRedeem
-              ? '正在兑换或等待远端结果，不能删除；请先取消对应 CDK 任务。'
-              : '删除';
-            const cancelRedeemControl = getUpiCredentialMembershipRedeemCancelControl(row, results);
-            const redeemProgress = getUpiCredentialMembershipRedeemProgressMeta(row, results);
-            const singleCheckDataAttribute = 'data-upi-membership-check-one';
-            const disableSingleCheck = mutatingBusy || isRowChecking || row.enabled === false;
-            const singleActionTitle = '点击检测该账号是否已开通 Plus/Pro/Team';
-            const singleActionAria = `检测 ${email} 是否有 Plus`;
-            const titleParts = [
-              email,
-              meta.detail,
-              row.accessTokenMasked ? `AT ${row.accessTokenMasked}` : '',
-              row.checkedAt ? formatAccountRecordTime(row.checkedAt) : '',
-            ].filter(Boolean);
-            return `
-              <div class="upi-membership-check-item" data-upi-membership-email="${escapeHtml(email)}" title="${escapeHtml(titleParts.join('\n'))}">
-                <label class="toggle-switch upi-membership-check-enabled-toggle">
-                  <input type="checkbox" data-upi-membership-toggle="${escapeHtml(email)}" ${row.enabled === false ? '' : 'checked'} ${mutatingBusy ? 'disabled' : ''} aria-label="启用核验 ${escapeHtml(email)}" />
-                  <span class="toggle-switch-track"><span class="toggle-switch-thumb"></span></span>
-                </label>
-                <button class="upi-membership-check-email upi-membership-check-email-action mono" type="button" ${singleCheckDataAttribute}="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} title="${escapeHtml(singleActionTitle)}">${escapeHtml(email)}</button>
-                <button class="icloud-tag upi-membership-check-status-action ${escapeHtml(meta.className)}" type="button" ${singleCheckDataAttribute}="${escapeHtml(email)}" ${disableSingleCheck ? 'disabled' : ''} aria-label="${escapeHtml(singleActionAria)}" title="${escapeHtml(singleActionTitle)}">${escapeHtml(meta.label)}</button>
-                <button class="icloud-tag upi-membership-check-login-action" type="button" data-upi-membership-login="${escapeHtml(email)}" ${disableLogin ? 'disabled' : ''} title="登录">登录</button>
-                <button class="icloud-tag upi-membership-check-move-action" type="button" data-upi-membership-move-group="${escapeHtml(email)}" data-upi-membership-move-target="${escapeHtml(targetMoveStatus)}" ${mutatingBusy ? 'disabled' : ''}>${escapeHtml(moveLabel)}</button>
-                ${renderUpiCredentialMembershipRedeemProgress(row, redeemProgress, cancelRedeemControl)}
-                <button class="icloud-tag danger upi-membership-check-delete-action" type="button" data-upi-membership-delete="${escapeHtml(email)}" data-upi-membership-delete-channel="${escapeHtml(deleteChannel)}" ${disableDelete ? 'disabled' : ''} title="${escapeHtml(deleteTitle)}">删除</button>
-              </div>
-            `;
-          }).join('') : `<div class="upi-membership-check-empty">${escapeHtml(`${group === 'free' ? 'Free' : getRedeemChannelLabel(group === 'paid-ideal' ? 'ideal' : 'upi') + ' Plus'} 分组暂无账号`)}</div>`}
-        </div>
-      `;
-      container.innerHTML = `
-        <div class="upi-membership-check-head">
-          <span>${escapeHtml(`${progress}${currentFlowText}`)} · 启用 ${escapeHtml(String(enabledCount))} / 有会员 ${escapeHtml(String(paidCount))} / 无会员 ${escapeHtml(String(freeCount))} / 失败 ${escapeHtml(String(failedCount))}</span>
-          ${results.updatedAt ? `<span class="mono">${escapeHtml(formatAccountRecordTime(results.updatedAt))}</span>` : ''}
-        </div>
-        ${hasActivity ? renderUpiCredentialMembershipFlow(results, rows) : ''}
-        <div class="upi-membership-check-detail">提示：点击账号邮箱或状态标签，可以单独检测该账号是否是 Plus/Pro/Team 会员。</div>
-        <div class="upi-membership-check-section" data-upi-membership-section="paid-all-actions">
-          <div class="upi-membership-check-head upi-membership-section-head">
-            <span class="upi-membership-section-title">全部 Plus 操作</span>
-            <span class="upi-membership-section-meta">${escapeHtml(String(paidRows.length))} 个账号</span>
-          </div>
-          <div class="upi-membership-check-actions">
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-export="paid-all"${paidRows.length || autoRunBusy ? '' : ' disabled'}>导出全部 Plus(${escapeHtml(String(paidRows.length))})</button>
-            <button class="btn btn-primary btn-xs" type="button" data-upi-membership-verify-plus ${verifyPlusCount && !mutatingBusy ? '' : 'disabled'} title="${escapeHtml(verifyPlusTitle)}">${escapeHtml(verifyPlusButtonText)}</button>
-          </div>
-        </div>
-        <div class="upi-membership-check-section" data-upi-membership-section="free">
-          <div class="upi-membership-check-head upi-membership-section-head">
-            <span class="upi-membership-section-title">Free 组</span>
-            <span class="upi-membership-section-meta">${escapeHtml(String(freeSectionCount))} 个账号 · 待兑换 ${escapeHtml(String(freeCount))} · 可兑换 ${escapeHtml(String(redeemableFreeCount))} · UPI候选 ${escapeHtml(String(redeemableUpiFreeCount))} · IDEAL候选 ${escapeHtml(String(redeemableIdealFreeCount))}${upiDailyLimitBlockedFreeCount ? ` · UPI日限 ${escapeHtml(String(upiDailyLimitBlockedFreeCount))}` : ''} · 失败 ${escapeHtml(String(failedCount))} · 封存 ${escapeHtml(String(lockedRedeemCount))} · 缺 AT ${escapeHtml(String(missingAtCount))}</span>
-          </div>
-          ${autoRunBusy ? '<div class="upi-membership-check-detail">自动注册中，允许导入 Free、删除安全行和一键兑换 CDK；补 AT、识别、登录、移动仍锁定。</div>' : ''}
-          <div class="upi-membership-check-actions">
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-import-free ${importActionBusy ? 'disabled' : ''}>导入 Free</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-export="free"${freeSectionRows.length || autoRunBusy ? '' : ' disabled'}>导出 Free(${escapeHtml(String(freeSectionRows.length))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-delete-group="free" ${deletableFreeRows.length && !deleteActionBusy ? '' : 'disabled'} title="${escapeHtml(deletableFreeTitle)}">删除 Free/失败(${escapeHtml(String(deletableFreeRows.length))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-fill-free-at ${missingAtCount && !mutatingBusy ? '' : 'disabled'}>一键补充 AT(${escapeHtml(String(missingAtCount))})</button>
-            <button class="btn btn-primary btn-xs" type="button" data-upi-membership-identify-free-plus ${identifyPlusCount && !mutatingBusy ? '' : 'disabled'}>一键识别 Plus(${escapeHtml(String(identifyPlusCount))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-refresh-all-email-statuses ${refreshEmailStatusCount && !membershipBusy ? '' : 'disabled'} title="${escapeHtml(refreshEmailStatusTitle)}">一键刷新所有邮箱状态(${escapeHtml(String(refreshEmailStatusCount))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-redeem-free data-upi-membership-redeem-channel="upi" ${redeemUpiNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemUpiTitle)}">一键兑换 UPI(${escapeHtml(String(redeemUpiNowCount))}/${escapeHtml(String(redeemableUpiFreeCount))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-redeem-free data-upi-membership-redeem-channel="ideal" ${redeemIdealNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemIdealTitle)}">一键兑换 IDEAL(${escapeHtml(String(redeemIdealNowCount))}/${escapeHtml(String(redeemableIdealFreeCount))})</button>
-            <button class="btn btn-primary btn-xs" type="button" data-upi-membership-redeem-all ${redeemAllNowCount && !redeemActionBusy ? '' : 'disabled'} title="${escapeHtml(redeemAllTitle)}">一键兑换全部(${escapeHtml(String(redeemAllNowCount))}/${escapeHtml(String(redeemableFreeCount))})</button>
-            ${results.running ? '<button class="btn btn-ghost btn-xs" type="button" data-upi-membership-stop-check>停止补 AT/核验</button>' : '<button class="btn btn-ghost btn-xs" type="button" data-upi-membership-stop-check hidden>停止补 AT/核验</button>'}
-            ${results.redeeming ? '<button class="btn btn-ghost btn-xs" type="button" data-upi-membership-stop-redeem>停止兑换</button>' : '<button class="btn btn-ghost btn-xs" type="button" data-upi-membership-stop-redeem hidden>停止兑换</button>'}
-          </div>
-          ${renderRows(freeSectionRows, 'free')}
-        </div>
-        <div class="upi-membership-check-section" data-upi-membership-section="paid-upi">
-          <div class="upi-membership-check-head upi-membership-section-head">
-            <span class="upi-membership-section-title">UPI Plus 组</span>
-            <span class="upi-membership-section-meta">${escapeHtml(String(upiPaidRows.length))} 个账号</span>
-          </div>
-          <div class="upi-membership-check-actions">
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-export="paid-upi"${upiPaidRows.length || autoRunBusy ? '' : ' disabled'}>导出 UPI Plus(${escapeHtml(String(upiPaidRows.length))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-delete-group="paid-upi" ${deletableUpiPaidRows.length && !deleteActionBusy ? '' : 'disabled'} title="${blockedUpiPaidDeleteCount ? escapeHtml(`将跳过 ${blockedUpiPaidDeleteCount} 条正在兑换或等待远端结果的账号`) : '删除 UPI Plus'}">删除 UPI Plus(${escapeHtml(String(deletableUpiPaidRows.length))})</button>
-          </div>
-          ${renderRows(upiPaidRows, 'paid-upi')}
-        </div>
-        <div class="upi-membership-check-section" data-upi-membership-section="paid-ideal">
-          <div class="upi-membership-check-head upi-membership-section-head">
-            <span class="upi-membership-section-title">IDEAL Plus 组</span>
-            <span class="upi-membership-section-meta">${escapeHtml(String(idealPaidRows.length))} 个账号</span>
-          </div>
-          <div class="upi-membership-check-actions">
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-export="paid-ideal"${idealPaidRows.length || autoRunBusy ? '' : ' disabled'}>导出 IDEAL Plus(${escapeHtml(String(idealPaidRows.length))})</button>
-            <button class="btn btn-ghost btn-xs" type="button" data-upi-membership-delete-group="paid-ideal" ${deletableIdealPaidRows.length && !deleteActionBusy ? '' : 'disabled'} title="${blockedIdealPaidDeleteCount ? escapeHtml(`将跳过 ${blockedIdealPaidDeleteCount} 条正在兑换或等待远端结果的账号`) : '删除 IDEAL Plus'}">删除 IDEAL Plus(${escapeHtml(String(deletableIdealPaidRows.length))})</button>
-          </div>
-          ${renderRows(idealPaidRows, 'paid-ideal')}
-        </div>
-      `;
-      restoreScrollTopAfterRender(
-        container.querySelector('.upi-membership-check-list[data-upi-membership-list="free"]'),
-        previousFreeScrollTop
-      );
-      restoreScrollTopAfterRender(
-        container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-upi"]'),
-        previousUpiPaidScrollTop
-      );
-      restoreScrollTopAfterRender(
-        container.querySelector('.upi-membership-check-list[data-upi-membership-list="paid-ideal"]'),
-        previousIdealPaidScrollTop
-      );
-    }
+    const { renderUpiCredentialMembershipCheckResults } = membershipResultsRendererApi.createAccountRecordsMembershipResultsRenderer({
+      dom,
+      state,
+      redeemChannelFailureLimit,
+      escapeHtml,
+      formatAccountRecordTime,
+      setNodeHidden,
+      restoreScrollTopAfterRender,
+      getUpiCredentialMembershipCheckResults: context.getUpiCredentialMembershipCheckResults,
+      buildUpiCredentialMembershipDisplayRows: context.buildUpiCredentialMembershipDisplayRows,
+      normalizeUpiCredentialMembershipEmail: context.normalizeUpiCredentialMembershipEmail,
+      normalizeUpiCredentialMembershipText: context.normalizeUpiCredentialMembershipText,
+      isActiveUpiCredentialMembershipRedeemRow: context.isActiveUpiCredentialMembershipRedeemRow,
+      isAutoRunRecordDisplayRunning: context.isAutoRunRecordDisplayRunning,
+      summarizeMembershipViewModelRows: context.summarizeMembershipViewModelRows,
+      getUpiCredentialMembershipUiGroup: context.getUpiCredentialMembershipUiGroup,
+      getChannelFailureLimitBlockedFreeRows: context.getChannelFailureLimitBlockedFreeRows,
+      isRedeemChannelDailyLimitBlocked: context.isRedeemChannelDailyLimitBlocked,
+      isUpiCredentialMembershipRedeemLocked: context.isUpiCredentialMembershipRedeemLocked,
+      hasUpiCredentialMembershipLoginMaterial: context.hasUpiCredentialMembershipLoginMaterial,
+      getUpiCredentialMembershipRowStatusMeta: context.getUpiCredentialMembershipRowStatusMeta,
+      getUpiCredentialMembershipRedeemCancelControl: context.getUpiCredentialMembershipRedeemCancelControl,
+      getUpiCredentialMembershipRedeemProgressMeta: context.getUpiCredentialMembershipRedeemProgressMeta,
+      renderUpiCredentialMembershipRedeemProgress: context.renderUpiCredentialMembershipRedeemProgress,
+      getAvailableUpiRedeemCdkeyCount: context.getAvailableUpiRedeemCdkeyCount,
+      isRedeemableFreeUpiCredentialMembershipRow: context.isRedeemableFreeUpiCredentialMembershipRow,
+      isRedeemableFreeUpiCredentialMembershipRowForChannel: context.isRedeemableFreeUpiCredentialMembershipRowForChannel,
+      getRedeemChannelLabel: context.getRedeemChannelLabel,
+      renderUpiCredentialMembershipFlow: context.renderUpiCredentialMembershipFlow,
+      getUpiCredentialMembershipFlowTitle: context.getUpiCredentialMembershipFlowTitle,
+      getUpiCredentialMembershipCheckBusy: context.getUpiCredentialMembershipCheckBusy,
+      getUpiCredentialMembershipRedeemBusy: context.getUpiCredentialMembershipRedeemBusy,
+      getUpiCredentialMembershipAllRedeemBusy: context.getUpiCredentialMembershipAllRedeemBusy,
+      getUpiCredentialMembershipCheckingEmail: context.getUpiCredentialMembershipCheckingEmail,
+      getUpiCredentialMembershipLoginEmail: context.getUpiCredentialMembershipLoginEmail,
+    });
 
     function renderAccountRecordsPanel(currentState = state.getLatestState?.() || {}) {
       const allRecords = getAccountRunRecords(currentState);

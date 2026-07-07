@@ -15,6 +15,7 @@ delete globalThis.SidepanelAccountRecordsCredentialParser;
 delete globalThis.SidepanelAccountRecordsStatusMeta;
 delete globalThis.SidepanelAccountRecordsDisplayModel;
 delete globalThis.SidepanelAccountRecordsFlowView;
+delete globalThis.SidepanelAccountRecordsMembershipResultsRenderer;
 delete globalThis.SidepanelAccountRecordsRenderer;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
@@ -31,6 +32,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-credential-pa
 delete require.cache[require.resolve('../sidepanel/account-records-status-meta.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-display-model.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-flow-view.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-membership-results-renderer.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-renderer.js')];
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
@@ -48,6 +50,7 @@ require('../sidepanel/account-records-credential-parser.js');
 require('../sidepanel/account-records-status-meta.js');
 require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-flow-view.js');
+require('../sidepanel/account-records-membership-results-renderer.js');
 require('../sidepanel/account-records-renderer.js');
 require('../sidepanel/account-records-manager.js');
 

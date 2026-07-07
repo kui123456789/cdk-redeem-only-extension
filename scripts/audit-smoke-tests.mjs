@@ -340,6 +340,7 @@ function checkStaticContracts() {
   const accountRecordsStatusMeta = readText('sidepanel/account-records-status-meta.js');
   const accountRecordsDisplayModel = readText('sidepanel/account-records-display-model.js');
   const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
+  const accountRecordsMembershipResultsRenderer = readText('sidepanel/account-records-membership-results-renderer.js');
   const accountRecordsRenderer = readText('sidepanel/account-records-renderer.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
@@ -454,6 +455,9 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsDisplayModel, 'createAccountRecordsDisplayModel', 'account records display model factory');
   assertIncludes(accountRecordsFlowView, 'SidepanelAccountRecordsFlowView', 'account records flow view global');
   assertIncludes(accountRecordsFlowView, 'createAccountRecordsFlowView', 'account records flow view factory');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'account records membership results renderer script load');
+  assertIncludes(accountRecordsMembershipResultsRenderer, 'SidepanelAccountRecordsMembershipResultsRenderer', 'account records membership results renderer global');
+  assertIncludes(accountRecordsMembershipResultsRenderer, 'createAccountRecordsMembershipResultsRenderer', 'account records membership results renderer factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -482,6 +486,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-status-meta.js"', 'src="account-records-display-model.js"', 'account records status meta must load before display model');
   assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-flow-view.js"', 'account records display model must load before flow view');
   assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-renderer.js"', 'account records flow view must load before renderer');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'src="account-records-renderer.js"', 'account records membership results renderer must load before renderer');
   assertBefore(sidepanelHtml, 'src="account-records-renderer.js"', 'src="account-records-manager.js"', 'account records renderer must load before manager');
   assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
@@ -901,7 +906,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-credential-parser.js', 250, 'account records credential parser size guard');
   assertFileLineCountAtMost('sidepanel/account-records-status-meta.js', 250, 'account records status meta size guard');
   assertFileLineCountAtMost('sidepanel/account-records-display-model.js', 250, 'account records display model size guard');
-  assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 800, 'account records renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-results-renderer.js', 250, 'account records membership results renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 700, 'account records renderer size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
