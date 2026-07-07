@@ -206,6 +206,7 @@ function checkCoreFiles() {
     'background/membership/credential-backup-format.js',
     'background/membership/plus-verification-service.js',
     'background/membership/failed-redeem-retry-service.js',
+    'background/membership/redeem-service.js',
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
@@ -368,6 +369,7 @@ function checkStaticContracts() {
   const membershipCredentialBackupFormat = readText('background/membership/credential-backup-format.js');
   const membershipPlusVerificationService = readText('background/membership/plus-verification-service.js');
   const membershipFailedRedeemRetryService = readText('background/membership/failed-redeem-retry-service.js');
+  const membershipRedeemService = readText('background/membership/redeem-service.js');
   const redeemChannelState = readText('shared/redeem-channel-state.js');
   const membershipCredentialFormat = readText('shared/membership-credential-format.js');
   const redeemCdkeyUsage = readText('background/redeem/redeem-cdkey-usage.js');
@@ -877,6 +879,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/membership/credential-backup-format.js'", 'background credential backup format script load');
   assertIncludes(background, "'background/membership/plus-verification-service.js'", 'background Plus verification service script load');
   assertIncludes(background, "'background/membership/failed-redeem-retry-service.js'", 'background failed redeem retry service script load');
+  assertIncludes(background, "'background/membership/redeem-service.js'", 'background membership redeem service script load');
   assertIncludes(background, "'background/steps/upi-redeem/session-material.js'", 'background UPI redeem session material script load');
   assertIncludes(background, "'background/steps/upi-redeem/free-entry.js'", 'background UPI redeem Free entry script load');
   assertIncludes(background, "'background/steps/upi-redeem/channel-submission.js'", 'background UPI redeem channel submission script load');
@@ -934,6 +937,7 @@ function checkStaticContracts() {
     'credential-backup-format.js',
     'plus-verification-service.js',
     'failed-redeem-retry-service.js',
+    'redeem-service.js',
   ].forEach((file) => {
     assertBefore(
       background,
@@ -1027,6 +1031,9 @@ function checkStaticContracts() {
   assertIncludes(membershipFailedRedeemRetryService, 'MultiPageMembershipFailedRedeemRetryService', 'membership failed redeem retry service global');
   assertIncludes(membershipFailedRedeemRetryService, 'createFailedRedeemRetryService', 'membership failed redeem retry service factory');
   assertIncludes(membershipFailedRedeemRetryService, 'retryFailedUpiRedeemCdkey', 'membership failed redeem retry flow');
+  assertIncludes(membershipRedeemService, 'MultiPageMembershipRedeemService', 'membership redeem service global');
+  assertIncludes(membershipRedeemService, 'createMembershipRedeemService', 'membership redeem service factory');
+  assertIncludes(membershipRedeemService, 'redeemUpiCredentialMembershipFree', 'membership redeem flow');
   assertIncludes(checker, 'getMembershipResultStateHelper', 'membership checker result-state wrapper');
   assertIncludes(checker, 'getMembershipTrialEligibilityServiceModule', 'membership checker trial service wrapper');
   assertIncludes(checker, 'getMembershipResultSyncModule', 'membership checker result sync wrapper');
@@ -1038,6 +1045,7 @@ function checkStaticContracts() {
   assertIncludes(checker, 'getMembershipCredentialBackupFormatModule', 'membership checker credential backup format wrapper');
   assertIncludes(checker, 'getMembershipPlusVerificationServiceModule', 'membership checker Plus verification wrapper');
   assertIncludes(checker, 'getMembershipFailedRedeemRetryServiceModule', 'membership checker failed redeem retry wrapper');
+  assertIncludes(checker, 'getMembershipRedeemServiceModule', 'membership checker redeem service wrapper');
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
@@ -1293,7 +1301,7 @@ function checkStaticContracts() {
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
   assertIncludes(upiRedeem, 'autoRedeemQueuedFreeCredentialsForChannel', 'main flow queued Free auto redeem');
   assertIncludes(checker, 'REDEEM_GROUP_CONTINUATION_IDLE_WAIT_MS = 5000', 'group continuation CDK refresh interval');
-  assertIncludes(checker, 'disableGroupContinuation', 'controlled group continuation flag');
+  assertIncludes(membershipRedeemService, 'disableGroupContinuation', 'controlled group continuation flag');
 
   assertIncludes(gitignore, 'used-*-email-password-2fa*.txt', 'sensitive used-email exports ignore rule');
   assertIncludes(gitignore, '/config.json', 'local config ignore rule');
@@ -1403,6 +1411,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/membership/credential-backup-format.js', 300, 'membership credential backup format size guard');
   assertFileLineCountAtMost('background/membership/plus-verification-service.js', 600, 'membership Plus verification service size guard');
   assertFileLineCountAtMost('background/membership/failed-redeem-retry-service.js', 650, 'membership failed redeem retry service size guard');
+  assertFileLineCountAtMost('background/membership/redeem-service.js', 1600, 'membership redeem service size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/session-material.js', 750, 'UPI redeem session material size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/free-entry.js', 580, 'UPI redeem Free entry size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/channel-submission.js', 1900, 'UPI redeem channel submission size guard');
