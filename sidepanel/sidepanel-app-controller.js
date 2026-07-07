@@ -608,7 +608,6 @@ const appState = window.SidepanelAppState.createSidepanelAppState({
       currentTotpMfaAfterProfileEnabled: undefined,
       currentRegistrationFreeRoute: undefined,
       localCpaJsonAuthDirExpanded: undefined,
-      lastConfirmedOperationDelayEnabled: undefined,
       stepDefinitions: undefined,
       workflowNodes: undefined,
       STEP_IDS: undefined,
@@ -662,7 +661,7 @@ with (appState.createScope()) {
 
   function buildRuntimeMessageControllerScopeValues() {
     return {
-      accountRecordsManager,
+      accountRecordsManager: getAccountRecordsManager(),
       appendLog,
       applyAutoRunStatus,
       applyChatgptSessionReaderProfileToInputs,
@@ -875,7 +874,6 @@ with (appState.createScope()) {
   currentTotpMfaAfterProfileEnabled = DEFAULT_TOTP_MFA_AFTER_PROFILE_ENABLED;
   currentRegistrationFreeRoute = DEFAULT_REGISTRATION_FREE_ROUTE;
   localCpaJsonAuthDirExpanded = false;
-  lastConfirmedOperationDelayEnabled = false;
   stepDefinitions = getStepDefinitionsForMode(false, {
     plusPaymentMethod: currentPlusPaymentMethod,
     plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
@@ -1481,6 +1479,62 @@ with (appState.createScope()) {
   currentContributionContentSnapshot = null;
   contributionContentSnapshotRequestInFlight = null;
   accountRecordsManager = null;
+  const accountRecordsPanelController = window.SidepanelAccountRecordsPanelController.createAccountRecordsPanelController({
+    state: {
+      getLatestState: () => latestState,
+      syncLatestState,
+      onManagerCreated: (manager) => {
+        accountRecordsManager = manager;
+      },
+    },
+    dom: {
+      accountRecordsList,
+      accountRecordsMeta,
+      accountRecordsOverlay,
+      accountRecordsPageLabel,
+      accountRecordsStats,
+      btnAccountRecordsNext,
+      btnAccountRecordsPrev,
+      btnClearAccountRecords,
+      btnDeleteSelectedAccountRecords,
+      btnExportSuccessAccountRecords,
+      btnShowUpiCredentialBackups,
+      btnExportUpiCredentialBackups,
+      btnCheckUpiCredentialMembershipLocal,
+      btnImportUpiCredentialMembershipTxt,
+      btnImportUpiCredentialMembershipFreeTxt,
+      btnStopUpiCredentialMembershipCheck,
+      inputUpiCredentialMembershipTxt,
+      inputUpiCredentialMembershipTotpApiBaseUrl,
+      inputUpiCredentialMembershipTotpLookupKey,
+      inputUpiRedeemExternalApiKey,
+      inputUpiRedeemClientId,
+      inputUpiRedeemFailedAccountRetryLimit,
+      inputUpiRedeemCdkeyPool,
+      inputIdealRedeemCdkeyPool,
+      btnExportUpiRedeemSuccessRecords,
+      upiCredentialBackupPreviewWrap,
+      upiCredentialBackupPreview,
+      upiCredentialMembershipCheckResults,
+      btnCloseAccountRecords,
+      btnOpenAccountRecords,
+      btnToggleAccountRecordsSelection,
+    },
+    helpers: {
+      downloadTextFile,
+      escapeHtml,
+      openConfirmModal,
+      refreshUpiRedeemCdkeyStatuses,
+      showToast,
+    },
+    runtime: {
+      sendMessage: (message) => chrome.runtime.sendMessage(message),
+    },
+    constants: {
+      displayTimeZone: DISPLAY_TIMEZONE,
+      pageSize: 10,
+    },
+  });
   settingsStateManager = null;
   workflowControlsManager = null;
   settingsTransferManager = null;
@@ -3088,163 +3142,90 @@ with (appState.createScope()) {
   }
   
   function getAccountRecordsManager() {
-    if (accountRecordsManager) {
-      return accountRecordsManager;
-    }
-    accountRecordsManager = window.SidepanelAccountRecordsManager?.createAccountRecordsManager?.({
-      state: {
-        getLatestState: () => latestState,
-        syncLatestState,
-      },
-      dom: {
-        accountRecordsList,
-        accountRecordsMeta,
-        accountRecordsOverlay,
-        accountRecordsPageLabel,
-        accountRecordsStats,
-        btnAccountRecordsNext,
-        btnAccountRecordsPrev,
-        btnClearAccountRecords,
-        btnDeleteSelectedAccountRecords,
-        btnExportSuccessAccountRecords,
-        btnShowUpiCredentialBackups,
-        btnExportUpiCredentialBackups,
-        btnCheckUpiCredentialMembershipLocal,
-        btnImportUpiCredentialMembershipTxt,
-        btnImportUpiCredentialMembershipFreeTxt,
-        btnStopUpiCredentialMembershipCheck,
-        inputUpiCredentialMembershipTxt,
-        inputUpiCredentialMembershipTotpApiBaseUrl,
-        inputUpiCredentialMembershipTotpLookupKey,
-        inputUpiRedeemExternalApiKey,
-        inputUpiRedeemClientId,
-        inputUpiRedeemFailedAccountRetryLimit,
-        inputUpiRedeemCdkeyPool,
-        inputIdealRedeemCdkeyPool,
-        btnExportUpiRedeemSuccessRecords,
-        upiCredentialBackupPreviewWrap,
-        upiCredentialBackupPreview,
-        upiCredentialMembershipCheckResults,
-        btnCloseAccountRecords,
-        btnOpenAccountRecords,
-        btnToggleAccountRecordsSelection,
-      },
-      helpers: {
-        downloadTextFile,
-        escapeHtml,
-        openConfirmModal,
-        refreshUpiRedeemCdkeyStatuses,
-        showToast,
-      },
-      runtime: {
-        sendMessage: (message) => chrome.runtime.sendMessage(message),
-      },
-      constants: {
-        displayTimeZone: DISPLAY_TIMEZONE,
-        pageSize: 10,
-      },
-    }) || null;
-    return accountRecordsManager;
+    return accountRecordsPanelController.getAccountRecordsManager();
   }
   
   function renderAccountRecords(currentState = latestState) {
-    getAccountRecordsManager()?.render?.(currentState);
+    accountRecordsPanelController.render(currentState);
   }
   
   function bindAccountRecordEvents() {
-    getAccountRecordsManager()?.bindEvents?.();
+    accountRecordsPanelController.bindEvents();
   }
   
   function closeAccountRecordsPanel() {
-    getAccountRecordsManager()?.closePanel?.();
+    accountRecordsPanelController.closePanel();
   }
   
-  function setElementVisible(element, visible) {
-    if (element) {
-      element.style.display = visible ? '' : 'none';
-    }
-  }
+  const panelDisplayController = window.SidepanelPanelDisplayController.createPanelDisplayController({
+    constants: {
+      CLOUD_MAIL_PROVIDER,
+      CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+      CUSTOM_EMAIL_POOL_GENERATOR,
+      DEFAULT_PANEL_MODE,
+      FREEMAIL_PROVIDER,
+      ICLOUD_API_PROVIDER,
+      ICLOUD_PROVIDER,
+      LOCAL_CPA_JSON_NO_RT_PANEL_MODE,
+      LOCAL_CPA_JSON_PANEL_MODE,
+      LUCKMAIL_PROVIDER,
+    },
+    dom: {
+      document,
+      cloudflareTempEmailSection,
+      cloudMailSection,
+      freemailSection,
+      icloudSection,
+      inputIcloudApiAdminKey,
+      inputIcloudApiBaseUrl,
+      luckmailSection,
+      rowAccountAccessStrategy,
+      rowCodex2ApiAdminKey,
+      rowCodex2ApiUrl,
+      rowCustomEmailPool,
+      rowCustomMailProviderPool,
+      rowEmailGenerator,
+      rowLocalCpaJsonAdvancedToggle,
+      rowLocalCpaJsonPluginDir,
+      rowLocalCpaJsonRelativeAuthDir,
+      rowLocalCpaStep9Mode,
+      rowMail2925Mode,
+      rowMail2925PoolSettings,
+      rowSub2ApiAccountPriority,
+      rowSub2ApiDefaultProxy,
+      rowSub2ApiEmail,
+      rowSub2ApiGroup,
+      rowSub2ApiPassword,
+      rowSub2ApiUrl,
+      rowVpsPassword,
+      rowVpsUrl,
+      selectAccountAccessStrategy,
+      selectEmailGenerator,
+      selectMailProvider,
+      selectPanelMode,
+    },
+    getters: {
+      getLatestState: () => latestState,
+      getLocalCpaJsonAuthDirExpanded: () => localCpaJsonAuthDirExpanded,
+      getSelectedPanelMode: () => getSelectedPanelMode(),
+    },
+    helpers: {
+      getAccountAccessStrategyUiValueForState,
+      getExportTargetForPanelMode,
+      queueCustomEmailPoolRefresh,
+      resetCustomEmailPoolManager,
+    },
+    normalizers: {
+      normalizePanelMode,
+    },
+  });
   
   function updateMailProviderUI() {
-    const provider = String(selectMailProvider?.value || latestState?.mailProvider || '').trim().toLowerCase();
-    const emailGenerator = String(selectEmailGenerator?.value || latestState?.emailGenerator || '').trim().toLowerCase();
-    const useCustomProvider = provider === 'custom';
-    const use2925 = provider === '2925';
-    const useLuckmail = provider === LUCKMAIL_PROVIDER;
-    const useIcloud = provider === ICLOUD_PROVIDER || provider === ICLOUD_API_PROVIDER || emailGenerator === ICLOUD_PROVIDER;
-    const useCustomPool = provider === CUSTOM_EMAIL_POOL_GENERATOR || emailGenerator === CUSTOM_EMAIL_POOL_GENERATOR;
-    const useCloudflareTempEmail = provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER || emailGenerator === CLOUDFLARE_TEMP_EMAIL_PROVIDER;
-    const useCloudMail = provider === CLOUD_MAIL_PROVIDER || emailGenerator === CLOUD_MAIL_PROVIDER;
-    const useFreemail = provider === FREEMAIL_PROVIDER || emailGenerator === FREEMAIL_PROVIDER;
-  
-    setElementVisible(rowCustomMailProviderPool, useCustomProvider);
-    setElementVisible(rowMail2925Mode, use2925);
-    setElementVisible(rowMail2925PoolSettings, use2925);
-    setElementVisible(rowCustomEmailPool, useCustomPool);
-    if (useCustomPool) {
-      queueCustomEmailPoolRefresh();
-    } else {
-      resetCustomEmailPoolManager();
-    }
-    setElementVisible(icloudSection, useIcloud);
-    setElementVisible(luckmailSection, useLuckmail);
-    setElementVisible(cloudflareTempEmailSection, useCloudflareTempEmail);
-    setElementVisible(cloudMailSection, useCloudMail);
-    setElementVisible(freemailSection, useFreemail);
-    setElementVisible(rowEmailGenerator, !useCustomProvider);
-    if (selectEmailGenerator) {
-      selectEmailGenerator.disabled = useCustomProvider || useLuckmail || provider === 'hotmail-api';
-    }
-  
-    if (inputIcloudApiBaseUrl) {
-      inputIcloudApiBaseUrl.disabled = provider !== ICLOUD_API_PROVIDER;
-    }
-    if (inputIcloudApiAdminKey) {
-      inputIcloudApiAdminKey.disabled = provider !== ICLOUD_API_PROVIDER;
-    }
+    panelDisplayController.updateMailProviderUI();
   }
   
   function updatePanelModeUI() {
-    const panelMode = typeof getSelectedPanelMode === 'function'
-      ? getSelectedPanelMode()
-      : normalizePanelMode(latestState?.panelMode || DEFAULT_PANEL_MODE);
-    const exportTarget = getExportTargetForPanelMode(panelMode);
-    const useLocalCpaJson = exportTarget === LOCAL_CPA_JSON_PANEL_MODE || panelMode === LOCAL_CPA_JSON_NO_RT_PANEL_MODE;
-    const useLocalCpaJsonNoRt = panelMode === LOCAL_CPA_JSON_NO_RT_PANEL_MODE;
-    const useCodex2Api = exportTarget === 'codex2api';
-    const useSub2Api = false;
-    const useCpa = false;
-  
-    if (selectPanelMode) {
-      selectPanelMode.value = exportTarget;
-    }
-    if (selectAccountAccessStrategy) {
-      selectAccountAccessStrategy.value = getAccountAccessStrategyUiValueForState(latestState);
-      selectAccountAccessStrategy.disabled = useCodex2Api;
-      selectAccountAccessStrategy.title = useCodex2Api ? 'Codex2API 仅支持 OAuth' : '';
-    }
-    setElementVisible(rowAccountAccessStrategy, false);
-    setElementVisible(rowLocalCpaJsonPluginDir, useLocalCpaJson);
-    setElementVisible(rowLocalCpaJsonAdvancedToggle, useLocalCpaJson);
-    setElementVisible(rowLocalCpaJsonRelativeAuthDir, useLocalCpaJson && localCpaJsonAuthDirExpanded);
-    setElementVisible(rowVpsUrl, useCpa);
-    setElementVisible(rowVpsPassword, useCpa);
-    setElementVisible(rowLocalCpaStep9Mode, useCpa);
-    setElementVisible(rowSub2ApiUrl, useSub2Api);
-    setElementVisible(rowSub2ApiEmail, useSub2Api);
-    setElementVisible(rowSub2ApiPassword, useSub2Api);
-    setElementVisible(rowSub2ApiGroup, useSub2Api);
-    setElementVisible(rowSub2ApiAccountPriority, useSub2Api);
-    setElementVisible(rowSub2ApiDefaultProxy, useSub2Api);
-    setElementVisible(rowCodex2ApiUrl, useCodex2Api);
-    setElementVisible(rowCodex2ApiAdminKey, useCodex2Api);
-  
-    const platformButton = document.querySelector('.step-btn[data-step-key="platform-verify"]');
-    if (platformButton) {
-      platformButton.textContent = useLocalCpaJson
-        ? (useLocalCpaJsonNoRt ? '本地CPA JSON 无RT 导出' : '本地CPA JSON 有RT 导出')
-        : (useCodex2Api ? 'Codex2API 回调验证' : 'CPA 回调验证');
-    }
+    panelDisplayController.updatePanelModeUI();
   }
   
   async function initializeReleaseInfo() {
@@ -3552,52 +3533,24 @@ with (appState.createScope()) {
     }, Math.max(0, Number(delayMs) || 0));
   }
   
-  function normalizeOperationDelayEnabled(value) {
-    return typeof value === 'boolean' ? value : false;
-  }
+  const operationDelayController = window.SidepanelOperationDelayController.createOperationDelayController({
+    dom: {
+      inputOperationDelayEnabled,
+    },
+    helpers: {
+      appendLog,
+    },
+    runtime: {
+      sendMessage: (message) => chrome.runtime.sendMessage(message),
+    },
+    state: {
+      getLatestState: () => latestState,
+      syncLatestState,
+    },
+  });
   
-  function appendOperationDelayLog(enabled, level = 'info', message = '') {
-    appendLog({
-      timestamp: Date.now(),
-      level,
-      message: message || (enabled
-        ? '操作间延迟已开启：页面输入、选择、点击、提交、继续、授权后等待 2 秒。'
-        : '操作间延迟已关闭：页面操作将连续执行。'),
-    });
-  }
-  
-  function applyOperationDelayState(state = latestState, options = {}) {
-    const enabled = options.restoreFailed ? false : normalizeOperationDelayEnabled(state?.operationDelayEnabled);
-    lastConfirmedOperationDelayEnabled = enabled;
-    if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = enabled;
-    if (typeof syncLatestState === 'function') {
-      syncLatestState({ operationDelayEnabled: enabled });
-    }
-    if (options.restoreFailed) {
-      appendOperationDelayLog(false, 'warn', '操作间延迟设置读取失败，已回退为默认关闭。');
-    }
-  }
-  
-  async function persistOperationDelayToggle() {
-    const nextEnabled = normalizeOperationDelayEnabled(inputOperationDelayEnabled?.checked);
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'SAVE_SETTING',
-        source: 'sidepanel',
-        payload: { operationDelayEnabled: nextEnabled },
-      });
-      if (response?.error) throw new Error(response.error);
-      const confirmed = normalizeOperationDelayEnabled(response?.state?.operationDelayEnabled ?? nextEnabled);
-      lastConfirmedOperationDelayEnabled = confirmed;
-      if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = confirmed;
-      syncLatestState({ operationDelayEnabled: confirmed });
-      appendOperationDelayLog(confirmed);
-    } catch (error) {
-      if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = lastConfirmedOperationDelayEnabled;
-      appendOperationDelayLog(lastConfirmedOperationDelayEnabled, 'error', `操作间延迟设置保存失败，已恢复为上一次确认的状态：${error.message}`);
-      throw error;
-    }
-  }
+  function applyOperationDelayState(state = latestState, options = {}) { operationDelayController.applyState(state, options); }
+  async function persistOperationDelayToggle() { await operationDelayController.persistToggle(); }
   
   function normalizePlusPaymentMethod(value = '') {
     const normalized = String(value || '').trim().toLowerCase();
@@ -3657,7 +3610,7 @@ with (appState.createScope()) {
     state: {
       getLatestState: () => latestState,
       syncLatestState,
-      getAccountRecordsManager: () => accountRecordsManager,
+      getAccountRecordsManager: () => getAccountRecordsManager(),
     },
     helpers: {
       showToast,
@@ -3881,19 +3834,6 @@ with (appState.createScope()) {
   }
   
   
-  function setRemovedPaymentWorkerInputValue(input, value = '') {
-    if (!input) {
-      return;
-    }
-    if (typeof document !== 'undefined' && document.activeElement === input) {
-      return;
-    }
-    const nextValue = String(value ?? '');
-    if (input.value !== nextValue) {
-      input.value = nextValue;
-    }
-  }
-  
   function syncLocalChatgptSessionReaderDraftFromState(state = latestState) {
     const normalizedState = normalizeChatgptSessionReaderStateForUi(state || {});
     localChatgptSessionReaderMode = normalizeChatgptSessionReaderModeValue(normalizedState.chatgptSessionReaderMode);
@@ -4050,179 +3990,11 @@ with (appState.createScope()) {
   }
   
   function updateRemovedPaymentWorkerUi(state = latestState) {
-    const normalized = normalizeRemovedPaymentWorkerSettingsValue(state || {});
-    const runtimeStatus = String(state?.removedPaymentWorkerJobStatus || '').trim().toLowerCase();
-    const currentAttempt = Math.max(0, Number(state?.removedPaymentWorkerCurrentAttempt) || 0);
-    const enabled = Boolean(normalized.removedPaymentWorkerEnabled);
-    if (removedPaymentWorkerSection) {
-      removedPaymentWorkerSection.style.display = '';
-    }
-    if (inputRemovedPaymentWorkerEnabled) {
-      inputRemovedPaymentWorkerEnabled.checked = enabled;
-    }
-    if (removedPaymentWorkerSettingsShell) {
-      removedPaymentWorkerSettingsShell.hidden = !enabled;
-    }
-    const browserBackend = normalized.removedPaymentWorkerBrowserBackend;
-    if (selectRemovedPaymentWorkerBrowserBackend) {
-      selectRemovedPaymentWorkerBrowserBackend.value = browserBackend;
-    }
-    if (rowRemovedPaymentWorkerAdsPowerApiBase) {
-      rowRemovedPaymentWorkerAdsPowerApiBase.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerAdsPowerApiBase, normalized.removedPaymentWorkerAdsPowerApiBase);
-    if (rowRemovedPaymentWorkerAdsPowerApiKey) {
-      rowRemovedPaymentWorkerAdsPowerApiKey.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerAdsPowerApiKey, normalized.removedPaymentWorkerAdsPowerApiKey);
-    if (rowRemovedPaymentWorkerRoxyBrowserApiBase) {
-      rowRemovedPaymentWorkerRoxyBrowserApiBase.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerRoxyBrowserApiBase, normalized.removedPaymentWorkerRoxyBrowserApiBase);
-    if (rowRemovedPaymentWorkerRoxyBrowserApiKey) {
-      rowRemovedPaymentWorkerRoxyBrowserApiKey.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerRoxyBrowserApiKey, normalized.removedPaymentWorkerRoxyBrowserApiKey);
-    if (rowRemovedPaymentWorkerAdsPowerProfileId) {
-      rowRemovedPaymentWorkerAdsPowerProfileId.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerAdsPowerProfileId, normalized.removedPaymentWorkerAdsPowerProfileId);
-    if (rowRemovedPaymentWorkerRoxyBrowserProfileId) {
-      rowRemovedPaymentWorkerRoxyBrowserProfileId.style.display = '';
-    }
-    setRemovedPaymentWorkerInputValue(inputRemovedPaymentWorkerRoxyBrowserProfileId, normalized.removedPaymentWorkerRoxyBrowserProfileId);
-    if (inputRemovedPaymentWorkerStripePublishableKey) {
-      inputRemovedPaymentWorkerStripePublishableKey.value = normalized.removedPaymentWorkerStripePublishableKey;
-    }
-    if (inputRemovedPaymentWorkerDeviceId) {
-      inputRemovedPaymentWorkerDeviceId.value = normalized.removedPaymentWorkerDeviceId;
-    }
-    if (inputRemovedPaymentWorkerUserAgent) {
-      inputRemovedPaymentWorkerUserAgent.value = normalized.removedPaymentWorkerUserAgent;
-    }
-    if (inputRemovedPaymentWorkerMaxAttempts) {
-      inputRemovedPaymentWorkerMaxAttempts.value = String(normalized.removedPaymentWorkerMaxAttempts);
-    }
-    if (selectRemovedPaymentWorkerPaymentLocale) {
-      selectRemovedPaymentWorkerPaymentLocale.value = normalized.removedPaymentWorkerPaymentLocale;
-    }
-    if (inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts) {
-      inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts.value = String(normalized.removedPaymentWorkerCheckoutRebuildMaxAttempts);
-    }
-    if (inputRemovedPaymentWorkerDefaultProxy) {
-      inputRemovedPaymentWorkerDefaultProxy.value = normalized.removedPaymentWorkerDefaultProxy;
-    }
-    if (inputRemovedPaymentWorkerProviderProxy) {
-      inputRemovedPaymentWorkerProviderProxy.value = normalized.removedPaymentWorkerProviderProxy;
-    }
-    if (rowRemovedPaymentWorkerProviderProxy) {
-      rowRemovedPaymentWorkerProviderProxy.hidden = false;
-    }
-    if (displayRemovedPaymentWorkerStatus) {
-      displayRemovedPaymentWorkerStatus.textContent = enabled ? '已启用' : '默认关闭';
-    }
-    if (displayRemovedPaymentWorkerRuntime) {
-      if (runtimeStatus === 'pending') {
-        displayRemovedPaymentWorkerRuntime.textContent = `准备中：第 ${currentAttempt} / ${normalized.removedPaymentWorkerMaxAttempts} 次`;
-      } else if (runtimeStatus === 'running') {
-        displayRemovedPaymentWorkerRuntime.textContent = `运行中：第 ${currentAttempt} / ${normalized.removedPaymentWorkerMaxAttempts} 次`;
-      } else if (runtimeStatus === 'paused') {
-        displayRemovedPaymentWorkerRuntime.textContent = `已暂停：第 ${currentAttempt} / ${normalized.removedPaymentWorkerMaxAttempts} 次`;
-      } else if (runtimeStatus === 'succeeded') {
-        displayRemovedPaymentWorkerRuntime.textContent = `已成功：第 ${currentAttempt} 次`;
-      } else if (runtimeStatus === 'failed') {
-        displayRemovedPaymentWorkerRuntime.textContent = `已失败：共 ${currentAttempt} 次`;
-      } else {
-        displayRemovedPaymentWorkerRuntime.textContent = '未运行';
-      }
-    }
-    if (btnRemovedPaymentWorkerPause) {
-      btnRemovedPaymentWorkerPause.disabled = !(enabled && (runtimeStatus === 'running' || runtimeStatus === 'pending'));
-    }
-    if (btnRemovedPaymentWorkerResume) {
-      btnRemovedPaymentWorkerResume.disabled = !(enabled && runtimeStatus === 'paused');
-    }
+    removedPaymentWorkerController.updateUi(state);
   }
   
   function buildRemovedPaymentWorkerSettingsPayloadFromInputs() {
-    const browserBackend = normalizeRemovedPaymentWorkerBrowserBackendValue(selectRemovedPaymentWorkerBrowserBackend?.value || 'local');
-    return {
-      removedPaymentWorkerEnabled: Boolean(inputRemovedPaymentWorkerEnabled?.checked),
-      removedPaymentWorkerBrowserBackend: browserBackend,
-      removedPaymentWorkerAdsPowerApiBase: normalizeRemovedPaymentWorkerAdsPowerApiBaseValue(inputRemovedPaymentWorkerAdsPowerApiBase?.value || ''),
-      removedPaymentWorkerAdsPowerApiKey: String(inputRemovedPaymentWorkerAdsPowerApiKey?.value || '').trim(),
-      removedPaymentWorkerAdsPowerProfileId: String(inputRemovedPaymentWorkerAdsPowerProfileId?.value || '').trim(),
-      removedPaymentWorkerRoxyBrowserApiBase: normalizeRemovedPaymentWorkerRoxyBrowserApiBaseValue(inputRemovedPaymentWorkerRoxyBrowserApiBase?.value || ''),
-      removedPaymentWorkerRoxyBrowserApiKey: String(inputRemovedPaymentWorkerRoxyBrowserApiKey?.value || '').trim(),
-      removedPaymentWorkerRoxyBrowserProfileId: String(inputRemovedPaymentWorkerRoxyBrowserProfileId?.value || '').trim(),
-      removedPaymentWorkerStripePublishableKey: String(inputRemovedPaymentWorkerStripePublishableKey?.value || '').trim(),
-      removedPaymentWorkerDeviceId: String(inputRemovedPaymentWorkerDeviceId?.value || '').trim(),
-      removedPaymentWorkerUserAgent: String(inputRemovedPaymentWorkerUserAgent?.value || '').trim(),
-      removedPaymentWorkerMaxAttempts: normalizeRemovedPaymentWorkerMaxAttemptsValue(inputRemovedPaymentWorkerMaxAttempts?.value, REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS),
-      removedPaymentWorkerPaymentLocale: normalizeRemovedPaymentWorkerPaymentLocaleValue(selectRemovedPaymentWorkerPaymentLocale?.value || 'en'),
-      removedPaymentWorkerCheckoutRebuildMaxAttempts: normalizeRemovedPaymentWorkerCheckoutRebuildMaxAttemptsValue(
-        inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts?.value,
-        3,
-      ),
-      removedPaymentWorkerDefaultProxy: String(inputRemovedPaymentWorkerDefaultProxy?.value || '').trim(),
-      removedPaymentWorkerProviderProxy: String(inputRemovedPaymentWorkerProviderProxy?.value || '').trim(),
-    };
-  }
-  
-  function resetRemovedPaymentWorkerInputsToDefaults() {
-    const defaults = buildDefaultRemovedPaymentWorkerSettings();
-    if (inputRemovedPaymentWorkerEnabled) {
-      inputRemovedPaymentWorkerEnabled.checked = defaults.removedPaymentWorkerEnabled;
-    }
-    if (selectRemovedPaymentWorkerBrowserBackend) {
-      selectRemovedPaymentWorkerBrowserBackend.value = defaults.removedPaymentWorkerBrowserBackend;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerApiBase) {
-      inputRemovedPaymentWorkerAdsPowerApiBase.value = defaults.removedPaymentWorkerAdsPowerApiBase;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerApiKey) {
-      inputRemovedPaymentWorkerAdsPowerApiKey.value = defaults.removedPaymentWorkerAdsPowerApiKey;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerProfileId) {
-      inputRemovedPaymentWorkerAdsPowerProfileId.value = defaults.removedPaymentWorkerAdsPowerProfileId;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserProfileId) {
-      inputRemovedPaymentWorkerRoxyBrowserProfileId.value = defaults.removedPaymentWorkerRoxyBrowserProfileId;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserApiBase) {
-      inputRemovedPaymentWorkerRoxyBrowserApiBase.value = defaults.removedPaymentWorkerRoxyBrowserApiBase;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserApiKey) {
-      inputRemovedPaymentWorkerRoxyBrowserApiKey.value = defaults.removedPaymentWorkerRoxyBrowserApiKey;
-    }
-    if (inputRemovedPaymentWorkerStripePublishableKey) {
-      inputRemovedPaymentWorkerStripePublishableKey.value = defaults.removedPaymentWorkerStripePublishableKey;
-    }
-    if (inputRemovedPaymentWorkerDeviceId) {
-      inputRemovedPaymentWorkerDeviceId.value = defaults.removedPaymentWorkerDeviceId;
-    }
-    if (inputRemovedPaymentWorkerUserAgent) {
-      inputRemovedPaymentWorkerUserAgent.value = defaults.removedPaymentWorkerUserAgent;
-    }
-    if (inputRemovedPaymentWorkerMaxAttempts) {
-      inputRemovedPaymentWorkerMaxAttempts.value = String(defaults.removedPaymentWorkerMaxAttempts);
-    }
-    if (selectRemovedPaymentWorkerPaymentLocale) {
-      selectRemovedPaymentWorkerPaymentLocale.value = defaults.removedPaymentWorkerPaymentLocale;
-    }
-    if (inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts) {
-      inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts.value = String(defaults.removedPaymentWorkerCheckoutRebuildMaxAttempts);
-    }
-    if (inputRemovedPaymentWorkerDefaultProxy) {
-      inputRemovedPaymentWorkerDefaultProxy.value = defaults.removedPaymentWorkerDefaultProxy;
-    }
-    if (inputRemovedPaymentWorkerProviderProxy) {
-      inputRemovedPaymentWorkerProviderProxy.value = defaults.removedPaymentWorkerProviderProxy;
-    }
-    updateRemovedPaymentWorkerUi({
-      ...latestState,
-      ...defaults,
-    });
+    return removedPaymentWorkerController.buildSettingsPayloadFromInputs();
   }
   
   function getUpiInfoHelperAutoModeEnabled(state = latestState) {
@@ -6138,92 +5910,104 @@ const {
   saveSettings,
   persistCurrentSettingsForAction,
 } = settingsController;
+  const removedPaymentWorkerController = window.SidepanelRemovedPaymentWorkerController.createRemovedPaymentWorkerController({
+    dom: {
+      document,
+      section: removedPaymentWorkerSection,
+      displayStatus: displayRemovedPaymentWorkerStatus,
+      inputEnabled: inputRemovedPaymentWorkerEnabled,
+      settingsShell: removedPaymentWorkerSettingsShell,
+      selectBrowserBackend: selectRemovedPaymentWorkerBrowserBackend,
+      rowAdsPowerApiBase: rowRemovedPaymentWorkerAdsPowerApiBase,
+      inputAdsPowerApiBase: inputRemovedPaymentWorkerAdsPowerApiBase,
+      rowAdsPowerApiKey: rowRemovedPaymentWorkerAdsPowerApiKey,
+      inputAdsPowerApiKey: inputRemovedPaymentWorkerAdsPowerApiKey,
+      rowRoxyBrowserApiBase: rowRemovedPaymentWorkerRoxyBrowserApiBase,
+      inputRoxyBrowserApiBase: inputRemovedPaymentWorkerRoxyBrowserApiBase,
+      rowRoxyBrowserApiKey: rowRemovedPaymentWorkerRoxyBrowserApiKey,
+      inputRoxyBrowserApiKey: inputRemovedPaymentWorkerRoxyBrowserApiKey,
+      rowAdsPowerProfileId: rowRemovedPaymentWorkerAdsPowerProfileId,
+      inputAdsPowerProfileId: inputRemovedPaymentWorkerAdsPowerProfileId,
+      rowRoxyBrowserProfileId: rowRemovedPaymentWorkerRoxyBrowserProfileId,
+      inputRoxyBrowserProfileId: inputRemovedPaymentWorkerRoxyBrowserProfileId,
+      inputStripePublishableKey: inputRemovedPaymentWorkerStripePublishableKey,
+      inputDeviceId: inputRemovedPaymentWorkerDeviceId,
+      inputUserAgent: inputRemovedPaymentWorkerUserAgent,
+      inputMaxAttempts: inputRemovedPaymentWorkerMaxAttempts,
+      selectPaymentLocale: selectRemovedPaymentWorkerPaymentLocale,
+      inputCheckoutRebuildMaxAttempts: inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts,
+      inputDefaultProxy: inputRemovedPaymentWorkerDefaultProxy,
+      rowProviderProxy: rowRemovedPaymentWorkerProviderProxy,
+      inputProviderProxy: inputRemovedPaymentWorkerProviderProxy,
+      btnPause: btnRemovedPaymentWorkerPause,
+      btnResume: btnRemovedPaymentWorkerResume,
+      displayRuntime: displayRemovedPaymentWorkerRuntime,
+    },
+    helpers: {
+      buildDefaults: buildDefaultRemovedPaymentWorkerSettings,
+      defaultMaxAttempts: REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS,
+      markSettingsDirty,
+      showToast,
+    },
+    normalizers: {
+      normalizeAdsPowerApiBase: normalizeRemovedPaymentWorkerAdsPowerApiBaseValue,
+      normalizeBrowserBackend: normalizeRemovedPaymentWorkerBrowserBackendValue,
+      normalizeCheckoutRebuildMaxAttempts: normalizeRemovedPaymentWorkerCheckoutRebuildMaxAttemptsValue,
+      normalizeMaxAttempts: normalizeRemovedPaymentWorkerMaxAttemptsValue,
+      normalizePaymentLocale: normalizeRemovedPaymentWorkerPaymentLocaleValue,
+      normalizeRoxyBrowserApiBase: normalizeRemovedPaymentWorkerRoxyBrowserApiBaseValue,
+      normalizeSettings: normalizeRemovedPaymentWorkerSettingsValue,
+    },
+    runtime: {
+      sendRuntimeMessageWithTimeout,
+    },
+    state: {
+      getLatestState: () => latestState,
+      syncLatestState,
+    },
+  });
+  const autoRunStatusController = window.SidepanelAutoRunStatusController.createAutoRunStatusController({
+    dom: {
+      autoContinueBar,
+      btnAutoRun,
+      btnFetchEmail,
+      inputAutoRunRetryLegacyWalletCallback,
+      inputAutoRunRetryNonFreeTrial,
+      inputAutoSkipFailures,
+      inputEmail,
+      inputRemovedContactCardDeclinedRetryEnabled,
+      inputRunCount,
+      inputSub2ApiAccountPriority,
+    },
+    getters: {
+      getCurrentAutoRun: () => currentAutoRun,
+    },
+    helpers: {
+      getAutoRunLabel,
+      getStepStatuses,
+      isAutoRunLockedPhase,
+      isAutoRunPausedPhase,
+      isAutoRunScheduledPhase,
+      isAutoRunSourceSyncPhase,
+      isCustomMailProvider,
+      renderContributionMode,
+      setDefaultAutoRunButton,
+      setSettingsCardLocked,
+      shouldLockRunCountToEmailPool,
+      shouldSyncRunCountFromAutoRunSource,
+      syncScheduledCountdownTicker,
+      updateAutoDelayInputState,
+      updateConfigMenuControls,
+      updateFallbackThreadIntervalInputState,
+      updateStopButtonState,
+      usesCustomEmailPoolGenerator,
+    },
+    state: {
+      syncAutoRunState,
+    },
+  });
   function applyAutoRunStatus(payload = currentAutoRun) {
-    syncAutoRunState(payload);
-    const runLabel = getAutoRunLabel(currentAutoRun);
-    const locked = isAutoRunLockedPhase();
-    const paused = isAutoRunPausedPhase();
-    const scheduled = isAutoRunScheduledPhase();
-    const settingsCardLocked = scheduled || locked;
-  
-    setSettingsCardLocked(settingsCardLocked);
-  
-    inputRunCount.disabled = currentAutoRun.autoRunning || shouldLockRunCountToEmailPool();
-    inputRunCount.title = shouldLockRunCountToEmailPool()
-      ? '运行次数已跟随当前可用邮箱数量'
-      : '';
-    btnAutoRun.disabled = currentAutoRun.autoRunning;
-    btnFetchEmail.disabled = locked
-      || isCustomMailProvider()
-      || usesCustomEmailPoolGenerator();
-    inputEmail.disabled = locked;
-  
-    if (typeof inputSub2ApiAccountPriority !== 'undefined' && inputSub2ApiAccountPriority) {
-      inputSub2ApiAccountPriority.disabled = locked;
-    }
-    inputAutoSkipFailures.checked = true;
-    inputAutoSkipFailures.disabled = scheduled;
-    if (inputAutoRunRetryNonFreeTrial) {
-      inputAutoRunRetryNonFreeTrial.disabled = scheduled;
-    }
-    if (inputAutoRunRetryLegacyWalletCallback) {
-      inputAutoRunRetryLegacyWalletCallback.disabled = scheduled;
-    }
-    if (inputRemovedContactCardDeclinedRetryEnabled) {
-      inputRemovedContactCardDeclinedRetryEnabled.disabled = scheduled;
-    }
-  
-    const isSyncPhase = typeof isAutoRunSourceSyncPhase === 'function'
-      ? isAutoRunSourceSyncPhase
-      : (phase) => ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
-    const shouldSyncRunCount = typeof shouldSyncRunCountFromAutoRunSource === 'function'
-      ? shouldSyncRunCountFromAutoRunSource(currentAutoRun)
-      : (currentAutoRun.autoRunning || isSyncPhase(currentAutoRun.phase));
-    if (shouldSyncRunCount && currentAutoRun.totalRuns > 0) {
-      inputRunCount.value = String(currentAutoRun.totalRuns);
-    }
-  
-    switch (currentAutoRun.phase) {
-      case 'scheduled':
-        autoContinueBar.style.display = 'none';
-        btnAutoRun.innerHTML = `已计划${runLabel}`;
-        break;
-      case 'waiting_step':
-        autoContinueBar.style.display = 'none';
-        btnAutoRun.innerHTML = `等待中${runLabel}`;
-        break;
-      case 'waiting_email':
-        autoContinueBar.style.display = 'flex';
-        btnAutoRun.innerHTML = `已暂停${runLabel}`;
-        break;
-      case 'running':
-        autoContinueBar.style.display = 'none';
-        btnAutoRun.innerHTML = `运行中${runLabel}`;
-        break;
-      case 'retrying':
-        autoContinueBar.style.display = 'none';
-        btnAutoRun.innerHTML = `重试中${runLabel}`;
-        break;
-      case 'waiting_interval':
-        autoContinueBar.style.display = 'none';
-        btnAutoRun.innerHTML = `等待中${runLabel}`;
-        break;
-      default:
-        autoContinueBar.style.display = 'none';
-        setDefaultAutoRunButton();
-        inputEmail.disabled = false;
-        if (!locked) {
-          btnFetchEmail.disabled = isCustomMailProvider() || usesCustomEmailPoolGenerator();
-        }
-        break;
-    }
-  
-    updateAutoDelayInputState();
-    updateFallbackThreadIntervalInputState();
-    syncScheduledCountdownTicker();
-    updateStopButtonState(scheduled || paused || locked || Object.values(getStepStatuses()).some(status => status === 'running'));
-    updateConfigMenuControls();
-    renderContributionMode();
+    autoRunStatusController.applyAutoRunStatus(payload);
   }
   
   settingsFieldBindings.bindInput(inputVpsUrl, {
@@ -7360,115 +7144,15 @@ const {
   }
   
   async function handleSaveRemovedPaymentWorkerSettings() {
-    const payload = buildRemovedPaymentWorkerSettingsPayloadFromInputs();
-    const activeWindowId = payload.removedPaymentWorkerBrowserBackend === 'roxybrowser'
-      ? payload.removedPaymentWorkerRoxyBrowserProfileId
-      : payload.removedPaymentWorkerAdsPowerProfileId;
-    if (payload.removedPaymentWorkerBrowserBackend === 'adspower' && !activeWindowId) {
-      throw new Error('AdsPower窗口ID 为必填项。');
-    }
-    if (payload.removedPaymentWorkerBrowserBackend === 'roxybrowser' && !activeWindowId) {
-      throw new Error('RoxyBrowser窗口ID 为必填项。');
-    }
-    if (payload.removedPaymentWorkerBrowserBackend === 'roxybrowser' && /^\d+$/.test(activeWindowId || '')) {
-      throw new Error('RoxyBrowser窗口ID 不是 workspaceId。请在 RoxyBrowser-全部窗口-右键窗口-窗口操作-复制窗口ID。');
-    }
-    if (payload.removedPaymentWorkerBrowserBackend === 'roxybrowser' && !payload.removedPaymentWorkerRoxyBrowserApiKey) {
-      throw new Error('RoxyBrowser API Key 为必填项。');
-    }
-    if (selectRemovedPaymentWorkerBrowserBackend) {
-      selectRemovedPaymentWorkerBrowserBackend.value = payload.removedPaymentWorkerBrowserBackend;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerApiBase) {
-      inputRemovedPaymentWorkerAdsPowerApiBase.value = payload.removedPaymentWorkerAdsPowerApiBase;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerApiKey) {
-      inputRemovedPaymentWorkerAdsPowerApiKey.value = payload.removedPaymentWorkerAdsPowerApiKey;
-    }
-    if (inputRemovedPaymentWorkerAdsPowerProfileId) {
-      inputRemovedPaymentWorkerAdsPowerProfileId.value = payload.removedPaymentWorkerAdsPowerProfileId;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserProfileId) {
-      inputRemovedPaymentWorkerRoxyBrowserProfileId.value = payload.removedPaymentWorkerRoxyBrowserProfileId;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserApiBase) {
-      inputRemovedPaymentWorkerRoxyBrowserApiBase.value = payload.removedPaymentWorkerRoxyBrowserApiBase;
-    }
-    if (inputRemovedPaymentWorkerRoxyBrowserApiKey) {
-      inputRemovedPaymentWorkerRoxyBrowserApiKey.value = payload.removedPaymentWorkerRoxyBrowserApiKey;
-    }
-    if (inputRemovedPaymentWorkerMaxAttempts) {
-      inputRemovedPaymentWorkerMaxAttempts.value = String(payload.removedPaymentWorkerMaxAttempts);
-    }
-    if (selectRemovedPaymentWorkerPaymentLocale) {
-      selectRemovedPaymentWorkerPaymentLocale.value = payload.removedPaymentWorkerPaymentLocale;
-    }
-    if (inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts) {
-      inputRemovedPaymentWorkerCheckoutRebuildMaxAttempts.value = String(payload.removedPaymentWorkerCheckoutRebuildMaxAttempts);
-    }
-    if (inputRemovedPaymentWorkerDefaultProxy) {
-      inputRemovedPaymentWorkerDefaultProxy.value = payload.removedPaymentWorkerDefaultProxy;
-    }
-    if (inputRemovedPaymentWorkerProviderProxy) {
-      inputRemovedPaymentWorkerProviderProxy.value = payload.removedPaymentWorkerProviderProxy;
-    }
-    const response = await sendRuntimeMessageWithTimeout({
-      type: 'SAVE_SETTING',
-      source: 'sidepanel',
-      payload,
-    }, 20000, '保存 RemovedPaymentWorker 配置');
-    if (response?.error) {
-      throw new Error(response.error);
-    }
-    syncLatestState({
-      ...(latestState || {}),
-      ...payload,
-      ...(response?.state && typeof response.state === 'object' ? response.state : {}),
-    });
-    updateRemovedPaymentWorkerUi(latestState);
-    markSettingsDirty(false);
-    showToast('RemovedPaymentWorker 配置已保存。', 'success', 1800);
+    await removedPaymentWorkerController.saveSettings();
   }
   
   async function handleClearRemovedPaymentWorkerSettings() {
-    const defaults = buildDefaultRemovedPaymentWorkerSettings();
-    resetRemovedPaymentWorkerInputsToDefaults();
-    const response = await sendRuntimeMessageWithTimeout({
-      type: 'SAVE_SETTING',
-      source: 'sidepanel',
-      payload: defaults,
-    }, 20000, '清除 RemovedPaymentWorker 配置');
-    if (response?.error) {
-      throw new Error(response.error);
-    }
-    syncLatestState({
-      ...(latestState || {}),
-      ...defaults,
-      ...(response?.state && typeof response.state === 'object' ? response.state : {}),
-    });
-    updateRemovedPaymentWorkerUi(latestState);
-    markSettingsDirty(false);
-    showToast('RemovedPaymentWorker 配置已重置。', 'success', 1800);
+    await removedPaymentWorkerController.clearSettings();
   }
   
   async function controlRemovedPaymentWorkerJob(action = 'pause') {
-    const type = action === 'resume' ? 'REMOVED_PAYMENT_WORKER_RESUME_JOB' : 'REMOVED_PAYMENT_WORKER_PAUSE_JOB';
-    const response = await sendRuntimeMessageWithTimeout({
-      type,
-      source: 'sidepanel',
-      payload: {},
-    }, 20000, action === 'resume' ? '继续 RemovedPaymentWorker 任务' : '暂停 RemovedPaymentWorker 任务');
-    if (response?.error) {
-      throw new Error(response.error);
-    }
-    if (response?.state && typeof response.state === 'object') {
-      syncLatestState({
-        ...(latestState || {}),
-        ...response.state,
-      });
-      updateRemovedPaymentWorkerUi(latestState);
-    }
-    showToast(action === 'resume' ? 'RemovedPaymentWorker 已继续。' : 'RemovedPaymentWorker 已请求暂停。', 'info', 1800);
+    await removedPaymentWorkerController.controlJob(action);
   }
   
   function handleChatgptSessionReaderModeSelectionChange(nextMode) {

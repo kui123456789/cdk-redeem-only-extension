@@ -235,6 +235,11 @@ function checkCoreFiles() {
     'sidepanel/upi-redeem-cdk-state.js',
     'sidepanel/upi-redeem-cdk-status-view.js',
     'sidepanel/upi-redeem-cdk-controller.js',
+    'sidepanel/account-records-panel-controller.js',
+    'sidepanel/panel-display-controller.js',
+    'sidepanel/removed-payment-worker-controller.js',
+    'sidepanel/auto-run-status-controller.js',
+    'sidepanel/operation-delay-controller.js',
     'sidepanel/sidepanel-bootstrap.js',
     'sidepanel/sidepanel-ui-helpers.js',
     'sidepanel/action-modal-service.js',
@@ -325,6 +330,11 @@ function checkStaticContracts() {
   const sidepanelUpiRedeemCdkState = readText('sidepanel/upi-redeem-cdk-state.js');
   const sidepanelUpiRedeemCdkStatusView = readText('sidepanel/upi-redeem-cdk-status-view.js');
   const sidepanelUpiRedeemCdkController = readText('sidepanel/upi-redeem-cdk-controller.js');
+  const sidepanelAccountRecordsPanelController = readText('sidepanel/account-records-panel-controller.js');
+  const sidepanelPanelDisplayController = readText('sidepanel/panel-display-controller.js');
+  const sidepanelRemovedPaymentWorkerController = readText('sidepanel/removed-payment-worker-controller.js');
+  const sidepanelAutoRunStatusController = readText('sidepanel/auto-run-status-controller.js');
+  const sidepanelOperationDelayController = readText('sidepanel/operation-delay-controller.js');
   const sidepanelAppController = readText('sidepanel/sidepanel-app-controller.js');
   const sidepanelBootstrap = readText('sidepanel/sidepanel-bootstrap.js');
   const sidepanelHtml = readText('sidepanel/sidepanel.html');
@@ -412,6 +422,16 @@ function checkStaticContracts() {
   assertIncludes(sidepanelUpiRedeemCdkStatusView, 'createUpiRedeemCdkStatusView', 'sidepanel UPI redeem CDK status view factory');
   assertIncludes(sidepanelUpiRedeemCdkController, 'SidepanelUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller global');
   assertIncludes(sidepanelUpiRedeemCdkController, 'createUpiRedeemCdkController', 'sidepanel UPI redeem CDK controller factory');
+  assertIncludes(sidepanelAccountRecordsPanelController, 'SidepanelAccountRecordsPanelController', 'sidepanel account records panel controller global');
+  assertIncludes(sidepanelAccountRecordsPanelController, 'createAccountRecordsPanelController', 'sidepanel account records panel controller factory');
+  assertIncludes(sidepanelPanelDisplayController, 'SidepanelPanelDisplayController', 'sidepanel panel display controller global');
+  assertIncludes(sidepanelPanelDisplayController, 'createPanelDisplayController', 'sidepanel panel display controller factory');
+  assertIncludes(sidepanelRemovedPaymentWorkerController, 'SidepanelRemovedPaymentWorkerController', 'sidepanel RemovedPaymentWorker controller global');
+  assertIncludes(sidepanelRemovedPaymentWorkerController, 'createRemovedPaymentWorkerController', 'sidepanel RemovedPaymentWorker controller factory');
+  assertIncludes(sidepanelAutoRunStatusController, 'SidepanelAutoRunStatusController', 'sidepanel auto-run status controller global');
+  assertIncludes(sidepanelAutoRunStatusController, 'createAutoRunStatusController', 'sidepanel auto-run status controller factory');
+  assertIncludes(sidepanelOperationDelayController, 'SidepanelOperationDelayController', 'sidepanel operation delay controller global');
+  assertIncludes(sidepanelOperationDelayController, 'createOperationDelayController', 'sidepanel operation delay controller factory');
   assertIncludes(sidepanelAppController, 'SidepanelAppController', 'sidepanel app controller global');
   assertIncludes(sidepanelAppController, 'createSidepanelApp', 'sidepanel app controller factory');
   assertIncludes(workflowController, 'SidepanelWorkflowController', 'sidepanel workflow controller global');
@@ -447,6 +467,11 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'sidepanel UPI redeem CDK state script load');
   assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK status view script load');
   assertIncludes(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK controller script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-panel-controller.js"', 'sidepanel account records panel controller script load');
+  assertIncludes(sidepanelHtml, 'src="panel-display-controller.js"', 'sidepanel panel display controller script load');
+  assertIncludes(sidepanelHtml, 'src="removed-payment-worker-controller.js"', 'sidepanel RemovedPaymentWorker controller script load');
+  assertIncludes(sidepanelHtml, 'src="auto-run-status-controller.js"', 'sidepanel auto-run status controller script load');
+  assertIncludes(sidepanelHtml, 'src="operation-delay-controller.js"', 'sidepanel operation delay controller script load');
   assertIncludes(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'sidepanel app controller script load');
   assertIncludes(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'sidepanel bootstrap script load');
   assertBefore(sidepanelHtml, 'src="dom-bindings.js"', 'src="sidepanel.js"', 'sidepanel DOM bindings must load before sidepanel.js');
@@ -473,7 +498,12 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="runtime-message-controller.js"', 'src="upi-redeem-cdk-state.js"', 'sidepanel runtime controller must load before UPI redeem CDK state');
   assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-state.js"', 'src="upi-redeem-cdk-status-view.js"', 'sidepanel UPI redeem CDK state must load before status view');
   assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-status-view.js"', 'src="upi-redeem-cdk-controller.js"', 'sidepanel UPI redeem CDK status view must load before controller');
-  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'src="sidepanel-app-controller.js"', 'sidepanel UPI redeem CDK controller must load before app controller');
+  assertBefore(sidepanelHtml, 'src="upi-redeem-cdk-controller.js"', 'src="account-records-panel-controller.js"', 'sidepanel UPI redeem CDK controller must load before account records panel controller');
+  assertBefore(sidepanelHtml, 'src="account-records-panel-controller.js"', 'src="panel-display-controller.js"', 'sidepanel account records panel controller must load before panel display controller');
+  assertBefore(sidepanelHtml, 'src="panel-display-controller.js"', 'src="removed-payment-worker-controller.js"', 'sidepanel panel display controller must load before RemovedPaymentWorker controller');
+  assertBefore(sidepanelHtml, 'src="removed-payment-worker-controller.js"', 'src="auto-run-status-controller.js"', 'sidepanel RemovedPaymentWorker controller must load before auto-run status controller');
+  assertBefore(sidepanelHtml, 'src="auto-run-status-controller.js"', 'src="operation-delay-controller.js"', 'sidepanel auto-run status controller must load before operation delay controller');
+  assertBefore(sidepanelHtml, 'src="operation-delay-controller.js"', 'src="sidepanel-app-controller.js"', 'sidepanel operation delay controller must load before app controller');
   assertBefore(sidepanelHtml, 'src="sidepanel-app-controller.js"', 'src="sidepanel-bootstrap.js"', 'sidepanel app controller must load before bootstrap');
   assertBefore(sidepanelHtml, 'src="sidepanel-bootstrap.js"', 'src="sidepanel.js"', 'sidepanel bootstrap must load before compatibility entrypoint');
   assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
@@ -1002,7 +1032,12 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-state.js', 250, 'sidepanel UPI redeem CDK state size guard');
   assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-status-view.js', 250, 'sidepanel UPI redeem CDK status view size guard');
   assertFileLineCountAtMost('sidepanel/upi-redeem-cdk-controller.js', 700, 'sidepanel UPI redeem CDK controller size guard');
-  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7963, 'sidepanel app controller decomposition guard');
+  assertFileLineCountAtMost('sidepanel/account-records-panel-controller.js', 250, 'sidepanel account records panel controller size guard');
+  assertFileLineCountAtMost('sidepanel/panel-display-controller.js', 250, 'sidepanel panel display controller size guard');
+  assertFileLineCountAtMost('sidepanel/removed-payment-worker-controller.js', 700, 'sidepanel RemovedPaymentWorker controller size guard');
+  assertFileLineCountAtMost('sidepanel/auto-run-status-controller.js', 250, 'sidepanel auto-run status controller size guard');
+  assertFileLineCountAtMost('sidepanel/operation-delay-controller.js', 140, 'sidepanel operation delay controller size guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7650, 'sidepanel app controller decomposition guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-bootstrap.js', 700, 'sidepanel bootstrap size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
