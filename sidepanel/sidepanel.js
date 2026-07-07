@@ -1196,63 +1196,18 @@ let settingsStateManager = null;
 let workflowControlsManager = null;
 let settingsTransferManager = null;
 
-function normalizeAutomationWindowId(value) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-  const numeric = Number(value);
-  return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
-}
-
-async function getCurrentSidepanelWindowId() {
-  if (chrome?.windows?.getCurrent) {
-    try {
-      const currentWindow = await chrome.windows.getCurrent();
-      const windowId = normalizeAutomationWindowId(currentWindow?.id);
-      if (windowId !== null) {
-        return windowId;
-      }
-    } catch (error) {
-      console.warn('Failed to get current sidepanel window:', error?.message || error);
-    }
-  }
-
-  return normalizeAutomationWindowId(latestState?.automationWindowId);
-}
-
-function shouldAttachAutomationWindow(message = {}) {
-  const source = String(message?.source || '').trim();
-  if (source && source !== 'sidepanel') {
-    return false;
-  }
-  return [
-    'EXECUTE_NODE',
-    'AUTO_RUN',
-    'SCHEDULE_AUTO_RUN',
-    'RESUME_AUTO_RUN',
-    'START_SCHEDULED_AUTO_RUN_NOW',
-    'SKIP_AUTO_RUN_COUNTDOWN',
-  ].includes(String(message?.type || '').trim());
-}
-
-async function sendSidepanelMessage(message = {}) {
-  const payload = {
-    ...(message || {}),
-    source: message?.source || 'sidepanel',
-  };
-  if (shouldAttachAutomationWindow(payload)) {
-    const windowId = await getCurrentSidepanelWindowId();
-    if (windowId !== null) {
-      payload.payload = {
-        ...(payload.payload || {}),
-        automationWindowId: windowId,
-      };
-      syncLatestState({ automationWindowId: windowId });
-    }
-  }
-  return chrome.runtime.sendMessage(payload);
-}
-
+const sidepanelRuntimeBridge = window.SidepanelRuntimeBridge.createSidepanelRuntimeBridge({
+  chromeApi: chrome,
+  getLatestState: () => latestState,
+  logger: console,
+  syncLatestState,
+});
+const {
+  getCurrentSidepanelWindowId,
+  normalizeAutomationWindowId,
+  sendSidepanelMessage,
+  shouldAttachAutomationWindow,
+} = sidepanelRuntimeBridge;
 window.sendSidepanelMessage = sendSidepanelMessage;
 
 const DEFAULT_SUB2API_GROUP_OPTIONS = ['codex', 'openai-plus'];
