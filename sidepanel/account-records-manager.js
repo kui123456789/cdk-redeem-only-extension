@@ -227,6 +227,10 @@
       setNodeText,
       toggleNodeClass,
     } = accountRecordsDomHelpers.createAccountRecordsDomHelpers();
+    const accountRecordsMembershipStateSync = globalScope.SidepanelAccountRecordsMembershipStateSync || {};
+    if (typeof accountRecordsMembershipStateSync.createAccountRecordsMembershipStateSync !== 'function') {
+      throw new Error('Account records membership state sync module is not loaded.');
+    }
     const accountRecordsMembershipHelpers = globalScope.SidepanelAccountRecordsMembershipHelpers || {};
     if (typeof accountRecordsMembershipHelpers.createAccountRecordsMembershipHelpers !== 'function') {
       throw new Error('Account records membership helpers module is not loaded.');
@@ -262,7 +266,7 @@
       getUpiCredentialMembershipPoolRows: () => upiCredentialMembershipPoolRows,
       getUpiCredentialMembershipPoolSource: () => upiCredentialMembershipPoolSource,
       isUpiCredentialMembershipEmailDisabled: (email) => disabledUpiCredentialMembershipEmails.has(email),
-      getLocallyDeletedUpiCredentialMembershipEmails: () => Array.from(locallyDeletedUpiCredentialMembershipEmails),
+      getLocallyDeletedUpiCredentialMembershipEmails: () => getLocallyDeletedUpiCredentialMembershipEmails(),
       applyUpiRedeemSuccessMembershipPatch: (row, lookup) => applyUpiRedeemSuccessMembershipPatch(row, lookup),
       buildMembershipViewModelRows,
       buildUpiCredentialMembershipDisplayRowKey,
@@ -349,6 +353,27 @@
       ideal: new Set(),
     };
     const selectedRecordIds = new Set();
+    const membershipStateSync = accountRecordsMembershipStateSync.createAccountRecordsMembershipStateSync({
+      state,
+      membershipRowPolicy,
+      locallyDeletedUpiCredentialMembershipEmails,
+      locallyDeletedRedeemPlusEmailsByChannel,
+      normalizeEmail: (value) => normalizeUpiCredentialMembershipEmail(value),
+      normalizeText: (value) => normalizeUpiCredentialMembershipText(value),
+      normalizeTimestamp,
+      normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
+      normalizeSubscriptionPlanType: (value) => normalizeSubscriptionPlanType(value),
+      isPaidSubscriptionPlan: (planType) => isPaidSubscriptionPlan(planType),
+      isActiveUpiRedeemRemoteStatus: (value) => isActiveUpiRedeemRemoteStatus(value),
+      normalizeUpiCredentialMembershipEmailList,
+      buildRedeemPlusDeletedEmailSetsFromValues,
+      mergeRedeemPlusDeletedEmailsByChannel,
+      getUpiRedeemCdkeyUsage: (currentState, channel) => getUpiRedeemCdkeyUsage(currentState, channel),
+      getUpiRedeemUsageEmail: (entry) => getUpiRedeemUsageEmail(entry),
+      findActiveUpiRedeemCdkeyUsageEntryByEmail: (email, currentState, channel) => (
+        findActiveUpiRedeemCdkeyUsageEntryByEmail(email, currentState, channel)
+      ),
+    });
 
     function escapeHtml(value) {
       if (typeof helpers.escapeHtml === 'function') {
@@ -398,323 +423,55 @@
     }
 
     function getLocallyDeletedRedeemPlusEmailsByChannel() {
-      return {
-        upi: Array.from(locallyDeletedRedeemPlusEmailsByChannel.upi),
-        ideal: Array.from(locallyDeletedRedeemPlusEmailsByChannel.ideal),
-      };
+      return membershipStateSync.getLocallyDeletedRedeemPlusEmailsByChannel();
     }
 
     function addLocallyDeletedRedeemPlusEmails(channel = 'upi', emails = []) {
-      const normalizedChannel = normalizeRedeemChannel(channel);
-      const target = locallyDeletedRedeemPlusEmailsByChannel[normalizedChannel];
-      normalizeUpiCredentialMembershipEmailList(Array.isArray(emails) ? emails : [emails])
-        .forEach((email) => target.add(email));
+      membershipStateSync.addLocallyDeletedRedeemPlusEmails(channel, emails);
+    }
+
+    function getLocallyDeletedUpiCredentialMembershipEmails() {
+      return membershipStateSync.getLocallyDeletedUpiCredentialMembershipEmails();
     }
 
     function buildRedeemPlusDeletedEmailSets(value = {}) {
-      return buildRedeemPlusDeletedEmailSetsFromValues(value, getLocallyDeletedRedeemPlusEmailsByChannel());
+      return membershipStateSync.buildRedeemPlusDeletedEmailSets(value);
     }
 
     function isRedeemPlusDeletedEmail(email = '', channel = 'upi', deletedEmailSets = {}) {
-      return membershipRowPolicy.isRedeemPlusDeletedEmail?.(email, channel, deletedEmailSets) === true;
+      return membershipStateSync.isRedeemPlusDeletedEmail(email, channel, deletedEmailSets);
     }
 
     function isRedeemPlusDeletedDisplayRow(row = {}, deletedEmailSets = {}) {
-      return membershipRowPolicy.isRedeemPlusDeletedDisplayRow?.(row, deletedEmailSets) === true;
+      return membershipStateSync.isRedeemPlusDeletedDisplayRow(row, deletedEmailSets);
     }
 
     function isActiveUpiCredentialMembershipRedeemRow(row = {}, results = getUpiCredentialMembershipCheckResults()) {
-      const source = row && typeof row === 'object' && !Array.isArray(row) ? row : {};
-      const email = normalizeUpiCredentialMembershipEmail(source.email);
-      const currentEmail = normalizeUpiCredentialMembershipEmail(results?.flowStageEmail);
-      if (results?.redeeming === true && email && currentEmail && email === currentEmail) {
-        return true;
-      }
-      return [
-        source.redeemStatus,
-        source.remoteStatus,
-        source.remote_status,
-        source.remoteMessage,
-        source.remote_message,
-      ].some((status) => isActiveUpiRedeemRemoteStatus(status));
+      return membershipStateSync.isActiveUpiCredentialMembershipRedeemRow(row, results);
     }
 
     function isActiveUpiCredentialMembershipRedeemRowOrUsage(row = {}, results = getUpiCredentialMembershipCheckResults()) {
-      if (isActiveUpiCredentialMembershipRedeemRow(row, results)) {
-        return true;
-      }
-      return Boolean(findActiveUpiRedeemCdkeyUsageEntryByEmail(row?.email, state.getLatestState(), row?.redeemChannel || row?.channel));
-    }
-
-    function isVerifiedPaidUpiRedeemUsageEntry(entry = {}) {
-      if (entry?.subscriptionActive !== true) {
-        return false;
-      }
-      const planType = normalizeSubscriptionPlanType(entry.subscriptionPlanType || entry.subscription_plan_type || '');
-      return !planType || isPaidSubscriptionPlan(planType);
-    }
-
-    function getUpiRedeemSuccessCheckedAt(entry = {}) {
-      const timestamp = Math.max(
-        0,
-        Number(entry.subscriptionCheckedAt) || 0,
-        Number(entry.remoteCheckedAt) || 0,
-        Number(entry.usedAt) || 0,
-        Number(entry.lastAttemptAt) || 0
-      );
-      if (!timestamp) {
-        return '';
-      }
-      const date = new Date(timestamp);
-      return Number.isNaN(date.getTime()) ? '' : date.toISOString();
-    }
-
-    function getUpiRedeemSuccessPlanType(entry = {}) {
-      const planType = normalizeSubscriptionPlanType(entry.subscriptionPlanType || entry.subscription_plan_type || '');
-      return isPaidSubscriptionPlan(planType) ? planType : 'plus';
+      return membershipStateSync.isActiveUpiCredentialMembershipRedeemRowOrUsage(row, results);
     }
 
     function buildUpiRedeemSuccessMembershipLookup(currentState = state.getLatestState()) {
-      const byCdkey = {};
-      const byEmail = {};
-      const plusDeletedEmailSets = buildRedeemPlusDeletedEmailSets(
-        currentState?.upiCredentialMembershipCheckResults?.redeemPlusDeletedEmailsByChannel
-      );
-      ['upi', 'ideal'].forEach((channel) => {
-        const usage = getUpiRedeemCdkeyUsage(currentState, channel);
-        Object.entries(usage).forEach(([rawCdkey, entry]) => {
-          const cdkey = String(rawCdkey || '').trim();
-          if (!cdkey || !isVerifiedPaidUpiRedeemUsageEntry(entry)) {
-            return;
-          }
-          const email = getUpiRedeemUsageEmail(entry);
-          if (!email) {
-            return;
-          }
-          if (isRedeemPlusDeletedEmail(email, channel, plusDeletedEmailSets)) {
-            return;
-          }
-          const patch = {
-            email,
-            status: 'paid',
-            planType: getUpiRedeemSuccessPlanType(entry),
-            reason: entry.subscriptionReason || entry.remoteMessage || 'CDK 已确认兑换成功',
-            upiRedeemCdkey: cdkey,
-            redeemChannel: channel,
-            upiRedeemSubscriptionCheckedAt: getUpiRedeemSuccessCheckedAt(entry),
-          };
-          byCdkey[`${channel}:${cdkey.toLowerCase()}`] = patch;
-          if (channel === 'upi') {
-            byCdkey[cdkey.toLowerCase()] = patch;
-          }
-          byEmail[`${channel}:${email}`] = patch;
-          if (!byEmail[email]) {
-            byEmail[email] = patch;
-          }
-        });
-      });
-      return { byCdkey, byEmail, plusDeletedEmailSets };
-    }
-
-    function shouldKeepCheckedFreeMembershipResult(row = {}, patch = {}) {
-      if (String(row.status || '').trim().toLowerCase() !== 'free') {
-        return false;
-      }
-      const patchCheckedAt = normalizeTimestamp(patch.upiRedeemSubscriptionCheckedAt);
-      if (String(row.membershipOverrideStatus || '').trim().toLowerCase() === 'free') {
-        const overrideCheckedAt = normalizeTimestamp(row.membershipOverrideCheckedAt || row.checkedAt);
-        return !patchCheckedAt || !overrideCheckedAt || overrideCheckedAt >= patchCheckedAt;
-      }
-      const rowCheckedAt = normalizeTimestamp(row.checkedAt);
-      if (!rowCheckedAt) {
-        return false;
-      }
-      return !patchCheckedAt || rowCheckedAt >= patchCheckedAt;
+      return membershipStateSync.buildUpiRedeemSuccessMembershipLookup(currentState);
     }
 
     function applyUpiRedeemSuccessMembershipPatch(row = {}, lookup = buildUpiRedeemSuccessMembershipLookup()) {
-      const email = normalizeUpiCredentialMembershipEmail(row.email);
-      const cdkey = String(row.upiRedeemCdkey || row.cdkey || '').trim().toLowerCase();
-      const rawChannel = normalizeUpiCredentialMembershipText(row.redeemChannel || row.channel);
-      const channel = normalizeRedeemChannel(rawChannel);
-      const patch = (cdkey && (lookup.byCdkey?.[`${channel}:${cdkey}`] || lookup.byCdkey?.[cdkey]))
-        || (email && rawChannel && lookup.byEmail?.[`${channel}:${email}`])
-        || (email && !rawChannel && lookup.byEmail?.[email])
-        || null;
-      if (!patch) {
-        return row;
-      }
-      const patchChannel = normalizeRedeemChannel(patch.redeemChannel || row.redeemChannel || row.channel);
-      if (isRedeemPlusDeletedEmail(email, patchChannel, lookup.plusDeletedEmailSets)) {
-        return row;
-      }
-      if (shouldKeepCheckedFreeMembershipResult(row, patch)) {
-        return row;
-      }
-      return {
-        ...row,
-        ...patch,
-        redeemStatus: row.redeemStatus === 'success' ? row.redeemStatus : 'success',
-        redeemReason: row.redeemReason || patch.reason,
-        checkedAt: patch.upiRedeemSubscriptionCheckedAt || row.checkedAt,
-        redeemSuccessAt: row.redeemSuccessAt || patch.upiRedeemSubscriptionCheckedAt,
-        membershipOverrideStatus: '',
-        membershipOverrideCheckedAt: '',
-      };
+      return membershipStateSync.applyUpiRedeemSuccessMembershipPatch(row, lookup);
     }
 
     function buildFreeMembershipOverridePatch(checkedAt = new Date().toISOString()) {
-      const timestamp = String(checkedAt || '').trim() || new Date().toISOString();
-      return {
-        status: 'free',
-        planType: 'free',
-        membershipOverrideStatus: 'free',
-        membershipOverrideCheckedAt: timestamp,
-        redeemStatus: '',
-        redeemReason: '',
-        redeemSuccessAt: '',
-        upiRedeemCdkey: '',
-        cdkey: '',
-        upiRedeemSuccess: false,
-        upiRedeemSubscriptionActive: false,
-        upiRedeemHasActiveSubscription: false,
-        upiRedeemSubscriptionPlanType: '',
-        upiRedeemSubscriptionCheckedAt: timestamp,
-        hasActiveSubscription: false,
-        has_active_subscription: false,
-        subscriptionActive: false,
-        subscription_active: false,
-        subscriptionPlanType: '',
-        isPlus: false,
-        isPro: false,
-        isTeam: false,
-      };
+      return membershipStateSync.buildFreeMembershipOverridePatch(checkedAt);
     }
 
     function mergeManualFreeMembershipOverridesIntoResults(results = {}, currentState = state.getLatestState()) {
-      const previousResults = currentState?.upiCredentialMembershipCheckResults || {};
-      const mergedPlusDeletedEmailsByChannel = mergeRedeemPlusDeletedEmailsByChannel(
-        previousResults.redeemPlusDeletedEmailsByChannel,
-        results?.redeemPlusDeletedEmailsByChannel,
-        getLocallyDeletedRedeemPlusEmailsByChannel()
-      );
-      const resultsWithDeletionState = {
-        ...results,
-        redeemPlusDeletedEmailsByChannel: mergedPlusDeletedEmailsByChannel,
-        redeemPlusDeletedCountByChannel: {
-          upi: mergedPlusDeletedEmailsByChannel.upi.length,
-          ideal: mergedPlusDeletedEmailsByChannel.ideal.length,
-        },
-      };
-      const deletedEmailSet = new Set([
-        ...(Array.isArray(previousResults.redeemAutoDeletedEmails) ? previousResults.redeemAutoDeletedEmails : []),
-        ...(Array.isArray(resultsWithDeletionState?.redeemAutoDeletedEmails) ? resultsWithDeletionState.redeemAutoDeletedEmails : []),
-        ...locallyDeletedUpiCredentialMembershipEmails,
-      ].map(normalizeUpiCredentialMembershipEmail).filter(Boolean));
-      const overrides = {};
-      (Array.isArray(previousResults.items) ? previousResults.items : []).forEach((row) => {
-        const email = normalizeUpiCredentialMembershipEmail(row?.email);
-        if (
-          !email
-          || deletedEmailSet.has(email)
-          || String(row?.membershipOverrideStatus || '').trim().toLowerCase() !== 'free'
-        ) {
-          return;
-        }
-        overrides[email] = row;
-      });
-      if (!Object.keys(overrides).length || !Array.isArray(resultsWithDeletionState?.items)) {
-        return resultsWithDeletionState;
-      }
-      let changed = false;
-      const items = resultsWithDeletionState.items.map((item) => {
-        const email = normalizeUpiCredentialMembershipEmail(item?.email);
-        const override = email ? overrides[email] : null;
-        if (!override || deletedEmailSet.has(email)) {
-          return item;
-        }
-        const itemStatus = String(item.status || '').trim().toLowerCase();
-        const itemCheckedAt = normalizeTimestamp(item.checkedAt);
-        const overrideCheckedAt = normalizeTimestamp(override.membershipOverrideCheckedAt || override.checkedAt);
-        if (itemStatus === 'paid' && itemCheckedAt > overrideCheckedAt) {
-          return {
-            ...item,
-            membershipOverrideStatus: '',
-            membershipOverrideCheckedAt: '',
-          };
-        }
-        const redeemStatus = String(item.redeemStatus || '').trim().toLowerCase();
-        changed = true;
-        return {
-          ...item,
-          ...buildFreeMembershipOverridePatch(override.membershipOverrideCheckedAt || override.checkedAt || item.checkedAt),
-          checkedAt: override.checkedAt || item.checkedAt,
-          reason: override.reason || item.reason || '单账号检测确认当前无会员',
-          redeemStatus: ['success', 'skipped'].includes(redeemStatus) ? '' : item.redeemStatus,
-          redeemReason: ['success', 'skipped'].includes(redeemStatus) ? '' : item.redeemReason,
-        };
-      });
-      return changed ? { ...resultsWithDeletionState, items } : resultsWithDeletionState;
+      return membershipStateSync.mergeManualFreeMembershipOverridesIntoResults(results, currentState);
     }
 
     function getUpiCredentialMembershipCheckResults(currentState = state.getLatestState()) {
-      const raw = currentState?.upiCredentialMembershipCheckResults || {};
-      const rawDeletedEmails = (Array.isArray(raw.redeemAutoDeletedEmails) ? raw.redeemAutoDeletedEmails : [])
-        .map(normalizeUpiCredentialMembershipEmail)
-        .filter(Boolean);
-      const rawDeletedEmailSet = new Set(rawDeletedEmails);
-      if (locallyDeletedUpiCredentialMembershipEmails.size) {
-        const restoredEmailSet = new Set((Array.isArray(raw.items) ? raw.items : [])
-          .filter((item) => {
-            const status = String(item?.status || '').trim().toLowerCase();
-            return status === 'free' || status === 'failed';
-          })
-          .map((item) => normalizeUpiCredentialMembershipEmail(item?.email))
-          .filter((email) => email && !rawDeletedEmailSet.has(email)));
-        restoredEmailSet.forEach((email) => locallyDeletedUpiCredentialMembershipEmails.delete(email));
-      }
-      const deletedEmailSet = new Set([
-        ...rawDeletedEmails,
-        ...locallyDeletedUpiCredentialMembershipEmails,
-      ]);
-      const redeemPlusDeletedEmailsByChannel = mergeRedeemPlusDeletedEmailsByChannel(
-        raw.redeemPlusDeletedEmailsByChannel,
-        getLocallyDeletedRedeemPlusEmailsByChannel()
-      );
-      const plusDeletedEmailSets = buildRedeemPlusDeletedEmailSets(redeemPlusDeletedEmailsByChannel);
-      const successLookup = buildUpiRedeemSuccessMembershipLookup(currentState);
-      const items = (Array.isArray(raw.items) ? raw.items : [])
-        .filter((item) => !deletedEmailSet.has(normalizeUpiCredentialMembershipEmail(item?.email)))
-        .map((item) => applyUpiRedeemSuccessMembershipPatch(item, successLookup))
-        .filter((item) => !isRedeemPlusDeletedDisplayRow(item, plusDeletedEmailSets));
-      const stoppedAt = String(raw.stoppedAt || '').trim();
-      const redeemStoppedAt = String(raw.redeemStoppedAt || '').trim();
-      return {
-        items,
-        running: raw.running === true && !stoppedAt,
-        redeeming: raw.redeeming === true && !redeemStoppedAt,
-        source: String(raw.source || '').trim(),
-        total: Math.max(0, Math.floor(Number(raw.total) || items.length || 0)),
-        completed: Math.max(0, Math.floor(Number(raw.completed) || items.length || 0)),
-        redeemTotal: Math.max(0, Math.floor(Number(raw.redeemTotal) || 0)),
-        redeemCompleted: Math.max(0, Math.floor(Number(raw.redeemCompleted) || 0)),
-        flowStage: String(raw.flowStage || '').trim().toLowerCase(),
-        flowStageEmail: normalizeUpiCredentialMembershipEmail(raw.flowStageEmail || ''),
-        flowMode: String(raw.flowMode || '').trim().toLowerCase(),
-        paidCount: items.filter((item) => item?.status === 'paid').length,
-        freeCount: items.filter((item) => item?.status === 'free').length,
-        failedCount: items.filter((item) => item?.status === 'failed').length,
-        updatedAt: String(raw.updatedAt || '').trim(),
-        stoppedAt,
-        redeemStoppedAt,
-        redeemAutoDeletedEmails: Array.from(deletedEmailSet),
-        redeemAutoDeletedCount: deletedEmailSet.size,
-        redeemPlusDeletedEmailsByChannel,
-        redeemPlusDeletedCountByChannel: {
-          upi: redeemPlusDeletedEmailsByChannel.upi.length,
-          ideal: redeemPlusDeletedEmailsByChannel.ideal.length,
-        },
-      };
+      return membershipStateSync.getUpiCredentialMembershipCheckResults(currentState);
     }
 
     function getMembershipStatusTitle(status = '') {
@@ -1505,14 +1262,13 @@
         upiCredentialMembershipPoolLoading = value === true;
       },
       clearLocallyDeletedUpiCredentialMembershipEmails: () => {
-        locallyDeletedUpiCredentialMembershipEmails.clear();
+        membershipStateSync.clearLocallyDeletedUpiCredentialMembershipEmails();
       },
       clearLocallyDeletedRedeemPlusEmailsByChannel: () => {
-        locallyDeletedRedeemPlusEmailsByChannel.upi.clear();
-        locallyDeletedRedeemPlusEmailsByChannel.ideal.clear();
+        membershipStateSync.clearLocallyDeletedRedeemPlusEmailsByChannel();
       },
       deleteLocallyDeletedUpiCredentialMembershipEmail: (email) => {
-        locallyDeletedUpiCredentialMembershipEmails.delete(email);
+        membershipStateSync.deleteLocallyDeletedUpiCredentialMembershipEmail(email);
       },
       setExportButtonsBusy,
       render: () => render(),
@@ -1612,7 +1368,7 @@
       getUpiCredentialMembershipDisplayRowByEmail: (email, channel) => getUpiCredentialMembershipDisplayRowByEmail(email, channel),
       addLocallyDeletedRedeemPlusEmails: (channel, emails) => addLocallyDeletedRedeemPlusEmails(channel, emails),
       addLocallyDeletedUpiCredentialMembershipEmail: (email) => {
-        locallyDeletedUpiCredentialMembershipEmails.add(email);
+        membershipStateSync.addLocallyDeletedUpiCredentialMembershipEmail(email);
       },
       removeDisabledUpiCredentialMembershipEmail: (email) => {
         disabledUpiCredentialMembershipEmails.delete(email);
