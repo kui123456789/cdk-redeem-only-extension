@@ -239,6 +239,10 @@
     if (typeof accountRecordsRunHistory.createAccountRecordsRunHistory !== 'function') {
       throw new Error('Account records run history module is not loaded.');
     }
+    const accountRecordsSettingsPayload = globalScope.SidepanelAccountRecordsSettingsPayload || {};
+    if (typeof accountRecordsSettingsPayload.createAccountRecordsSettingsPayload !== 'function') {
+      throw new Error('Account records settings payload module is not loaded.');
+    }
     const accountRecordsMembershipHelpers = globalScope.SidepanelAccountRecordsMembershipHelpers || {};
     if (typeof accountRecordsMembershipHelpers.createAccountRecordsMembershipHelpers !== 'function') {
       throw new Error('Account records membership helpers module is not loaded.');
@@ -939,6 +943,11 @@
       buildUpiCredentialMembershipRedeemStatusRefreshTargets,
       getUpiCredentialMembershipDisplayRowByEmail,
     } = membershipCredentialHelpers;
+    const settingsPayload = accountRecordsSettingsPayload.createAccountRecordsSettingsPayload({
+      state,
+      dom,
+      getStoredCdkPoolText: (currentState, channel) => getStoredCdkPoolText(currentState, channel),
+    });
 
     const redeemActions = accountRecordsRedeemActions.createAccountRecordsRedeemActions({
       state,
@@ -998,46 +1007,7 @@
     } = redeemActions;
 
     function getMembershipCheckSettingsPayload() {
-      const latest = state.getLatestState();
-      return {
-        upiCredentialMembershipCheckTotpApiBaseUrl: String(
-          dom.inputUpiCredentialMembershipTotpApiBaseUrl?.value
-          || latest?.upiCredentialMembershipCheckTotpApiBaseUrl
-          || 'https://cha.nerver.cc'
-        ).trim(),
-        upiCredentialMembershipCheckTotpLookupKey: String(
-          dom.inputUpiCredentialMembershipTotpLookupKey?.value
-          || latest?.upiCredentialMembershipCheckTotpLookupKey
-          || ''
-        ).trim(),
-        upiSubscriptionApiBaseUrl: String(
-          dom.inputUpiSubscriptionApiBaseUrl?.value
-          || latest?.upiSubscriptionApiBaseUrl
-          || latest?.upiCredentialMembershipCheckTotpApiBaseUrl
-          || 'https://cha.nerver.cc'
-        ).trim(),
-        upiRedeemExternalApiKey: String(
-          dom.inputUpiRedeemExternalApiKey?.value
-          || latest?.upiRedeemExternalApiKey
-          || latest?.pixRedeemExternalApiKey
-          || ''
-        ).trim(),
-        upiRedeemClientId: String(
-          dom.inputUpiRedeemClientId?.value
-          || latest?.upiRedeemClientId
-          || latest?.pixRedeemClientId
-          || ''
-        ).trim(),
-        upiRedeemFailedAccountRetryLimit: Math.max(0, Math.min(20, Math.floor(Number(
-          dom.inputUpiRedeemFailedAccountRetryLimit?.value
-          ?? latest?.upiRedeemFailedAccountRetryLimit
-          ?? 3
-        ) || 0))),
-        cdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-        upiRedeemCdkPoolText: getStoredCdkPoolText(latest, 'upi'),
-        upiRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'upi'),
-        idealRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'ideal'),
-      };
+      return settingsPayload.getMembershipCheckSettingsPayload();
     }
 
     const membershipActions = accountRecordsMembershipActions.createAccountRecordsMembershipActions({
