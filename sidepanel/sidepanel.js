@@ -1293,56 +1293,6 @@ async function handleDeleteSub2ApiGroup(groupName) {
   });
 }
 
-async function handleDeleteCloudflareDomain(domain) {
-  const target = normalizeCloudflareDomainValue(domain);
-  if (!target) {
-    return;
-  }
-  const nextDomains = normalizeCloudflareDomains(latestState?.cloudflareDomains || [])
-    .filter((item) => item !== target);
-  const nextSelected = normalizeCloudflareDomainValue(latestState?.cloudflareDomain) === target
-    ? (nextDomains[0] || '')
-    : normalizeCloudflareDomainValue(latestState?.cloudflareDomain);
-  syncLatestState({
-    cloudflareDomains: nextDomains,
-    cloudflareDomain: nextSelected,
-  });
-  cfDomainPicker.render(nextDomains, nextSelected);
-  await chrome.runtime.sendMessage({
-    type: 'SAVE_SETTING',
-    source: 'sidepanel',
-    payload: {
-      cloudflareDomains: nextDomains,
-      cloudflareDomain: nextSelected,
-    },
-  });
-}
-
-async function handleDeleteCloudflareTempEmailDomain(domain) {
-  const target = normalizeCloudflareTempEmailDomainValue(domain);
-  if (!target) {
-    return;
-  }
-  const nextDomains = normalizeCloudflareTempEmailDomains(latestState?.cloudflareTempEmailDomains || [])
-    .filter((item) => item !== target);
-  const nextSelected = normalizeCloudflareTempEmailDomainValue(latestState?.cloudflareTempEmailDomain) === target
-    ? (nextDomains[0] || '')
-    : normalizeCloudflareTempEmailDomainValue(latestState?.cloudflareTempEmailDomain);
-  syncLatestState({
-    cloudflareTempEmailDomains: nextDomains,
-    cloudflareTempEmailDomain: nextSelected,
-  });
-  tempEmailDomainPicker.render(nextDomains, nextSelected);
-  await chrome.runtime.sendMessage({
-    type: 'SAVE_SETTING',
-    source: 'sidepanel',
-    payload: {
-      cloudflareTempEmailDomains: nextDomains,
-      cloudflareTempEmailDomain: nextSelected,
-    },
-  });
-}
-
 const sub2ApiGroupPicker = createEditableListPicker({
   root: sub2ApiGroupPickerRoot,
   input: inputSub2ApiGroup,
@@ -1356,33 +1306,37 @@ const sub2ApiGroupPicker = createEditableListPicker({
   onDeleteError: (error) => showToast(error?.message || '删除 SUB2API 分组失败。', 'error'),
 });
 
-const cfDomainPicker = createEditableListPicker({
-  root: cfDomainPickerRoot,
-  input: selectCfDomain,
-  trigger: btnCfDomainMenu,
-  current: cfDomainCurrent,
-  menu: cfDomainMenu,
-  emptyLabel: '请先添加域名',
-  itemLabel: '域名',
-  normalizeItems: (values) => normalizeCloudflareDomains(values),
-  normalizeValue: (value) => normalizeCloudflareDomainValue(value),
-  onDelete: handleDeleteCloudflareDomain,
-  onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare 域名失败。', 'error'),
+const cloudflareDomainUi = window.SidepanelCloudflareDomainUi.createCloudflareDomainUi({
+  chromeApi: chrome,
+  createEditableListPicker,
+  dom: {
+    btnCfDomainMenu,
+    btnTempEmailDomainMenu,
+    cfDomainCurrent,
+    cfDomainMenu,
+    cfDomainPickerRoot,
+    selectCfDomain,
+    selectTempEmailDomain,
+    tempEmailDomainCurrent,
+    tempEmailDomainMenu,
+    tempEmailDomainPickerRoot,
+  },
+  getLatestState: () => latestState,
+  helpers: {
+    normalizeCloudflareDomainValue: (value) => normalizeCloudflareDomainValue(value),
+    normalizeCloudflareDomains: (values) => normalizeCloudflareDomains(values),
+    normalizeCloudflareTempEmailDomainValue: (value) => normalizeCloudflareTempEmailDomainValue(value),
+    normalizeCloudflareTempEmailDomains: (values) => normalizeCloudflareTempEmailDomains(values),
+  },
+  showToast,
+  syncLatestState,
 });
-
-const tempEmailDomainPicker = createEditableListPicker({
-  root: tempEmailDomainPickerRoot,
-  input: selectTempEmailDomain,
-  trigger: btnTempEmailDomainMenu,
-  current: tempEmailDomainCurrent,
-  menu: tempEmailDomainMenu,
-  emptyLabel: '请先更新域名',
-  itemLabel: '域名',
-  normalizeItems: (values) => normalizeCloudflareTempEmailDomains(values),
-  normalizeValue: (value) => normalizeCloudflareTempEmailDomainValue(value),
-  onDelete: handleDeleteCloudflareTempEmailDomain,
-  onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare Temp Email 域名失败。', 'error'),
-});
+const {
+  cfDomainPicker,
+  handleDeleteCloudflareDomain,
+  handleDeleteCloudflareTempEmailDomain,
+  tempEmailDomainPicker,
+} = cloudflareDomainUi;
 
 function renderSub2ApiGroupOptions(state = latestState, selectedValue = '') {
   if (!inputSub2ApiGroup) {

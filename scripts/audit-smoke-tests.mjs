@@ -235,6 +235,7 @@ function checkCoreFiles() {
     'sidepanel/settings-transfer-manager.js',
     'sidepanel/mail-provider-state.js',
     'sidepanel/sidepanel-runtime-bridge.js',
+    'sidepanel/cloudflare-domain-ui.js',
     'sidepanel/cdk-pool-manager.js',
     'sidepanel/membership-row-policy.js',
     'sidepanel/membership-renderer.js',
@@ -309,6 +310,7 @@ function checkStaticContracts() {
   const settingsTransferManager = readText('sidepanel/settings-transfer-manager.js');
   const mailProviderState = readText('sidepanel/mail-provider-state.js');
   const sidepanelRuntimeBridge = readText('sidepanel/sidepanel-runtime-bridge.js');
+  const cloudflareDomainUi = readText('sidepanel/cloudflare-domain-ui.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecordsViewModel = readText('sidepanel/account-records-view-model.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
@@ -340,6 +342,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
   assertIncludes(sidepanelHtml, 'src="mail-provider-state.js"', 'sidepanel mail provider state script load');
   assertIncludes(sidepanelHtml, 'src="sidepanel-runtime-bridge.js"', 'sidepanel runtime bridge script load');
+  assertIncludes(sidepanelHtml, 'src="cloudflare-domain-ui.js"', 'sidepanel Cloudflare domain UI script load');
   assertIncludes(sidepanelHtml, 'src="dom-bindings.js"', 'sidepanel DOM bindings script load');
   assertIncludes(sidepanelHtml, 'src="toast-service.js"', 'sidepanel toast service script load');
   assertIncludes(sidepanelHtml, 'src="log-panel-manager.js"', 'sidepanel log panel manager script load');
@@ -374,6 +377,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="settings-field-bindings.js"', 'src="sidepanel.js"', 'sidepanel settings field bindings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="mail-provider-state.js"', 'src="sidepanel.js"', 'sidepanel mail provider state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="sidepanel-runtime-bridge.js"', 'src="sidepanel.js"', 'sidepanel runtime bridge must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="cloudflare-domain-ui.js"', 'src="sidepanel.js"', 'sidepanel Cloudflare domain UI must load before sidepanel.js');
   assertIncludes(sidepanelHtml, 'src="../shared/redeem-channel-state.js"', 'sidepanel redeem channel state script load');
   assertIncludes(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'sidepanel membership credential format script load');
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
@@ -444,8 +448,8 @@ function checkStaticContracts() {
   assertIncludes(sidepanel, 'SidepanelWorkflowActionBindings.createWorkflowActionBindings', 'sidepanel workflow action bindings wiring');
   assertBefore(sidepanel, 'renderStepsList();\ninitializeManualStepActions();', 'bindConfigMenuEvents();', 'sidepanel must render workflow steps before binding init actions');
   assertIncludes(sidepanelHtml, '<span id="steps-progress" class="steps-progress">0 / 0</span>', 'sidepanel workflow progress placeholder must not hard-code stale step count');
-  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareDomains(values)', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
-  assertIncludes(sidepanel, 'normalizeItems: (values) => normalizeCloudflareTempEmailDomains(values)', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
+  assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareDomains?.(values) || []', 'Cloudflare domain picker must delay normalizer lookup until settings normalization is initialized');
+  assertIncludes(cloudflareDomainUi, 'normalizeItems: (values) => helpers.normalizeCloudflareTempEmailDomains?.(values) || []', 'Cloudflare temp email domain picker must delay normalizer lookup until settings normalization is initialized');
   assertIncludes(downloadService, 'createDownloadService', 'download service factory');
   assertIncludes(downloadService, 'chromeApi.downloads.download', 'download service browser API fallback');
   assertIncludes(settingsTransferManager, 'createSettingsTransferManager', 'settings transfer manager factory');
@@ -457,6 +461,9 @@ function checkStaticContracts() {
   assertIncludes(sidepanelRuntimeBridge, 'SidepanelRuntimeBridge', 'sidepanel runtime bridge global');
   assertIncludes(sidepanelRuntimeBridge, 'createSidepanelRuntimeBridge', 'sidepanel runtime bridge factory');
   assertIncludes(sidepanel, 'SidepanelRuntimeBridge.createSidepanelRuntimeBridge', 'sidepanel runtime bridge wiring');
+  assertIncludes(cloudflareDomainUi, 'SidepanelCloudflareDomainUi', 'sidepanel Cloudflare domain UI global');
+  assertIncludes(cloudflareDomainUi, 'createCloudflareDomainUi', 'sidepanel Cloudflare domain UI factory');
+  assertIncludes(sidepanel, 'SidepanelCloudflareDomainUi.createCloudflareDomainUi', 'sidepanel Cloudflare domain UI wiring');
   assertIncludes(cdkPoolManager, 'createCdkPoolManager', 'CDK pool manager factory');
   assertIncludes(membershipRowPolicy, 'SidepanelMembershipRowPolicy', 'membership row policy global');
   assertIncludes(membershipRowPolicy, 'isRedeemableFreeRowForChannel', 'membership row policy candidate helper');
@@ -788,6 +795,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');
   assertFileLineCountAtMost('sidepanel/mail-provider-state.js', 260, 'mail provider state size guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-runtime-bridge.js', 140, 'sidepanel runtime bridge size guard');
+  assertFileLineCountAtMost('sidepanel/cloudflare-domain-ui.js', 180, 'Cloudflare domain UI size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
