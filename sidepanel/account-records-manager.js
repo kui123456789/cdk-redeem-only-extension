@@ -214,6 +214,19 @@
     if (typeof accountRecordsRedeemActions.createAccountRecordsRedeemActions !== 'function') {
       throw new Error('Account records redeem actions module is not loaded.');
     }
+    const accountRecordsDomHelpers = globalScope.SidepanelAccountRecordsDomHelpers || {};
+    if (typeof accountRecordsDomHelpers.createAccountRecordsDomHelpers !== 'function') {
+      throw new Error('Account records DOM helpers module is not loaded.');
+    }
+    const {
+      findClosest,
+      getDatasetValue,
+      setNodeAttr,
+      setNodeDisabled,
+      setNodeHidden,
+      setNodeText,
+      toggleNodeClass,
+    } = accountRecordsDomHelpers.createAccountRecordsDomHelpers();
     const accountRecordsMembershipHelpers = globalScope.SidepanelAccountRecordsMembershipHelpers || {};
     if (typeof accountRecordsMembershipHelpers.createAccountRecordsMembershipHelpers !== 'function') {
       throw new Error('Account records membership helpers module is not loaded.');
@@ -1134,70 +1147,6 @@
         if (!availableIds.has(recordId)) {
           selectedRecordIds.delete(recordId);
         }
-      }
-    }
-
-    function setNodeHidden(node, hidden) {
-      if (node) {
-        node.hidden = Boolean(hidden);
-      }
-    }
-
-    function setNodeDisabled(node, disabled) {
-      if (node) {
-        node.disabled = Boolean(disabled);
-      }
-    }
-
-    function toggleNodeClass(node, className, enabled) {
-      if (!node || !className) {
-        return;
-      }
-      if (node.classList && typeof node.classList.toggle === 'function') {
-        node.classList.toggle(className, Boolean(enabled));
-      }
-    }
-
-    function setNodeText(node, value) {
-      if (node) {
-        node.textContent = String(value || '');
-      }
-    }
-
-    function setNodeAttr(node, name, value) {
-      if (!node || !name) {
-        return;
-      }
-      if (typeof node.setAttribute === 'function') {
-        node.setAttribute(name, String(value));
-        return;
-      }
-      node[name] = value;
-    }
-
-    function getDatasetValue(node, attrName) {
-      if (!node || !attrName) {
-        return '';
-      }
-
-      if (typeof node.getAttribute === 'function') {
-        return String(node.getAttribute(attrName) || '');
-      }
-
-      const dataKey = attrName
-        .replace(/^data-/, '')
-        .replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-      return String(node.dataset?.[dataKey] || '');
-    }
-
-    function findClosest(target, selector) {
-      if (!target || typeof target.closest !== 'function') {
-        return null;
-      }
-      try {
-        return target.closest(selector);
-      } catch {
-        return null;
       }
     }
 

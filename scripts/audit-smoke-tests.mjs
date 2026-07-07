@@ -308,6 +308,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-panel-events.js',
     'sidepanel/account-records-membership-actions.js',
     'sidepanel/account-records-redeem-actions.js',
+    'sidepanel/account-records-dom-helpers.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -439,6 +440,7 @@ function checkStaticContracts() {
   const accountRecordsPanelEvents = readText('sidepanel/account-records-panel-events.js');
   const accountRecordsMembershipActions = readText('sidepanel/account-records-membership-actions.js');
   const accountRecordsRedeemActions = readText('sidepanel/account-records-redeem-actions.js');
+  const accountRecordsDomHelpers = readText('sidepanel/account-records-dom-helpers.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -609,6 +611,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-panel-events.js"', 'account records panel events script load');
   assertIncludes(sidepanelHtml, 'src="account-records-membership-actions.js"', 'account records membership actions script load');
   assertIncludes(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'account records redeem actions script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'account records DOM helpers script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -651,6 +654,9 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsRedeemActions, 'SidepanelAccountRecordsRedeemActions', 'account records redeem actions global');
   assertIncludes(accountRecordsRedeemActions, 'createAccountRecordsRedeemActions', 'account records redeem actions factory');
   assertIncludes(accountRecordsRedeemActions, 'module.exports', 'account records redeem actions CommonJS export');
+  assertIncludes(accountRecordsDomHelpers, 'SidepanelAccountRecordsDomHelpers', 'account records DOM helpers global');
+  assertIncludes(accountRecordsDomHelpers, 'createAccountRecordsDomHelpers', 'account records DOM helpers factory');
+  assertIncludes(accountRecordsDomHelpers, 'module.exports', 'account records DOM helpers CommonJS export');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -687,6 +693,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-panel-events.js"', 'src="account-records-manager.js"', 'account records panel events must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-membership-actions.js"', 'src="account-records-manager.js"', 'account records membership actions must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'src="account-records-manager.js"', 'account records redeem actions must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-dom-helpers.js"', 'src="account-records-manager.js"', 'account records DOM helpers must load before manager');
   assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipHelpers', 'account records manager membership helpers dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipPoolOps', 'account records manager membership pool ops dependency');
@@ -695,6 +702,7 @@ function checkStaticContracts() {
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipActions', 'account records manager membership actions dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRedeemActions', 'account records manager redeem actions dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsDomHelpers', 'account records manager DOM helpers dependency');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
