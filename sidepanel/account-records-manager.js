@@ -23,6 +23,23 @@
     ) {
       throw new Error('Membership redeem progress module is not loaded.');
     }
+    const accountRecordsExport = globalScope.SidepanelAccountRecordsExport || {};
+    if (typeof accountRecordsExport.createAccountRecordsExportHelpers !== 'function') {
+      throw new Error('Account records export module is not loaded.');
+    }
+    const {
+      buildRecordId,
+      getRecordDisplayStatus,
+      getRecordExportUrl,
+      getRecordTotpMfaSecret,
+      getRecordGptPassword,
+      sanitizeExportField,
+      isUpiRedeemSuccessRecord,
+      getRecordUpiRedeemCdkey,
+      getRecordUpiRedeemAccessToken,
+    } = accountRecordsExport.createAccountRecordsExportHelpers({
+      accountRecordsViewModel,
+    });
     const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
     const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
 
@@ -250,86 +267,6 @@
 
     function isDuplicateCdkeyPendingMembershipRow(row = {}) {
       return membershipRowPolicy.isDuplicateCdkeyPendingRow?.(row) === true;
-    }
-
-    function buildRecordId(record = {}) {
-      if (typeof accountRecordsViewModel.buildRecordId === 'function') {
-        return accountRecordsViewModel.buildRecordId(record);
-      }
-      return String(record.recordId || record.email || record.accountIdentifier || '').trim().toLowerCase();
-    }
-
-    function getRecordDisplayStatus(record = {}) {
-      if (typeof accountRecordsViewModel.getRecordDisplayStatus === 'function') {
-        return accountRecordsViewModel.getRecordDisplayStatus(record);
-      }
-      return String(record.displayStatus || record.finalStatus || '').trim().toLowerCase();
-    }
-
-    function getRecordExportUrl(record = {}) {
-      return String(
-        record.emailVerificationUrl
-        || record.emailUrl
-        || record.mailVerificationUrl
-        || record.verificationUrl
-        || record.url
-        || record.localhostUrl
-        || record.oauthUrl
-        || record.callbackUrl
-        || record.contributionCallbackUrl
-        || record.plusReturnUrl
-        || record.finalUrl
-        || ''
-      ).trim();
-    }
-
-    function getRecordTotpMfaSecret(record = {}) {
-      return String(
-        record.totpMfaSecret
-        || record.totpSecret
-        || record.twoFactorSecret
-        || record.twoFaSecret
-        || ''
-      ).trim();
-    }
-
-    function getRecordGptPassword(record = {}) {
-      return String(
-        record.password
-        || record.gptPassword
-        || record.chatGptPassword
-        || record.openAiPassword
-        || record.accountPassword
-        || record.customPassword
-        || ''
-      ).trim();
-    }
-
-    function sanitizeExportField(value = '') {
-      return String(value || '')
-        .replace(/[\r\n]+/g, ' ')
-        .trim();
-    }
-
-    function isUpiRedeemSuccessRecord(record = {}) {
-      const upiRedeemSuccess = record?.upiRedeemSuccess === true
-        || String(record?.upiRedeemSuccess || '').trim().toLowerCase() === 'true';
-      return upiRedeemSuccess;
-    }
-
-    function getRecordUpiRedeemCdkey(record = {}) {
-      return String(record.upiRedeemCdkey || record.cdkey || '').trim();
-    }
-
-    function getRecordUpiRedeemAccessToken(record = {}) {
-      return String(
-        record.upiRedeemAccessToken
-        || record.accessToken
-        || record.chatGptAccessToken
-        || record.acToken
-        || record.token
-        || ''
-      ).trim();
     }
 
     function normalizeSubscriptionPlanType(value = '') {

@@ -2,9 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 delete globalThis.SidepanelAccountRecordsViewModel;
+delete globalThis.SidepanelAccountRecordsExport;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
+delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
+require('../sidepanel/account-records-export.js');
 require('../sidepanel/account-records-manager.js');
 
 test('createAccountRecordsManager fails loudly when redeem progress module is unavailable', () => {

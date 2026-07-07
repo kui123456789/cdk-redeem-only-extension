@@ -241,6 +241,7 @@ function checkCoreFiles() {
     'sidepanel/membership-renderer.js',
     'sidepanel/membership-redeem-progress.js',
     'sidepanel/account-records-view-model.js',
+    'sidepanel/account-records-export.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -313,6 +314,7 @@ function checkStaticContracts() {
   const cloudflareDomainUi = readText('sidepanel/cloudflare-domain-ui.js');
   const cdkPoolManager = readText('sidepanel/cdk-pool-manager.js');
   const accountRecordsViewModel = readText('sidepanel/account-records-view-model.js');
+  const accountRecordsExport = readText('sidepanel/account-records-export.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -388,11 +390,16 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
   assertIncludes(sidepanelHtml, 'src="membership-redeem-progress.js"', 'membership redeem progress script load');
   assertIncludes(sidepanelHtml, 'src="account-records-view-model.js"', 'account records view model script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-export.js"', 'account records export script load');
+  assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
+  assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="account-records-manager.js"', 'membership renderer must load before account records manager');
   assertBefore(sidepanelHtml, 'src="account-records-view-model.js"', 'src="account-records-manager.js"', 'account records view model must load before account records manager');
+  assertBefore(sidepanelHtml, 'src="account-records-view-model.js"', 'src="account-records-export.js"', 'account records view model must load before export helpers');
+  assertBefore(sidepanelHtml, 'src="account-records-export.js"', 'src="account-records-manager.js"', 'account records export helpers must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -797,6 +804,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/sidepanel-runtime-bridge.js', 140, 'sidepanel runtime bridge size guard');
   assertFileLineCountAtMost('sidepanel/cloudflare-domain-ui.js', 180, 'Cloudflare domain UI size guard');
   assertFileLineCountAtMost('sidepanel/cdk-pool-manager.js', 700, 'CDK pool manager size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-export.js', 180, 'account records export helper size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
