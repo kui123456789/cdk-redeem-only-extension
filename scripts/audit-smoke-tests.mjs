@@ -212,6 +212,11 @@ function checkCoreFiles() {
     'background/steps/upi-redeem/finalize.js',
     'background/steps/upi-redeem.js',
     'background/upi-credential-membership-checker.js',
+    'background/verification/assurivo-time.js',
+    'background/verification/verification-keywords.js',
+    'background/verification/code-extractor.js',
+    'background/verification/assurivo-feed-client.js',
+    'background/verification/resend-controller.js',
     'background/verification-flow.js',
     'content/auth-page-detectors.js',
     'content/signup-dom-utils.js',
@@ -420,6 +425,12 @@ function checkStaticContracts() {
   const upiRedeemFinalize = readText('background/steps/upi-redeem/finalize.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
+  const verificationAssurivoTime = readText('background/verification/assurivo-time.js');
+  const verificationKeywords = readText('background/verification/verification-keywords.js');
+  const verificationCodeExtractor = readText('background/verification/code-extractor.js');
+  const verificationAssurivoFeedClient = readText('background/verification/assurivo-feed-client.js');
+  const verificationResendController = readText('background/verification/resend-controller.js');
+  const verificationFlow = readText('background/verification-flow.js');
   const authPageDetectors = readText('content/auth-page-detectors.js');
   const signupDomUtils = readText('content/signup-dom-utils.js');
   const signupEntryPage = readText('content/signup-entry-page.js');
@@ -809,6 +820,11 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/steps/upi-redeem/channel-submission.js'", 'background UPI redeem channel submission script load');
   assertIncludes(background, "'background/steps/upi-redeem/status-polling.js'", 'background UPI redeem status polling script load');
   assertIncludes(background, "'background/steps/upi-redeem/finalize.js'", 'background UPI redeem finalize script load');
+  assertIncludes(background, "'background/verification/assurivo-time.js'", 'background verification Assurivo time script load');
+  assertIncludes(background, "'background/verification/verification-keywords.js'", 'background verification keywords script load');
+  assertIncludes(background, "'background/verification/code-extractor.js'", 'background verification code extractor script load');
+  assertIncludes(background, "'background/verification/assurivo-feed-client.js'", 'background verification Assurivo feed client script load');
+  assertIncludes(background, "'background/verification/resend-controller.js'", 'background verification resend controller script load');
   assertIncludes(upiRedeemSessionMaterial, 'MultiPageUpiRedeemSessionMaterial', 'UPI redeem session material global');
   assertIncludes(upiRedeemSessionMaterial, 'createUpiRedeemSessionMaterial', 'UPI redeem session material factory');
   assertIncludes(upiRedeemFreeEntry, 'MultiPageUpiRedeemFreeEntry', 'UPI redeem Free entry global');
@@ -819,6 +835,18 @@ function checkStaticContracts() {
   assertIncludes(upiRedeemStatusPolling, 'createUpiRedeemStatusPolling', 'UPI redeem status polling factory');
   assertIncludes(upiRedeemFinalize, 'MultiPageUpiRedeemFinalize', 'UPI redeem finalize global');
   assertIncludes(upiRedeemFinalize, 'createUpiRedeemFinalize', 'UPI redeem finalize factory');
+  assertIncludes(verificationAssurivoTime, 'MultiPageVerificationAssurivoTime', 'verification Assurivo time global');
+  assertIncludes(verificationAssurivoTime, 'createVerificationAssurivoTime', 'verification Assurivo time factory');
+  assertIncludes(verificationKeywords, 'MultiPageVerificationKeywords', 'verification keywords global');
+  assertIncludes(verificationKeywords, 'createVerificationKeywords', 'verification keywords factory');
+  assertIncludes(verificationCodeExtractor, 'MultiPageVerificationCodeExtractor', 'verification code extractor global');
+  assertIncludes(verificationCodeExtractor, 'createVerificationCodeExtractor', 'verification code extractor factory');
+  assertIncludes(verificationAssurivoFeedClient, 'MultiPageAssurivoFeedClient', 'verification Assurivo feed client global');
+  assertIncludes(verificationAssurivoFeedClient, 'createAssurivoFeedClient', 'verification Assurivo feed client factory');
+  assertIncludes(verificationResendController, 'MultiPageVerificationResendController', 'verification resend controller global');
+  assertIncludes(verificationResendController, 'createVerificationResendController', 'verification resend controller factory');
+  assertIncludes(verificationFlow, 'MultiPageBackgroundVerificationFlow', 'verification flow facade global');
+  assertIncludes(verificationFlow, 'createVerificationFlowHelpers', 'verification flow facade factory');
   assertBefore(background, "'background/membership/redeem-status-sync.js'", "'background/message-router.js'", 'redeem status sync must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
@@ -850,6 +878,20 @@ function checkStaticContracts() {
       `'background/steps/upi-redeem/${file}'`,
       "'background/steps/upi-redeem.js'",
       `background UPI redeem ${file} must load before UPI redeem facade`
+    );
+  });
+  [
+    'assurivo-time.js',
+    'verification-keywords.js',
+    'code-extractor.js',
+    'assurivo-feed-client.js',
+    'resend-controller.js',
+  ].forEach((file) => {
+    assertBefore(
+      background,
+      `'background/verification/${file}'`,
+      "'background/verification-flow.js'",
+      `background verification ${file} must load before verification facade`
     );
   });
   assertIncludes(membershipRedeemStatusSync, 'MultiPageMembershipRedeemStatusSync', 'membership redeem status sync global');
@@ -1229,6 +1271,12 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/steps/upi-redeem/status-polling.js', 1150, 'UPI redeem status polling size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem/finalize.js', 1150, 'UPI redeem finalize size guard');
   assertFileLineCountAtMost('background/steps/upi-redeem.js', 1200, 'UPI redeem facade size guard');
+  assertFileLineCountAtMost('background/verification/assurivo-time.js', 380, 'verification Assurivo time size guard');
+  assertFileLineCountAtMost('background/verification/verification-keywords.js', 180, 'verification keywords size guard');
+  assertFileLineCountAtMost('background/verification/code-extractor.js', 430, 'verification code extractor size guard');
+  assertFileLineCountAtMost('background/verification/assurivo-feed-client.js', 900, 'verification Assurivo feed client size guard');
+  assertFileLineCountAtMost('background/verification/resend-controller.js', 2000, 'verification resend controller size guard');
+  assertFileLineCountAtMost('background/verification-flow.js', 380, 'verification flow facade size guard');
   assertFileLineCountAtMost('content/auth-page-detectors.js', 250, 'auth page detectors size guard');
   assertFileLineCountAtMost('content/signup-dom-utils.js', 300, 'signup DOM utils size guard');
   assertFileLineCountAtMost('content/signup-entry-page.js', 400, 'signup entry page size guard');
