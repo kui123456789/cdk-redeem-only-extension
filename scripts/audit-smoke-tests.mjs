@@ -193,6 +193,9 @@ function checkCoreFiles() {
     'background/routes/membership-routes.js',
     'background/routes/cdkey-routes.js',
     'background/routes/workflow-routes.js',
+    'background/routes/settings-routes.js',
+    'background/routes/account-record-routes.js',
+    'background/routes/email-pool-routes.js',
     'shared/redeem-channel-state.js',
     'shared/membership-credential-format.js',
     'background/redeem/redeem-cdkey-usage.js',
@@ -390,6 +393,9 @@ function checkStaticContracts() {
   const membershipRoutes = readText('background/routes/membership-routes.js');
   const cdkRoutes = readText('background/routes/cdkey-routes.js');
   const workflowRoutes = readText('background/routes/workflow-routes.js');
+  const settingsRoutes = readText('background/routes/settings-routes.js');
+  const accountRecordRoutes = readText('background/routes/account-record-routes.js');
+  const emailPoolRoutes = readText('background/routes/email-pool-routes.js');
   const upiRedeem = readText('background/steps/upi-redeem.js');
   const checker = readText('background/upi-credential-membership-checker.js');
   const authPageDetectors = readText('content/auth-page-detectors.js');
@@ -788,6 +794,9 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/routes/membership-routes.js'", 'background membership routes script load');
   assertIncludes(background, "'background/routes/cdkey-routes.js'", 'background CDK routes script load');
   assertIncludes(background, "'background/routes/workflow-routes.js'", 'background workflow routes script load');
+  assertIncludes(background, "'background/routes/settings-routes.js'", 'background settings routes script load');
+  assertIncludes(background, "'background/routes/account-record-routes.js'", 'background account record routes script load');
+  assertIncludes(background, "'background/routes/email-pool-routes.js'", 'background email pool routes script load');
   assertBefore(
     background,
     "'background/routes/membership-routes.js'",
@@ -806,14 +815,46 @@ function checkStaticContracts() {
     "'background/message-router.js'",
     'background workflow routes must load before message router'
   );
+  assertBefore(
+    background,
+    "'background/routes/settings-routes.js'",
+    "'background/message-router.js'",
+    'background settings routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/account-record-routes.js'",
+    "'background/message-router.js'",
+    'background account record routes must load before message router'
+  );
+  assertBefore(
+    background,
+    "'background/routes/email-pool-routes.js'",
+    "'background/message-router.js'",
+    'background email pool routes must load before message router'
+  );
   assertIncludes(membershipRoutes, 'createMembershipRoutes', 'membership routes factory');
   assertIncludes(membershipRoutes, 'CHECK_UPI_CREDENTIAL_MEMBERSHIP_TRIAL_ELIGIBILITY_BATCH', 'membership trial batch route');
   assertIncludes(cdkRoutes, 'createCdkeyRoutes', 'CDK routes factory');
   assertIncludes(cdkRoutes, 'REFRESH_UPI_REDEEM_CDKEY_STATUSES', 'remote CDK status refresh route');
   assertIncludes(workflowRoutes, 'createWorkflowRoutes', 'workflow routes factory');
   assertIncludes(workflowRoutes, 'EXECUTE_NODE', 'workflow execute node route');
+  assertIncludes(settingsRoutes, 'MultiPageSettingsRoutes', 'settings routes global');
+  assertIncludes(settingsRoutes, 'createSettingsRoutes', 'settings routes factory');
+  assertIncludes(settingsRoutes, 'SAVE_SETTING', 'settings save route');
+  assertIncludes(settingsRoutes, 'IMPORT_SETTINGS', 'settings import route');
+  assertIncludes(accountRecordRoutes, 'MultiPageAccountRecordRoutes', 'account record routes global');
+  assertIncludes(accountRecordRoutes, 'createAccountRecordRoutes', 'account record routes factory');
+  assertIncludes(accountRecordRoutes, 'DELETE_ACCOUNT_RUN_HISTORY_RECORDS', 'account record delete route');
+  assertIncludes(emailPoolRoutes, 'MultiPageEmailPoolRoutes', 'email pool routes global');
+  assertIncludes(emailPoolRoutes, 'createEmailPoolRoutes', 'email pool routes factory');
+  assertIncludes(emailPoolRoutes, 'FETCH_DUCK_EMAIL', 'email pool Duck route');
+  assertIncludes(emailPoolRoutes, 'DELETE_USED_ICLOUD_ALIASES', 'email pool iCloud cleanup route');
   assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
   assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
+  assertIncludes(router, 'rootScope.MultiPageSettingsRoutes?.createSettingsRoutes', 'message router settings route registration');
+  assertIncludes(router, 'rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes', 'message router account record route registration');
+  assertIncludes(router, 'rootScope.MultiPageEmailPoolRoutes?.createEmailPoolRoutes', 'message router email pool route registration');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
   assertBefore(
@@ -1077,6 +1118,9 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/bootstrap/content-script-registry.js', 120, 'content script registry size guard');
   assertFileLineCountAtMost('background/bootstrap/signup-executor-registry.js', 500, 'signup executor registry size guard');
   assertFileLineCountAtMost('background/bootstrap/runtime-listeners.js', 80, 'runtime listeners size guard');
+  assertFileLineCountAtMost('background/routes/settings-routes.js', 220, 'settings routes size guard');
+  assertFileLineCountAtMost('background/routes/account-record-routes.js', 80, 'account record routes size guard');
+  assertFileLineCountAtMost('background/routes/email-pool-routes.js', 150, 'email pool routes size guard');
   assertFileLineCountAtMost('shared/redeem-channel-state.js', 700, 'redeem channel state size guard');
   assertFileLineCountAtMost('shared/membership-credential-format.js', 900, 'membership credential format size guard');
   assertFileLineCountAtMost('background/redeem/redeem-cdkey-usage.js', 400, 'redeem CDK usage size guard');

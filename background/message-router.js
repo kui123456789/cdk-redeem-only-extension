@@ -2340,31 +2340,6 @@
       return nodeId;
     }
 
-    function normalizePlusPaymentMethodForDisplay(value = '') {
-      const normalized = normalizeString(value).toLowerCase();
-      if (normalized === 'legacyPay') {
-        return 'legacyPay';
-      }
-      if (normalized === 'cardHelper-helper') {
-        return 'cardHelper-helper';
-      }
-      if (normalized === 'upi' || normalized === 'pix') {
-        return 'upi';
-      }
-      return 'legacyWallet';
-    }
-
-    function getPlusPaymentMethodLabel(value = '') {
-      const method = normalizePlusPaymentMethodForDisplay(value);
-      if (method === 'cardHelper-helper') {
-        return 'CARD_HELPER';
-      }
-      if (method === 'upi') {
-        return 'UPI';
-      }
-      return method === 'legacyPay' ? 'LegacyPay' : 'LegacyWallet';
-    }
-
     async function handlePlatformVerifyStepData(payload) {
       if (payload.localhostUrl) {
         await closeLocalhostCallbackTabs(payload.localhostUrl);
@@ -2990,6 +2965,45 @@
         skipAutoRunCountdown: handleSkipAutoRunCountdownRoute,
         startScheduledAutoRunNow: handleStartScheduledAutoRunNowRoute,
       }) || {}),
+      ...(rootScope.MultiPageSettingsRoutes?.createSettingsRoutes?.({
+        addLog,
+        broadcastDataUpdate,
+        buildLuckmailSessionSettingsPayload,
+        buildPersistentSettingsPayload,
+        exportSettingsBundle,
+        getNodeIdsForState,
+        getState,
+        getStepIdsForState,
+        getStepKeyForState,
+        importSettingsBundle,
+        normalizeHotmailAccounts,
+        resolveSignupMethod,
+        setContributionMode,
+        setPersistentSettings,
+        setState,
+        validateModeSwitch,
+      }) || {}),
+      ...(rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes?.({
+        clearAccountRunHistory,
+        deleteAccountRunHistoryRecords,
+        getState,
+        isAutoRunLockedState,
+      }) || {}),
+      ...(rootScope.MultiPageEmailPoolRoutes?.createEmailPoolRoutes?.({
+        checkIcloudSession,
+        clearStopRequest,
+        deleteIcloudAlias,
+        deleteUsedIcloudAliases,
+        fetchGeneratedEmail,
+        getState,
+        isAutoRunLockedState,
+        listIcloudAliases,
+        resumeAutoRun,
+        setEmailState,
+        setEmailStateSilently,
+        setIcloudAliasPreservedState,
+        setIcloudAliasUsedState,
+      }) || {}),
     };
 
     async function handleMessage(rawMessage, sender) {
@@ -3377,31 +3391,6 @@
           };
         }
 
-        case 'CLEAR_ACCOUNT_RUN_HISTORY': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能清理邮箱记录。');
-          }
-          if (typeof clearAccountRunHistory !== 'function') {
-            return { ok: true, clearedCount: 0 };
-          }
-          const result = await clearAccountRunHistory(state);
-          return { ok: true, ...result };
-        }
-
-        case 'DELETE_ACCOUNT_RUN_HISTORY_RECORDS': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能删除邮箱记录。');
-          }
-          if (typeof deleteAccountRunHistoryRecords !== 'function') {
-            return { ok: true, deletedCount: 0, remainingCount: 0 };
-          }
-          const recordIds = Array.isArray(message.payload?.recordIds) ? message.payload.recordIds : [];
-          const result = await deleteAccountRunHistoryRecords(recordIds, state);
-          return { ok: true, ...result };
-        }
-
         case 'TAKEOVER_AUTO_RUN': {
           await requestStop({ logMessage: '已确认手动接管，正在停止自动流程并切换为手动控制...' });
           await addLog('自动流程已切换为手动控制。', 'warn');
@@ -3414,110 +3403,6 @@
             throw new Error('SKIP_NODE 缺少 nodeId。');
           }
           return await skipNode(nodeId);
-        }
-
-        case 'SAVE_SETTING': {
-          const currentState = await getState();
-          const updates = buildPersistentSettingsPayload(message.payload || {});
-          if (
-            Object.prototype.hasOwnProperty.call(updates, 'hotmailAccounts')
-            && normalizeHotmailAccounts(updates.hotmailAccounts).length === 0
-            && normalizeHotmailAccounts(currentState.hotmailAccounts).length > 0
-          ) {
-            delete updates.hotmailAccounts;
-          }
-          const sessionUpdates = buildLuckmailSessionSettingsPayload(message.payload || {});
-          const modeValidation = validateModeSwitch({
-            ...currentState,
-            ...updates,
-            resolvedSignupMethod: null,
-          }, {
-            changedKeys: Object.keys(updates),
-          });
-          if (modeValidation?.normalizedUpdates && Object.keys(modeValidation.normalizedUpdates).length > 0) {
-            Object.assign(updates, modeValidation.normalizedUpdates);
-          }
-          const nextSignupState = {
-            ...currentState,
-            ...updates,
-            resolvedSignupMethod: null,
-          };
-          if (
-            Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
-            || Object.prototype.hasOwnProperty.call(updates, 'signupMethod')
-            || Object.prototype.hasOwnProperty.call(updates, 'panelMode')
-            || Object.prototype.hasOwnProperty.call(updates, 'activeFlowId')
-            || Object.prototype.hasOwnProperty.call(updates, 'contributionMode')
-          ) {
-            updates.signupMethod = resolveSignupMethod(nextSignupState);
-          }
-          const modeChanged = Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
-            && Boolean(currentState?.plusModeEnabled) !== Boolean(updates.plusModeEnabled);
-          const plusPaymentChanged = Object.prototype.hasOwnProperty.call(updates, 'plusPaymentMethod')
-            && normalizePlusPaymentMethodForDisplay(currentState?.plusPaymentMethod || 'legacyWallet')
-              !== normalizePlusPaymentMethodForDisplay(updates.plusPaymentMethod || 'legacyWallet');
-          const nextPlusModeEnabled = Object.prototype.hasOwnProperty.call(updates, 'plusModeEnabled')
-            ? Boolean(updates.plusModeEnabled)
-            : Boolean(currentState?.plusModeEnabled);
-          const stepModeChanged = modeChanged
-            || (nextPlusModeEnabled && plusPaymentChanged);
-          const oauthFlowTimeoutDisabled = Object.prototype.hasOwnProperty.call(updates, 'oauthFlowTimeoutEnabled')
-            && updates.oauthFlowTimeoutEnabled === false;
-          await setPersistentSettings(updates);
-          const stateUpdates = {
-            ...updates,
-            ...sessionUpdates,
-            ...(oauthFlowTimeoutDisabled ? {
-              oauthFlowDeadlineAt: null,
-              oauthFlowDeadlineSourceUrl: null,
-            } : {}),
-          };
-          if (Object.prototype.hasOwnProperty.call(updates, 'icloudHostPreference')) {
-            const nextHostPreference = String(updates.icloudHostPreference || '').trim().toLowerCase();
-            stateUpdates.preferredIcloudHost = nextHostPreference === 'icloud.com' || nextHostPreference === 'icloud.com.cn'
-              ? nextHostPreference
-              : '';
-          }
-          if (stepModeChanged && typeof getStepIdsForState === 'function') {
-            const nextStateForSteps = { ...currentState, ...stateUpdates };
-            const nextNodeIds = typeof getNodeIdsForState === 'function'
-              ? getNodeIdsForState(nextStateForSteps)
-              : getStepIdsForState(nextStateForSteps).map((stepId) => getStepKeyForState(stepId, nextStateForSteps)).filter(Boolean);
-            stateUpdates.nodeStatuses = Object.fromEntries(nextNodeIds.map((nodeId) => [nodeId, 'pending']));
-            stateUpdates.currentNodeId = '';
-          }
-          await setState(stateUpdates);
-          if (Boolean(currentState?.contributionMode) && typeof setContributionMode === 'function') {
-            await setContributionMode(true);
-          }
-          if (Object.keys(stateUpdates).length > 0 && typeof broadcastDataUpdate === 'function') {
-            broadcastDataUpdate(stateUpdates);
-          }
-          if (modeChanged) {
-            const selectedPlusPaymentMethod = getPlusPaymentMethodLabel(
-              stateUpdates.plusPaymentMethod ?? currentState?.plusPaymentMethod ?? 'legacyWallet'
-            );
-            await addLog(
-              Boolean(updates.plusModeEnabled)
-                ? `Plus 模式已开启，已切换为 ChatGPT 会话读取 步骤，当前支付方式：${selectedPlusPaymentMethod}。`
-                : 'Plus 模式已关闭，已恢复普通注册授权步骤。',
-              'info'
-            );
-          } else if (plusPaymentChanged && nextPlusModeEnabled) {
-            const selectedPlusPaymentMethod = getPlusPaymentMethodLabel(
-              stateUpdates.plusPaymentMethod ?? currentState?.plusPaymentMethod ?? 'legacyWallet'
-            );
-            await addLog(`Plus 支付方式已切换为 ${selectedPlusPaymentMethod}，已更新对应的 Plus 步骤。`, 'info');
-          }
-          return {
-            ok: true,
-            modeValidation,
-            state: await getState(),
-          };
-        }
-
-        case 'EXPORT_SETTINGS': {
-          return { ok: true, ...(await exportSettingsBundle()) };
         }
 
         case 'EXPORT_UPI_ACCOUNT_CREDENTIAL_BACKUPS': {
@@ -3673,11 +3558,6 @@
             throw new Error('UPI Free 账号兑换停止能力尚未接入。');
           }
           return { ok: true, results: await stopUpiCredentialMembershipRedeem() };
-        }
-
-        case 'IMPORT_SETTINGS': {
-          const state = await importSettingsBundle(message.payload?.config || null);
-          return { ok: true, state };
         }
 
         case 'REFRESH_CARD_HELPER_CARD_BALANCE': {
@@ -3842,37 +3722,6 @@
           return { ok: true, ...result };
         }
 
-        case 'SET_EMAIL_STATE': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改邮箱。');
-          }
-          const email = String(message.payload?.email || '').trim() || null;
-          await setEmailStateSilently(email, { source: 'manual' });
-          return { ok: true, email };
-        }
-
-        case 'SAVE_EMAIL': {
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改邮箱。');
-          }
-          await setEmailState(message.payload.email, { source: 'manual' });
-          await resumeAutoRun();
-          return { ok: true, email: message.payload.email };
-        }
-
-        case 'FETCH_GENERATED_EMAIL': {
-          clearStopRequest();
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动获取邮箱。');
-          }
-          const email = await fetchGeneratedEmail(state, message.payload || {});
-          await resumeAutoRun();
-          return { ok: true, email };
-        }
-
         case 'FETCH_HOSTED_CHECKOUT_VERIFICATION_CODE': {
           if (typeof fetchHostedCheckoutVerificationCodeManually !== 'function') {
             throw new Error('Hosted checkout 手动获取验证码能力尚未接入。');
@@ -3935,52 +3784,6 @@
           }
           const result = await resumeRemovedPaymentWorkerJob();
           return { ok: true, state: result };
-        }
-
-        case 'FETCH_DUCK_EMAIL': {
-          clearStopRequest();
-          const state = await getState();
-          if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动获取邮箱。');
-          }
-          const email = await fetchGeneratedEmail(state, { ...(message.payload || {}), generator: 'duck' });
-          await resumeAutoRun();
-          return { ok: true, email };
-        }
-
-        case 'CHECK_ICLOUD_SESSION': {
-          clearStopRequest();
-          return await checkIcloudSession();
-        }
-
-        case 'LIST_ICLOUD_ALIASES': {
-          clearStopRequest();
-          const aliases = await listIcloudAliases();
-          return { ok: true, aliases };
-        }
-
-        case 'SET_ICLOUD_ALIAS_USED_STATE': {
-          clearStopRequest();
-          const result = await setIcloudAliasUsedState(message.payload || {});
-          return { ok: true, ...result };
-        }
-
-        case 'SET_ICLOUD_ALIAS_PRESERVED_STATE': {
-          clearStopRequest();
-          const result = await setIcloudAliasPreservedState(message.payload || {});
-          return { ok: true, ...result };
-        }
-
-        case 'DELETE_ICLOUD_ALIAS': {
-          clearStopRequest();
-          const result = await deleteIcloudAlias(message.payload || {});
-          return { ok: true, ...result };
-        }
-
-        case 'DELETE_USED_ICLOUD_ALIASES': {
-          clearStopRequest();
-          const result = await deleteUsedIcloudAliases();
-          return { ok: true, ...result };
         }
 
         case 'STOP_FLOW': {
