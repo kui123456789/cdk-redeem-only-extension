@@ -248,6 +248,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-cdk-pool-text.js',
     'sidepanel/account-records-deletion-state.js',
     'sidepanel/account-records-export-builders.js',
+    'sidepanel/account-records-redeem-policy.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -327,6 +328,7 @@ function checkStaticContracts() {
   const accountRecordsCdkPoolText = readText('sidepanel/account-records-cdk-pool-text.js');
   const accountRecordsDeletionState = readText('sidepanel/account-records-deletion-state.js');
   const accountRecordsExportBuilders = readText('sidepanel/account-records-export-builders.js');
+  const accountRecordsRedeemPolicy = readText('sidepanel/account-records-redeem-policy.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -409,6 +411,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-cdk-pool-text.js"', 'account records CDK pool text script load');
   assertIncludes(sidepanelHtml, 'src="account-records-deletion-state.js"', 'account records deletion state script load');
   assertIncludes(sidepanelHtml, 'src="account-records-export-builders.js"', 'account records export builders script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'account records redeem policy script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
   assertIncludes(accountRecordsExport, 'createAccountRecordsExportHelpers', 'account records export helper factory');
   assertIncludes(accountRecordsSubscription, 'SidepanelAccountRecordsSubscription', 'account records subscription global');
@@ -423,6 +426,8 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsDeletionState, 'createAccountRecordsDeletionStateHelpers', 'account records deletion state helper factory');
   assertIncludes(accountRecordsExportBuilders, 'SidepanelAccountRecordsExportBuilders', 'account records export builders global');
   assertIncludes(accountRecordsExportBuilders, 'createAccountRecordsExportBuilders', 'account records export builders factory');
+  assertIncludes(accountRecordsRedeemPolicy, 'SidepanelAccountRecordsRedeemPolicy', 'account records redeem policy global');
+  assertIncludes(accountRecordsRedeemPolicy, 'createAccountRecordsRedeemPolicy', 'account records redeem policy factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -442,6 +447,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-deletion-state.js"', 'src="account-records-manager.js"', 'account records deletion state helpers must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-deletion-state.js"', 'src="account-records-export-builders.js"', 'account records deletion state helpers must load before export builders');
   assertBefore(sidepanelHtml, 'src="account-records-export-builders.js"', 'src="account-records-manager.js"', 'account records export builders must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-export-builders.js"', 'src="account-records-redeem-policy.js"', 'account records export builders must load before redeem policy');
+  assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-manager.js"', 'account records redeem policy must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
@@ -747,7 +754,7 @@ function checkStaticContracts() {
   });
 
   assertIncludes(accountRecords, 'redeemPlusDeletedEmailsByChannel', 'Plus delete tombstones');
-  assertIncludes(accountRecords, "normalizeRedeemChannel(channel) === 'ideal'", 'IDEAL channel UI support');
+  assertIncludes(accountRecordsRedeemPolicy, "normalizeRedeemChannel(channel) === 'ideal'", 'IDEAL channel UI support');
   assertIncludes(
     accountRecords,
     'const credentials = getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);',
@@ -853,6 +860,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-cdk-pool-text.js', 120, 'account records CDK pool text helper size guard');
   assertFileLineCountAtMost('sidepanel/account-records-deletion-state.js', 120, 'account records deletion state helper size guard');
   assertFileLineCountAtMost('sidepanel/account-records-export-builders.js', 260, 'account records export builders size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-redeem-policy.js', 180, 'account records redeem policy size guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');

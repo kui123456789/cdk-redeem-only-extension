@@ -15,6 +15,8 @@
     const membershipViewModel = globalScope.SidepanelMembershipViewModel || {};
     const membershipRowPolicy = globalScope.SidepanelMembershipRowPolicy || {};
     const membershipRenderer = globalScope.SidepanelMembershipRenderer || {};
+    const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
+    const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
     const membershipRedeemProgress = globalScope.SidepanelMembershipRedeemProgress || {};
     if (
       typeof membershipRedeemProgress.clampRedeemProgressPercent !== 'function'
@@ -132,8 +134,33 @@
       isUpiRedeemSuccessRecord,
       sanitizeExportField,
     });
-    const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
-    const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
+    const accountRecordsRedeemPolicy = globalScope.SidepanelAccountRecordsRedeemPolicy || {};
+    if (typeof accountRecordsRedeemPolicy.createAccountRecordsRedeemPolicy !== 'function') {
+      throw new Error('Account records redeem policy module is not loaded.');
+    }
+    const {
+      getRedeemChannelFailureField,
+      getRedeemChannelFailureCount,
+      getRedeemChannelDailyLimitBlockedAtField,
+      getRedeemChannelDailyLimitBlockedUntilField,
+      getRedeemChannelDailyLimitReasonField,
+      isRedeemChannelDailyLimitReason,
+      isRedeemChannelDailyLimitBlocked,
+      isUpiCredentialMembershipRedeemLocked,
+      getUpiCredentialMembershipRedeemLockReason,
+      getUpiCredentialMembershipFailureLimit,
+      shouldApplyRedeemFailureLimitForChannel,
+      isPreSubmitUpiCredentialMembershipBlockedReason,
+      isPreSubmitUpiCredentialMembershipBlockedRow,
+      hasUpiCredentialMembershipLoginMaterial,
+      isManualLoginRetryableUpiCredentialMembershipRow,
+      isDuplicateCdkeyPendingMembershipRow,
+    } = accountRecordsRedeemPolicy.createAccountRecordsRedeemPolicy({
+      failureLimit: REDEEM_CHANNEL_FAILURE_LIMIT,
+      getRedeemChannelStateHelpers: () => getRedeemChannelStateHelpers(),
+      membershipRowPolicy,
+      normalizeRedeemChannel: (value) => normalizeRedeemChannel(value),
+    });
 
     function getRedeemChannelStateHelpers() {
       const rootScope = typeof window !== 'undefined' ? window : globalThis;
@@ -228,90 +255,6 @@
       return count > 0 ? count : 0;
     }
 
-    function getRedeemChannelFailureField(channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
-      if (typeof helper === 'function') {
-        return helper(channel);
-      }
-      return membershipRowPolicy.getRedeemChannelFailureField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemFailureCount'
-          : 'upiRedeemFailureCount');
-    }
-
-    function getRedeemChannelFailureCount(row = {}, channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureCount;
-      if (typeof helper === 'function') {
-        return helper(row, channel);
-      }
-      if (typeof membershipRowPolicy.getRedeemChannelFailureCount === 'function') {
-        return membershipRowPolicy.getRedeemChannelFailureCount(row, channel);
-      }
-      return 0;
-    }
-
-    function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedAtField;
-      if (typeof helper === 'function') {
-        return helper(channel);
-      }
-      return membershipRowPolicy.getRedeemChannelDailyLimitBlockedAtField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitBlockedAt'
-          : 'upiRedeemDailyLimitBlockedAt');
-    }
-
-    function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitBlockedUntilField;
-      if (typeof helper === 'function') {
-        return helper(channel);
-      }
-      return membershipRowPolicy.getRedeemChannelDailyLimitBlockedUntilField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitBlockedUntil'
-          : 'upiRedeemDailyLimitBlockedUntil');
-    }
-
-    function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().getRedeemChannelDailyLimitReasonField;
-      if (typeof helper === 'function') {
-        return helper(channel);
-      }
-      return membershipRowPolicy.getRedeemChannelDailyLimitReasonField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitReason'
-          : 'upiRedeemDailyLimitReason');
-    }
-
-    function isRedeemChannelDailyLimitReason(message = '') {
-      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitReason;
-      if (typeof helper === 'function') {
-        return helper(message);
-      }
-      return membershipRowPolicy.isRedeemChannelDailyLimitReason?.(message) === true;
-    }
-
-    function isRedeemChannelDailyLimitBlocked(row = {}, channel = 'upi') {
-      const helper = getRedeemChannelStateHelpers().isRedeemChannelDailyLimitBlocked;
-      if (typeof helper === 'function') {
-        return helper(row, channel);
-      }
-      return membershipRowPolicy.isRedeemChannelDailyLimitBlocked?.(row, channel) === true;
-    }
-
-    function isUpiCredentialMembershipRedeemLocked(row = {}) {
-      const helper = getRedeemChannelStateHelpers().isRedeemAccountLocked;
-      if (typeof helper === 'function') {
-        return helper(row);
-      }
-      return membershipRowPolicy.isRedeemLocked?.(row) === true;
-    }
-
-    function getUpiCredentialMembershipRedeemLockReason(row = {}) {
-      return membershipRowPolicy.getRedeemLockReason?.(row)
-        || 'IDEAL 已失败 3 次，账号已封存，不再使用';
-    }
-
     function normalizeUpiRedeemConfiguredRoundCount(value, fallback = 3) {
       const fallbackNumber = Math.floor(Number(fallback));
       const fallbackCount = Number.isFinite(fallbackNumber)
@@ -331,34 +274,6 @@
     function normalizeUpiRedeemTotalRoundLimit(value, fallback = 3) {
       const configuredRoundCount = normalizeUpiRedeemConfiguredRoundCount(value, fallback);
       return configuredRoundCount > 0 ? configuredRoundCount : 1;
-    }
-
-    function getUpiCredentialMembershipFailureLimit(row = {}) {
-      return membershipRowPolicy.getFailureLimit?.(row) || REDEEM_CHANNEL_FAILURE_LIMIT;
-    }
-
-    function shouldApplyRedeemFailureLimitForChannel(channel = 'upi') {
-      return membershipRowPolicy.shouldApplyRedeemFailureLimitForChannel?.(channel) === true;
-    }
-
-    function isPreSubmitUpiCredentialMembershipBlockedReason(message = '') {
-      return membershipRowPolicy.isPreSubmitBlockedReason?.(message) === true;
-    }
-
-    function isPreSubmitUpiCredentialMembershipBlockedRow(row = {}) {
-      return membershipRowPolicy.isPreSubmitBlockedRow?.(row) === true;
-    }
-
-    function hasUpiCredentialMembershipLoginMaterial(row = {}) {
-      return membershipRowPolicy.hasLoginMaterial?.(row) === true;
-    }
-
-    function isManualLoginRetryableUpiCredentialMembershipRow(row = {}) {
-      return membershipRowPolicy.isManualLoginRetryableRow?.(row) === true;
-    }
-
-    function isDuplicateCdkeyPendingMembershipRow(row = {}) {
-      return membershipRowPolicy.isDuplicateCdkeyPendingRow?.(row) === true;
     }
 
     function normalizeRedeemChannel(value = '') {
