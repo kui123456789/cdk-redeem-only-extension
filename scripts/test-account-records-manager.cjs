@@ -12,6 +12,7 @@ delete globalThis.SidepanelAccountRecordsExportBuilders;
 delete globalThis.SidepanelAccountRecordsRedeemPolicy;
 delete globalThis.SidepanelAccountRecordsPasskeyHelpers;
 delete globalThis.SidepanelAccountRecordsCredentialParser;
+delete globalThis.SidepanelAccountRecordsDisplayModel;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
@@ -24,6 +25,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-export-builde
 delete require.cache[require.resolve('../sidepanel/account-records-redeem-policy.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-passkey-helpers.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-credential-parser.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-display-model.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
 require('../sidepanel/account-records-subscription.js');
@@ -35,6 +37,7 @@ require('../sidepanel/account-records-export-builders.js');
 require('../sidepanel/account-records-redeem-policy.js');
 require('../sidepanel/account-records-passkey-helpers.js');
 require('../sidepanel/account-records-credential-parser.js');
+require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-manager.js');
 
 test('account records credential parser exposes the expected factory helpers', () => {

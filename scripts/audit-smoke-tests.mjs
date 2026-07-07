@@ -251,6 +251,7 @@ function checkCoreFiles() {
     'sidepanel/account-records-redeem-policy.js',
     'sidepanel/account-records-passkey-helpers.js',
     'sidepanel/account-records-credential-parser.js',
+    'sidepanel/account-records-display-model.js',
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
@@ -333,6 +334,7 @@ function checkStaticContracts() {
   const accountRecordsRedeemPolicy = readText('sidepanel/account-records-redeem-policy.js');
   const accountRecordsPasskeyHelpers = readText('sidepanel/account-records-passkey-helpers.js');
   const accountRecordsCredentialParser = readText('sidepanel/account-records-credential-parser.js');
+  const accountRecordsDisplayModel = readText('sidepanel/account-records-display-model.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -437,6 +439,8 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsPasskeyHelpers, 'SidepanelAccountRecordsPasskeyHelpers', 'account records passkey helpers global');
   assertIncludes(accountRecordsCredentialParser, 'SidepanelAccountRecordsCredentialParser', 'account records credential parser global');
   assertIncludes(accountRecordsCredentialParser, 'createAccountRecordsCredentialParser', 'account records credential parser factory');
+  assertIncludes(accountRecordsDisplayModel, 'SidepanelAccountRecordsDisplayModel', 'account records display model global');
+  assertIncludes(accountRecordsDisplayModel, 'createAccountRecordsDisplayModel', 'account records display model factory');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -461,6 +465,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-redeem-policy.js"', 'src="account-records-credential-parser.js"', 'account records redeem policy must load before credential parser');
   assertBefore(sidepanelHtml, 'src="account-records-passkey-helpers.js"', 'src="account-records-credential-parser.js"', 'account records passkey helpers must load before credential parser');
   assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-manager.js"', 'account records credential parser must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-credential-parser.js"', 'src="account-records-display-model.js"', 'account records credential parser must load before display model');
+  assertBefore(sidepanelHtml, 'src="account-records-display-model.js"', 'src="account-records-manager.js"', 'account records display model must load before manager');
   assertBefore(
     sidepanelHtml,
     'src="../shared/redeem-channel-state.js"',
