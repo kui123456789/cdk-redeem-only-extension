@@ -473,7 +473,13 @@
     };
   }
 
-  globalScope.SidepanelAccountRecordsRedeemActions = {
+  const api = {
     createAccountRecordsRedeemActions,
   };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  }
+
+  globalScope.SidepanelAccountRecordsRedeemActions = api;
 })(typeof window !== 'undefined' ? window : globalThis);

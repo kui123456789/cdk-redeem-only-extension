@@ -287,7 +287,13 @@
     };
   }
 
-  globalScope.SidepanelAccountRecordsMembershipActions = {
+  const api = {
     createAccountRecordsMembershipActions,
   };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  }
+
+  globalScope.SidepanelAccountRecordsMembershipActions = api;
 })(typeof window !== 'undefined' ? window : globalThis);

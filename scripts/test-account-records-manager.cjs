@@ -17,6 +17,10 @@ delete globalThis.SidepanelAccountRecordsDisplayModel;
 delete globalThis.SidepanelAccountRecordsFlowView;
 delete globalThis.SidepanelAccountRecordsMembershipResultsRenderer;
 delete globalThis.SidepanelAccountRecordsRenderer;
+delete globalThis.SidepanelAccountRecordsMembershipHelpers;
+delete globalThis.SidepanelAccountRecordsMembershipPoolOps;
+delete globalThis.SidepanelAccountRecordsMembershipResultOps;
+delete globalThis.SidepanelAccountRecordsPanelEvents;
 delete globalThis.SidepanelAccountRecordsMembershipActions;
 delete globalThis.SidepanelAccountRecordsRedeemActions;
 delete globalThis.SidepanelMembershipRedeemProgress;
@@ -36,6 +40,10 @@ delete require.cache[require.resolve('../sidepanel/account-records-display-model
 delete require.cache[require.resolve('../sidepanel/account-records-flow-view.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-membership-results-renderer.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-renderer.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-membership-helpers.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-membership-pool-ops.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-membership-result-ops.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-panel-events.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-membership-actions.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-redeem-actions.js')];
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
@@ -56,6 +64,10 @@ require('../sidepanel/account-records-display-model.js');
 require('../sidepanel/account-records-flow-view.js');
 require('../sidepanel/account-records-membership-results-renderer.js');
 require('../sidepanel/account-records-renderer.js');
+require('../sidepanel/account-records-membership-helpers.js');
+require('../sidepanel/account-records-membership-pool-ops.js');
+require('../sidepanel/account-records-membership-result-ops.js');
+require('../sidepanel/account-records-panel-events.js');
 require('../sidepanel/account-records-membership-actions.js');
 require('../sidepanel/account-records-redeem-actions.js');
 require('../sidepanel/account-records-manager.js');
@@ -167,6 +179,10 @@ test('account records renderer exposes the expected factory helpers', () => {
 });
 
 test('account records runtime action modules expose the expected factory helpers', () => {
+  assert.equal(typeof globalThis.SidepanelAccountRecordsMembershipHelpers?.createAccountRecordsMembershipHelpers, 'function');
+  assert.equal(typeof globalThis.SidepanelAccountRecordsMembershipPoolOps?.createAccountRecordsMembershipPoolOps, 'function');
+  assert.equal(typeof globalThis.SidepanelAccountRecordsMembershipResultOps?.createAccountRecordsMembershipResultOps, 'function');
+  assert.equal(typeof globalThis.SidepanelAccountRecordsPanelEvents?.createAccountRecordsPanelEvents, 'function');
   assert.equal(typeof globalThis.SidepanelAccountRecordsMembershipActions?.createAccountRecordsMembershipActions, 'function');
   assert.equal(typeof globalThis.SidepanelAccountRecordsRedeemActions?.createAccountRecordsRedeemActions, 'function');
 });

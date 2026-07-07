@@ -255,6 +255,10 @@ function checkCoreFiles() {
     'sidepanel/account-records-display-model.js',
     'sidepanel/account-records-flow-view.js',
     'sidepanel/account-records-renderer.js',
+    'sidepanel/account-records-membership-helpers.js',
+    'sidepanel/account-records-membership-pool-ops.js',
+    'sidepanel/account-records-membership-result-ops.js',
+    'sidepanel/account-records-panel-events.js',
     'sidepanel/account-records-membership-actions.js',
     'sidepanel/account-records-redeem-actions.js',
     'sidepanel/sidepanel.js',
@@ -344,6 +348,10 @@ function checkStaticContracts() {
   const accountRecordsFlowView = readText('sidepanel/account-records-flow-view.js');
   const accountRecordsMembershipResultsRenderer = readText('sidepanel/account-records-membership-results-renderer.js');
   const accountRecordsRenderer = readText('sidepanel/account-records-renderer.js');
+  const accountRecordsMembershipHelpers = readText('sidepanel/account-records-membership-helpers.js');
+  const accountRecordsMembershipPoolOps = readText('sidepanel/account-records-membership-pool-ops.js');
+  const accountRecordsMembershipResultOps = readText('sidepanel/account-records-membership-result-ops.js');
+  const accountRecordsPanelEvents = readText('sidepanel/account-records-panel-events.js');
   const accountRecordsMembershipActions = readText('sidepanel/account-records-membership-actions.js');
   const accountRecordsRedeemActions = readText('sidepanel/account-records-redeem-actions.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
@@ -434,6 +442,10 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-status-meta.js"', 'account records status meta script load');
   assertIncludes(sidepanelHtml, 'src="account-records-renderer.js"', 'account records renderer script load');
   assertIncludes(sidepanelHtml, 'src="account-records-flow-view.js"', 'account records flow view script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-helpers.js"', 'account records membership helpers script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-pool-ops.js"', 'account records membership pool ops script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-membership-result-ops.js"', 'account records membership result ops script load');
+  assertIncludes(sidepanelHtml, 'src="account-records-panel-events.js"', 'account records panel events script load');
   assertIncludes(sidepanelHtml, 'src="account-records-membership-actions.js"', 'account records membership actions script load');
   assertIncludes(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'account records redeem actions script load');
   assertIncludes(accountRecordsExport, 'SidepanelAccountRecordsExport', 'account records export global');
@@ -464,10 +476,20 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'account records membership results renderer script load');
   assertIncludes(accountRecordsMembershipResultsRenderer, 'SidepanelAccountRecordsMembershipResultsRenderer', 'account records membership results renderer global');
   assertIncludes(accountRecordsMembershipResultsRenderer, 'createAccountRecordsMembershipResultsRenderer', 'account records membership results renderer factory');
+  assertIncludes(accountRecordsMembershipHelpers, 'SidepanelAccountRecordsMembershipHelpers', 'account records membership helpers global');
+  assertIncludes(accountRecordsMembershipHelpers, 'createAccountRecordsMembershipHelpers', 'account records membership helpers factory');
+  assertIncludes(accountRecordsMembershipPoolOps, 'SidepanelAccountRecordsMembershipPoolOps', 'account records membership pool ops global');
+  assertIncludes(accountRecordsMembershipPoolOps, 'createAccountRecordsMembershipPoolOps', 'account records membership pool ops factory');
+  assertIncludes(accountRecordsMembershipResultOps, 'SidepanelAccountRecordsMembershipResultOps', 'account records membership result ops global');
+  assertIncludes(accountRecordsMembershipResultOps, 'createAccountRecordsMembershipResultOps', 'account records membership result ops factory');
+  assertIncludes(accountRecordsPanelEvents, 'SidepanelAccountRecordsPanelEvents', 'account records panel events global');
+  assertIncludes(accountRecordsPanelEvents, 'createAccountRecordsPanelEvents', 'account records panel events factory');
   assertIncludes(accountRecordsMembershipActions, 'SidepanelAccountRecordsMembershipActions', 'account records membership actions global');
   assertIncludes(accountRecordsMembershipActions, 'createAccountRecordsMembershipActions', 'account records membership actions factory');
+  assertIncludes(accountRecordsMembershipActions, 'module.exports', 'account records membership actions CommonJS export');
   assertIncludes(accountRecordsRedeemActions, 'SidepanelAccountRecordsRedeemActions', 'account records redeem actions global');
   assertIncludes(accountRecordsRedeemActions, 'createAccountRecordsRedeemActions', 'account records redeem actions factory');
+  assertIncludes(accountRecordsRedeemActions, 'module.exports', 'account records redeem actions CommonJS export');
   assertBefore(sidepanelHtml, 'src="membership-row-policy.js"', 'src="membership-renderer.js"', 'membership row policy must load before renderer');
   assertBefore(sidepanelHtml, 'src="membership-renderer.js"', 'src="membership-redeem-progress.js"', 'membership renderer must load before redeem progress');
   assertBefore(sidepanelHtml, 'src="membership-redeem-progress.js"', 'src="account-records-manager.js"', 'membership redeem progress must load before account records manager');
@@ -498,9 +520,17 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="account-records-flow-view.js"', 'src="account-records-renderer.js"', 'account records flow view must load before renderer');
   assertBefore(sidepanelHtml, 'src="account-records-membership-results-renderer.js"', 'src="account-records-renderer.js"', 'account records membership results renderer must load before renderer');
   assertBefore(sidepanelHtml, 'src="account-records-renderer.js"', 'src="account-records-manager.js"', 'account records renderer must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-helpers.js"', 'src="account-records-manager.js"', 'account records membership helpers must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-pool-ops.js"', 'src="account-records-manager.js"', 'account records membership pool ops must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-membership-result-ops.js"', 'src="account-records-manager.js"', 'account records membership result ops must load before manager');
+  assertBefore(sidepanelHtml, 'src="account-records-panel-events.js"', 'src="account-records-manager.js"', 'account records panel events must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-membership-actions.js"', 'src="account-records-manager.js"', 'account records membership actions must load before manager');
   assertBefore(sidepanelHtml, 'src="account-records-redeem-actions.js"', 'src="account-records-manager.js"', 'account records redeem actions must load before manager');
   assertIncludes(accountRecordsRenderer, 'createAccountRecordsRenderer', 'account records renderer factory');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipHelpers', 'account records manager membership helpers dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipPoolOps', 'account records manager membership pool ops dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipResultOps', 'account records manager membership result ops dependency');
+  assertIncludes(accountRecords, 'SidepanelAccountRecordsPanelEvents', 'account records manager panel events dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRenderer', 'account records manager renderer dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsMembershipActions', 'account records manager membership actions dependency');
   assertIncludes(accountRecords, 'SidepanelAccountRecordsRedeemActions', 'account records manager redeem actions dependency');
@@ -811,7 +841,7 @@ function checkStaticContracts() {
   assertIncludes(accountRecords, 'redeemPlusDeletedEmailsByChannel', 'Plus delete tombstones');
   assertIncludes(accountRecordsRedeemPolicy, "normalizeRedeemChannel(channel) === 'ideal'", 'IDEAL channel UI support');
   assertIncludes(
-    accountRecords,
+    accountRecordsMembershipPoolOps,
     'const credentials = getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);',
     'CDK import resume must use channel-specific Free candidates'
   );
@@ -836,17 +866,17 @@ function checkStaticContracts() {
     'CDK import entrypoints must not skip autoResume'
   );
   assertMatch(
-    accountRecords,
+    accountRecordsMembershipPoolOps + accountRecordsMembershipResultOps,
     /await helpers\.downloadTextFile\(/,
     'account record exports must await async download helper'
   );
   assertMatch(
-    accountRecords,
-    /deletedEmails\.forEach\(\(email\) => disabledUpiCredentialMembershipEmails\.delete\(email\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
+    accountRecordsMembershipResultOps,
+    /deletedEmails\.forEach\(\([^)]*\)\s*=>\s*removeDisabledUpiCredentialMembershipEmail\([^)]*\)\);\s*if\s*\(deleteStatus === 'free'\)\s*\{[\s\S]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus delete must not remove local backup pool rows'
   );
   assertNotMatch(
-    accountRecords,
+    accountRecordsMembershipResultOps,
     /else if\s*\(deleteStatus === 'paid' && deleteChannel\)\s*\{[^{}]*?setUpiCredentialMembershipPoolRows\(/,
     'single Plus paid delete must not mutate local backup pool rows'
   );
@@ -922,8 +952,13 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-display-model.js', 250, 'account records display model size guard');
   assertFileLineCountAtMost('sidepanel/account-records-membership-results-renderer.js', 250, 'account records membership results renderer size guard');
   assertFileLineCountAtMost('sidepanel/account-records-renderer.js', 700, 'account records renderer size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-helpers.js', 700, 'account records membership helpers size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-pool-ops.js', 700, 'account records membership pool ops size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-membership-result-ops.js', 700, 'account records membership result ops size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-panel-events.js', 700, 'account records panel events size guard');
   assertFileLineCountAtMost('sidepanel/account-records-membership-actions.js', 320, 'account records membership actions size guard');
   assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
+  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 1800, 'account records manager growth guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
@@ -949,7 +984,6 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('content/signup-page-orchestrator.js', 300, 'signup orchestrator size guard');
   assertFileLineCountAtMost('content/signup-page.js', 7000, 'signup content script growth guard');
   assertFileLineCountAtMost('background/upi-credential-membership-checker.js', 6700, 'membership checker growth guard');
-  assertFileLineCountAtMost('sidepanel/account-records-manager.js', 5600, 'account records manager growth guard');
 }
 
 function checkTrackedSourceLineWarnings() {
