@@ -650,6 +650,52 @@ const autoRunNormalizers = window.SidepanelAutoRunNormalizers.createAutoRunNorma
   autoStepDelayMaxSeconds: AUTO_STEP_DELAY_MAX_SECONDS,
   autoStepDelayMinSeconds: AUTO_STEP_DELAY_MIN_SECONDS,
 });
+const chatgptSessionReaderSettings = window.SidepanelChatgptSessionReaderSettings.createChatgptSessionReaderSettings({
+  chatgptSessionReaderModeUs: CHATGPT_SESSION_READER_MODE_US_PP,
+  chatgptSessionReaderModeJp: CHATGPT_SESSION_READER_MODE_JP_PP,
+  defaultChatgptSessionReaderMode: DEFAULT_CHATGPT_SESSION_READER_MODE,
+  profileSettingKeys: CHATGPT_SESSION_READER_PROFILE_SETTING_KEYS,
+  removedPaymentWorkerDefaultMaxAttempts: REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS,
+  removedPaymentWorkerMaxAttemptsLimit: REMOVED_PAYMENT_WORKER_MAX_ATTEMPTS_LIMIT,
+  removedPaymentWorkerAllowedPaymentLocales: REMOVED_PAYMENT_WORKER_ALLOWED_PAYMENT_LOCALES,
+  normalizePlusRemovedContactOauthDelaySeconds: (value) => normalizePlusRemovedContactOauthDelaySeconds(value),
+  normalizeRemovedContactResendWaitSeconds: (value, fallback) => normalizeRemovedContactResendWaitSeconds(value, fallback),
+  normalizeRemovedContactVerificationResendMaxAttempts: (value, fallback) => normalizeRemovedContactVerificationResendMaxAttempts(value, fallback),
+  normalizeRemovedContactVerificationPollAttempts: (value, fallback) => normalizeRemovedContactVerificationPollAttempts(value, fallback),
+  normalizeRemovedContactVerificationPollIntervalSeconds: (value, fallback) => normalizeRemovedContactVerificationPollIntervalSeconds(value, fallback),
+  normalizeChatgptSessionReaderConversionProxyUrlValue: (value) => normalizeChatgptSessionReaderConversionProxyUrlValue(value),
+  normalizeChatgptSessionReaderCloudConversionApiUrlValue: (value) => normalizeChatgptSessionReaderCloudConversionApiUrlValue(value),
+  normalizeChatgptSessionReaderCloudConversionApiKeyValue: (value) => normalizeChatgptSessionReaderCloudConversionApiKeyValue(value),
+  normalizeRemovedContactVerificationUrlValue: (value) => normalizeRemovedContactVerificationUrlValue(value),
+});
+const {
+  normalizeChatgptSessionReaderModeValue,
+  buildDefaultChatgptSessionReaderProfile,
+  buildDefaultRemovedPaymentWorkerSettings,
+  normalizeRemovedPaymentWorkerMaxAttemptsValue,
+  normalizeRemovedPaymentWorkerPaymentLocaleValue,
+  normalizeRemovedPaymentWorkerBrowserBackendValue,
+  normalizeRemovedPaymentWorkerAdsPowerApiBaseValue,
+  normalizeRemovedPaymentWorkerRoxyBrowserApiBaseValue,
+  normalizeRemovedPaymentWorkerCheckoutRebuildMaxAttemptsValue,
+  normalizeRemovedPaymentWorkerSettingsValue,
+  normalizeChatgptSessionReaderProfileValue,
+  normalizeChatgptSessionReaderProfilesValue,
+  buildChatgptSessionReaderLegacyPatchFromProfile,
+  normalizeChatgptSessionReaderStateForUi,
+} = chatgptSessionReaderSettings;
+const upiInfoHelperState = window.SidepanelUpiInfoHelperState.createUpiInfoHelperState({
+  rootScope: window,
+});
+const {
+  getUpiInfoAutoModePermissionFromPayload,
+  hasUpiInfoAutoModePermissionField,
+  isUpiInfoAutoModePermissionDenied,
+  normalizeUpiInfoRemainingUsesValue,
+  getUpiInfoBalanceRemainingUsesFromResponse,
+  getUpiInfoAutoModeEnabledFromResponse,
+  normalizeUpiInfoOtpChannelValue,
+} = upiInfoHelperState;
 function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID !== 'undefined' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
   const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : 'legacyWallet';
@@ -4714,67 +4760,6 @@ function syncTotpMfaAfterProfileStepDefinitions() {
 }
 
 
-function normalizeChatgptSessionReaderModeValue(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  return normalized === CHATGPT_SESSION_READER_MODE_JP_PP
-    ? CHATGPT_SESSION_READER_MODE_JP_PP
-    : DEFAULT_CHATGPT_SESSION_READER_MODE;
-}
-
-function buildDefaultChatgptSessionReaderProfile() {
-  return {
-    removedContactVerificationUrl: '',
-    removedContactCardDeclinedRetryEnabled: true,
-    removedContactFirstDirectResendEnabled: false,
-    removedContactFirstResendWaitSeconds: 20,
-    removedContactSubsequentResendWaitSeconds: 25,
-    removedContactVerificationResendMaxAttempts: 1,
-    removedContactVerificationPollAttempts: 6,
-    removedContactVerificationPollIntervalSeconds: 5,
-  };
-}
-
-function buildDefaultRemovedPaymentWorkerSettings() {
-  return {
-    removedPaymentWorkerEnabled: true,
-    removedPaymentWorkerBrowserBackend: 'local',
-    removedPaymentWorkerAdsPowerApiBase: 'http://127.0.0.1:50325',
-    removedPaymentWorkerAdsPowerApiKey: '',
-    removedPaymentWorkerAdsPowerProfileId: '',
-    removedPaymentWorkerRoxyBrowserApiBase: 'http://127.0.0.1:50000',
-    removedPaymentWorkerRoxyBrowserApiKey: '',
-    removedPaymentWorkerRoxyBrowserProfileId: '',
-    removedPaymentWorkerStripePublishableKey: '',
-    removedPaymentWorkerDeviceId: '',
-    removedPaymentWorkerUserAgent: '',
-    removedPaymentWorkerMaxAttempts: REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS,
-    removedPaymentWorkerPaymentLocale: 'en',
-    removedPaymentWorkerCheckoutRebuildMaxAttempts: 3,
-    removedPaymentWorkerDefaultProxy: '',
-    removedPaymentWorkerProviderProxy: '',
-  };
-}
-
-function normalizeRemovedPaymentWorkerMaxAttemptsValue(value, fallback = REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS) {
-  const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-  if (!Number.isFinite(numeric)) {
-    return Math.max(1, Math.min(REMOVED_PAYMENT_WORKER_MAX_ATTEMPTS_LIMIT, Number(fallback) || REMOVED_PAYMENT_WORKER_DEFAULT_MAX_ATTEMPTS));
-  }
-  return Math.max(1, Math.min(REMOVED_PAYMENT_WORKER_MAX_ATTEMPTS_LIMIT, numeric));
-}
-
-function normalizeRemovedPaymentWorkerPaymentLocaleValue(value = '') {
-  const normalized = String(value || '').trim();
-  return REMOVED_PAYMENT_WORKER_ALLOWED_PAYMENT_LOCALES.has(normalized) ? normalized : 'en';
-}
-
-function normalizeRemovedPaymentWorkerBrowserBackendValue(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'adspower') return 'adspower';
-  if (normalized === 'roxybrowser') return 'roxybrowser';
-  return 'local';
-}
-
 function setRemovedPaymentWorkerInputValue(input, value = '') {
   if (!input) {
     return;
@@ -4786,200 +4771,6 @@ function setRemovedPaymentWorkerInputValue(input, value = '') {
   if (input.value !== nextValue) {
     input.value = nextValue;
   }
-}
-
-function normalizeRemovedPaymentWorkerAdsPowerApiBaseValue(value = '') {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  return /:\/\//.test(raw) ? raw.replace(/\/+$/, '') : `http://${raw.replace(/\/+$/, '')}`;
-}
-
-function normalizeRemovedPaymentWorkerRoxyBrowserApiBaseValue(value = '') {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  return /:\/\//.test(raw) ? raw.replace(/\/+$/, '') : `http://${raw.replace(/\/+$/, '')}`;
-}
-
-function normalizeRemovedPaymentWorkerCheckoutRebuildMaxAttemptsValue(value, fallback = 3) {
-  const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-  if (!Number.isFinite(numeric)) {
-    return Math.max(1, Math.min(10, Number(fallback) || 3));
-  }
-  return Math.max(1, Math.min(10, numeric));
-}
-
-function normalizeRemovedPaymentWorkerSettingsValue(state = {}) {
-  const defaults = buildDefaultRemovedPaymentWorkerSettings();
-  const legacyProxy = String(state?.removedPaymentWorkerProxy || '').trim();
-  const hasRoxyBrowserProfileId = Object.prototype.hasOwnProperty.call(
-    state && typeof state === 'object' ? state : {},
-    'removedPaymentWorkerRoxyBrowserProfileId',
-  );
-  const legacyProfileId = String(state?.removedPaymentWorkerAdsPowerProfileId || '').trim();
-  const roxyBrowserProfileId = hasRoxyBrowserProfileId
-    ? String(state?.removedPaymentWorkerRoxyBrowserProfileId || '').trim()
-    : (normalizeRemovedPaymentWorkerBrowserBackendValue(state?.removedPaymentWorkerBrowserBackend) === 'roxybrowser' ? legacyProfileId : '');
-  const hasAdsPowerApiBase = Object.prototype.hasOwnProperty.call(
-    state && typeof state === 'object' ? state : {},
-    'removedPaymentWorkerAdsPowerApiBase',
-  );
-  const hasRoxyBrowserApiBase = Object.prototype.hasOwnProperty.call(
-    state && typeof state === 'object' ? state : {},
-    'removedPaymentWorkerRoxyBrowserApiBase',
-  );
-  return {
-    removedPaymentWorkerEnabled: Boolean(state?.removedPaymentWorkerEnabled),
-    removedPaymentWorkerBrowserBackend: normalizeRemovedPaymentWorkerBrowserBackendValue(state?.removedPaymentWorkerBrowserBackend || defaults.removedPaymentWorkerBrowserBackend),
-    removedPaymentWorkerAdsPowerApiBase: normalizeRemovedPaymentWorkerAdsPowerApiBaseValue(hasAdsPowerApiBase ? state?.removedPaymentWorkerAdsPowerApiBase : defaults.removedPaymentWorkerAdsPowerApiBase),
-    removedPaymentWorkerAdsPowerApiKey: String(state?.removedPaymentWorkerAdsPowerApiKey || defaults.removedPaymentWorkerAdsPowerApiKey || '').trim(),
-    removedPaymentWorkerAdsPowerProfileId: legacyProfileId,
-    removedPaymentWorkerRoxyBrowserApiBase: normalizeRemovedPaymentWorkerRoxyBrowserApiBaseValue(hasRoxyBrowserApiBase ? state?.removedPaymentWorkerRoxyBrowserApiBase : defaults.removedPaymentWorkerRoxyBrowserApiBase),
-    removedPaymentWorkerRoxyBrowserApiKey: String(state?.removedPaymentWorkerRoxyBrowserApiKey || defaults.removedPaymentWorkerRoxyBrowserApiKey || '').trim(),
-    removedPaymentWorkerRoxyBrowserProfileId: roxyBrowserProfileId,
-    removedPaymentWorkerStripePublishableKey: String(state?.removedPaymentWorkerStripePublishableKey || '').trim(),
-    removedPaymentWorkerDeviceId: String(state?.removedPaymentWorkerDeviceId || '').trim(),
-    removedPaymentWorkerUserAgent: String(state?.removedPaymentWorkerUserAgent || '').trim(),
-    removedPaymentWorkerMaxAttempts: normalizeRemovedPaymentWorkerMaxAttemptsValue(state?.removedPaymentWorkerMaxAttempts, defaults.removedPaymentWorkerMaxAttempts),
-    removedPaymentWorkerPaymentLocale: normalizeRemovedPaymentWorkerPaymentLocaleValue(state?.removedPaymentWorkerPaymentLocale || defaults.removedPaymentWorkerPaymentLocale),
-    removedPaymentWorkerCheckoutRebuildMaxAttempts: normalizeRemovedPaymentWorkerCheckoutRebuildMaxAttemptsValue(
-      state?.removedPaymentWorkerCheckoutRebuildMaxAttempts,
-      defaults.removedPaymentWorkerCheckoutRebuildMaxAttempts,
-    ),
-    removedPaymentWorkerDefaultProxy: String(state?.removedPaymentWorkerDefaultProxy || legacyProxy).trim(),
-    removedPaymentWorkerProviderProxy: String(state?.removedPaymentWorkerProviderProxy || '').trim(),
-  };
-}
-
-function normalizeChatgptSessionReaderProfileValue(profile = {}, fallback = null) {
-  const rawProfile = profile && typeof profile === 'object' && !Array.isArray(profile)
-    ? profile
-    : {};
-  const baseProfile = fallback && typeof fallback === 'object' && !Array.isArray(fallback)
-    ? fallback
-    : buildDefaultChatgptSessionReaderProfile();
-  return {
-    plusRemovedContactOauthDelaySeconds: normalizePlusRemovedContactOauthDelaySeconds(
-      rawProfile.plusRemovedContactOauthDelaySeconds ?? baseProfile.plusRemovedContactOauthDelaySeconds
-    ),
-    chatgptSessionReaderCloudConversionEnabled: Boolean(
-      rawProfile.chatgptSessionReaderCloudConversionEnabled ?? baseProfile.chatgptSessionReaderCloudConversionEnabled
-    ),
-    chatgptSessionReaderCloudConversionApiUrl: normalizeChatgptSessionReaderCloudConversionApiUrlValue(
-      rawProfile.chatgptSessionReaderCloudConversionApiUrl ?? baseProfile.chatgptSessionReaderCloudConversionApiUrl
-    ),
-    chatgptSessionReaderCloudConversionApiKey: normalizeChatgptSessionReaderCloudConversionApiKeyValue(
-      rawProfile.chatgptSessionReaderCloudConversionApiKey ?? baseProfile.chatgptSessionReaderCloudConversionApiKey
-    ),
-    chatgptSessionReaderConversionProxyUrl: normalizeChatgptSessionReaderConversionProxyUrlValue(
-      rawProfile.chatgptSessionReaderConversionProxyUrl ?? baseProfile.chatgptSessionReaderConversionProxyUrl
-    ),
-    removedContactVerificationUrl: normalizeRemovedContactVerificationUrlValue(
-      rawProfile.removedContactVerificationUrl ?? baseProfile.removedContactVerificationUrl
-    ),
-    removedContactCardDeclinedRetryEnabled: Boolean(
-      rawProfile.removedContactCardDeclinedRetryEnabled ?? baseProfile.removedContactCardDeclinedRetryEnabled
-    ),
-    removedContactFirstDirectResendEnabled: Boolean(
-      rawProfile.removedContactFirstDirectResendEnabled ?? baseProfile.removedContactFirstDirectResendEnabled
-    ),
-    removedContactFirstResendWaitSeconds: normalizeRemovedContactResendWaitSeconds(
-      rawProfile.removedContactFirstResendWaitSeconds ?? baseProfile.removedContactFirstResendWaitSeconds,
-      20
-    ),
-    removedContactSubsequentResendWaitSeconds: normalizeRemovedContactResendWaitSeconds(
-      rawProfile.removedContactSubsequentResendWaitSeconds ?? baseProfile.removedContactSubsequentResendWaitSeconds,
-      25
-    ),
-    removedContactVerificationResendMaxAttempts: normalizeRemovedContactVerificationResendMaxAttempts(
-      rawProfile.removedContactVerificationResendMaxAttempts ?? baseProfile.removedContactVerificationResendMaxAttempts,
-      1
-    ),
-    removedContactVerificationPollAttempts: normalizeRemovedContactVerificationPollAttempts(
-      rawProfile.removedContactVerificationPollAttempts ?? baseProfile.removedContactVerificationPollAttempts,
-      6
-    ),
-    removedContactVerificationPollIntervalSeconds: normalizeRemovedContactVerificationPollIntervalSeconds(
-      rawProfile.removedContactVerificationPollIntervalSeconds ?? baseProfile.removedContactVerificationPollIntervalSeconds,
-      5
-    ),
-  };
-}
-
-function buildLegacyChatgptSessionReaderProfileFromState(state = {}) {
-  return normalizeChatgptSessionReaderProfileValue({
-    plusRemovedContactOauthDelaySeconds: state?.plusRemovedContactOauthDelaySeconds,
-    chatgptSessionReaderCloudConversionEnabled: state?.chatgptSessionReaderCloudConversionEnabled,
-    chatgptSessionReaderCloudConversionApiUrl: state?.chatgptSessionReaderCloudConversionApiUrl,
-    chatgptSessionReaderCloudConversionApiKey: state?.chatgptSessionReaderCloudConversionApiKey,
-    chatgptSessionReaderConversionProxyUrl: state?.chatgptSessionReaderConversionProxyUrl,
-    removedContactVerificationUrl: state?.removedContactVerificationUrl,
-    removedContactCardDeclinedRetryEnabled: state?.removedContactCardDeclinedRetryEnabled,
-    removedContactFirstDirectResendEnabled: state?.removedContactFirstDirectResendEnabled,
-    removedContactFirstResendWaitSeconds: state?.removedContactFirstResendWaitSeconds,
-    removedContactSubsequentResendWaitSeconds: state?.removedContactSubsequentResendWaitSeconds,
-    removedContactVerificationResendMaxAttempts: state?.removedContactVerificationResendMaxAttempts,
-    removedContactVerificationPollAttempts: state?.removedContactVerificationPollAttempts,
-    removedContactVerificationPollIntervalSeconds: state?.removedContactVerificationPollIntervalSeconds,
-  });
-}
-
-function normalizeChatgptSessionReaderProfilesValue(value = {}, fallbackState = {}) {
-  const rawProfiles = value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
-  const legacyProfile = buildLegacyChatgptSessionReaderProfileFromState(fallbackState);
-  const hasUsProfile = Object.prototype.hasOwnProperty.call(rawProfiles, CHATGPT_SESSION_READER_MODE_US_PP);
-  const hasJpProfile = Object.prototype.hasOwnProperty.call(rawProfiles, CHATGPT_SESSION_READER_MODE_JP_PP);
-  const usProfile = hasUsProfile
-    ? normalizeChatgptSessionReaderProfileValue(rawProfiles[CHATGPT_SESSION_READER_MODE_US_PP])
-    : normalizeChatgptSessionReaderProfileValue(legacyProfile);
-  const jpProfile = hasJpProfile
-    ? normalizeChatgptSessionReaderProfileValue(rawProfiles[CHATGPT_SESSION_READER_MODE_JP_PP])
-    : normalizeChatgptSessionReaderProfileValue(hasUsProfile ? usProfile : legacyProfile);
-  return {
-    [CHATGPT_SESSION_READER_MODE_US_PP]: usProfile,
-    [CHATGPT_SESSION_READER_MODE_JP_PP]: jpProfile,
-  };
-}
-
-function buildChatgptSessionReaderLegacyPatchFromProfile(profile = {}) {
-  const normalizedProfile = normalizeChatgptSessionReaderProfileValue(profile);
-  return Object.fromEntries(
-    CHATGPT_SESSION_READER_PROFILE_SETTING_KEYS.map((key) => [key, normalizedProfile[key]])
-  );
-}
-
-function normalizeChatgptSessionReaderStateForUi(state = {}, options = {}) {
-  const mode = normalizeChatgptSessionReaderModeValue(state?.chatgptSessionReaderMode);
-  const profiles = normalizeChatgptSessionReaderProfilesValue(state?.chatgptSessionReaderProfiles || {}, state);
-  const legacyOverrideSource = options?.legacyOverrideSource && typeof options.legacyOverrideSource === 'object'
-    ? options.legacyOverrideSource
-    : null;
-  const hasExplicitLegacyOverrides = Boolean(legacyOverrideSource) && CHATGPT_SESSION_READER_PROFILE_SETTING_KEYS.some((key) => (
-    Object.prototype.hasOwnProperty.call(legacyOverrideSource, key)
-  ));
-  const activeProfile = hasExplicitLegacyOverrides
-    ? normalizeChatgptSessionReaderProfileValue({
-      ...(profiles[mode] || {}),
-      ...buildLegacyChatgptSessionReaderProfileFromState({
-        ...state,
-        ...legacyOverrideSource,
-      }),
-    }, profiles[mode])
-    : (profiles[mode] || buildLegacyChatgptSessionReaderProfileFromState(state));
-  return {
-    ...(state || {}),
-    chatgptSessionReaderMode: mode,
-    chatgptSessionReaderProfiles: {
-      ...profiles,
-      [mode]: activeProfile,
-    },
-    ...buildChatgptSessionReaderLegacyPatchFromProfile(activeProfile),
-  };
 }
 
 function syncLocalChatgptSessionReaderDraftFromState(state = latestState) {
@@ -5315,106 +5106,6 @@ function resetRemovedPaymentWorkerInputsToDefaults() {
 
 function getUpiInfoHelperAutoModeEnabled(state = latestState) {
   return Boolean(state?.legacyPayHelperAutoModeEnabled);
-}
-
-function normalizeUpiInfoAutoModePermissionValue(value) {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    if (value === 1) return true;
-    if (value === 0) return false;
-  }
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  if (['true', '1', 'yes', 'y', 'on', 'enabled', 'enable'].includes(normalized)) {
-    return true;
-  }
-  if (['false', '0', 'no', 'n', 'off', 'disabled', 'disable'].includes(normalized)) {
-    return false;
-  }
-  return null;
-}
-
-function getUpiInfoAutoModePermissionFromPayload(payload = {}) {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return null;
-  }
-  for (const key of ['auto_mode_enabled', 'autoModeEnabled', 'auto_enabled', 'autoEnabled']) {
-    if (payload[key] !== undefined) {
-      return normalizeUpiInfoAutoModePermissionValue(payload[key]);
-    }
-  }
-  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
-    return getUpiInfoAutoModePermissionFromPayload(payload.data);
-  }
-  return null;
-}
-
-function hasUpiInfoAutoModePermissionField(payload = {}) {
-  return getUpiInfoAutoModePermissionFromPayload(payload) !== null;
-}
-
-function isUpiInfoAutoModePermissionDenied(state = latestState) {
-  const payloadPermission = getUpiInfoAutoModePermissionFromPayload(state?.legacyPayHelperBalancePayload);
-  return payloadPermission === false;
-}
-
-function normalizeUpiInfoRemainingUsesValue(value) {
-  const rootScope = typeof window !== 'undefined' ? window : globalThis;
-  if (rootScope.LegacyPayUtils?.normalizeUpiInfoRemainingUses) {
-    return rootScope.LegacyPayUtils.normalizeUpiInfoRemainingUses(value);
-  }
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return null;
-  }
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : null;
-}
-
-function getUpiInfoBalanceRemainingUsesFromResponse(response = {}) {
-  const rootScope = typeof window !== 'undefined' ? window : globalThis;
-  if (rootScope.LegacyPayUtils?.getUpiInfoBalanceRemainingUses) {
-    const remaining = rootScope.LegacyPayUtils.getUpiInfoBalanceRemainingUses(response?.data || response?.payload || response);
-    if (remaining !== null && remaining !== undefined) {
-      return remaining;
-    }
-  }
-  return normalizeUpiInfoRemainingUsesValue(
-    response?.remainingUses
-    ?? response?.data?.remaining_uses
-    ?? response?.data?.remainingUses
-    ?? response?.payload?.data?.remaining_uses
-    ?? response?.payload?.remaining_uses
-    ?? response?.payload?.remainingUses
-  );
-}
-
-function getUpiInfoAutoModeEnabledFromResponse(response = {}) {
-  if (typeof response?.autoModeEnabled === 'boolean') {
-    return response.autoModeEnabled;
-  }
-  const rootScope = typeof window !== 'undefined' ? window : globalThis;
-  if (rootScope.LegacyPayUtils?.isUpiInfoAutoModeEnabled) {
-    return rootScope.LegacyPayUtils.isUpiInfoAutoModeEnabled(response?.data || response?.payload || response);
-  }
-  return Boolean(
-    response?.data?.auto_mode_enabled
-    ?? response?.data?.autoModeEnabled
-    ?? response?.payload?.data?.auto_mode_enabled
-    ?? response?.payload?.auto_mode_enabled
-    ?? response?.payload?.autoModeEnabled
-  );
-}
-
-function normalizeUpiInfoOtpChannelValue(value = '') {
-  const rootScope = typeof window !== 'undefined' ? window : globalThis;
-  if (rootScope.LegacyPayUtils?.normalizeUpiInfoOtpChannel) {
-    return rootScope.LegacyPayUtils.normalizeUpiInfoOtpChannel(value);
-  }
-  return 'whatsapp';
 }
 
 function readAutoRunStateValue(source, keys, fallback) {

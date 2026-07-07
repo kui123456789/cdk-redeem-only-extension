@@ -222,6 +222,8 @@ function checkCoreFiles() {
     'sidepanel/auto-run-normalizers.js',
     'sidepanel/cdk-pool-state.js',
     'sidepanel/settings-normalization.js',
+    'sidepanel/chatgpt-session-reader-settings.js',
+    'sidepanel/upi-info-helper-state.js',
     'sidepanel/auto-run-countdown-view.js',
     'sidepanel/auto-run-state.js',
     'sidepanel/config-menu-controller.js',
@@ -295,6 +297,8 @@ function checkStaticContracts() {
   const autoRunNormalizers = readText('sidepanel/auto-run-normalizers.js');
   const sidepanelCdkPoolState = readText('sidepanel/cdk-pool-state.js');
   const sidepanelSettingsNormalization = readText('sidepanel/settings-normalization.js');
+  const chatgptSessionReaderSettings = readText('sidepanel/chatgpt-session-reader-settings.js');
+  const upiInfoHelperState = readText('sidepanel/upi-info-helper-state.js');
   const autoRunCountdownView = readText('sidepanel/auto-run-countdown-view.js');
   const autoRunState = readText('sidepanel/auto-run-state.js');
   const configMenuController = readText('sidepanel/config-menu-controller.js');
@@ -339,6 +343,8 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-state.js"', 'sidepanel CDK pool state script load');
   assertIncludes(sidepanelHtml, 'src="settings-normalization.js"', 'sidepanel settings normalization script load');
+  assertIncludes(sidepanelHtml, 'src="chatgpt-session-reader-settings.js"', 'sidepanel ChatGPT session reader settings script load');
+  assertIncludes(sidepanelHtml, 'src="upi-info-helper-state.js"', 'sidepanel UPI info helper state script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'sidepanel auto-run countdown view script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-state.js"', 'sidepanel auto-run state script load');
   assertIncludes(sidepanelHtml, 'src="config-menu-controller.js"', 'sidepanel config menu controller script load');
@@ -353,6 +359,8 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="cdk-pool-state.js"', 'src="sidepanel.js"', 'sidepanel CDK pool state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-normalization.js"', 'src="sidepanel.js"', 'sidepanel settings normalization must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="chatgpt-session-reader-settings.js"', 'src="sidepanel.js"', 'sidepanel ChatGPT session reader settings must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="upi-info-helper-state.js"', 'src="sidepanel.js"', 'sidepanel UPI info helper state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'src="sidepanel.js"', 'sidepanel auto-run countdown view must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-state.js"', 'src="sidepanel.js"', 'sidepanel auto-run state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="config-menu-controller.js"', 'src="sidepanel.js"', 'sidepanel config menu controller must load before sidepanel.js');
@@ -409,7 +417,13 @@ function checkStaticContracts() {
   assertIncludes(sidepanelSettingsNormalization, 'SidepanelSettingsNormalization', 'sidepanel settings normalization global');
   assertIncludes(sidepanelSettingsNormalization, 'createSettingsNormalization', 'sidepanel settings normalization factory');
   assertIncludes(sidepanelSettingsNormalization, 'normalizeCustomEmailPoolEntryObjects', 'custom email pool normalizer');
-  assertIncludes(autoRunCountdownView, 'SidepanelAutoRunCountdownView', 'sidepanel auto-run countdown view global');
+  assertIncludes(chatgptSessionReaderSettings, 'SidepanelChatgptSessionReaderSettings', 'ChatGPT session reader settings global');
+  assertIncludes(chatgptSessionReaderSettings, 'createChatgptSessionReaderSettings', 'ChatGPT session reader settings factory');
+  assertIncludes(chatgptSessionReaderSettings, 'normalizeChatgptSessionReaderStateForUi', 'ChatGPT session reader state normalizer');
+  assertIncludes(upiInfoHelperState, 'SidepanelUpiInfoHelperState', 'UPI info helper state global');
+  assertIncludes(upiInfoHelperState, 'createUpiInfoHelperState', 'UPI info helper state factory');
+  assertIncludes(upiInfoHelperState, 'getUpiInfoAutoModePermissionFromPayload', 'UPI info auto-mode permission parser');
+	  assertIncludes(autoRunCountdownView, 'SidepanelAutoRunCountdownView', 'sidepanel auto-run countdown view global');
   assertIncludes(autoRunCountdownView, 'createAutoRunCountdownView', 'sidepanel auto-run countdown view factory');
   assertIncludes(autoRunCountdownView, 'syncScheduledCountdownTicker', 'sidepanel auto-run countdown ticker');
   assertIncludes(autoRunState, 'SidepanelAutoRunState', 'sidepanel auto-run state global');
@@ -733,7 +747,7 @@ function checkStaticContracts() {
 
 function checkModuleSizeGuard() {
   readText('scripts/module-size-report.mjs');
-  assertFileLineCountAtMost('sidepanel/sidepanel.js', 10100, 'sidepanel composition root growth guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel.js', 9800, 'sidepanel composition root growth guard');
   assertFileLineCountAtMost('sidepanel/sidepanel.css', 2500, 'sidepanel base stylesheet growth guard');
   assertFileLineCountAtMost('sidepanel/styles/settings.css', 1800, 'settings stylesheet size guard');
   assertFileLineCountAtMost('sidepanel/styles/cdk-pools.css', 500, 'CDK pools stylesheet size guard');
@@ -742,10 +756,12 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/action-modal-service.js', 300, 'action modal service size guard');
   assertFileLineCountAtMost('sidepanel/workflow-button-state.js', 220, 'sidepanel workflow button state size guard');
   assertFileLineCountAtMost('sidepanel/workflow-status-display.js', 220, 'sidepanel workflow status display size guard');
-  assertFileLineCountAtMost('sidepanel/auto-run-normalizers.js', 200, 'sidepanel auto-run normalizers size guard');
-  assertFileLineCountAtMost('sidepanel/cdk-pool-state.js', 450, 'sidepanel CDK pool state size guard');
-  assertFileLineCountAtMost('sidepanel/settings-normalization.js', 280, 'sidepanel settings normalization size guard');
-  assertFileLineCountAtMost('sidepanel/auto-run-countdown-view.js', 250, 'sidepanel auto-run countdown view size guard');
+	  assertFileLineCountAtMost('sidepanel/auto-run-normalizers.js', 200, 'sidepanel auto-run normalizers size guard');
+	  assertFileLineCountAtMost('sidepanel/cdk-pool-state.js', 450, 'sidepanel CDK pool state size guard');
+	  assertFileLineCountAtMost('sidepanel/settings-normalization.js', 280, 'sidepanel settings normalization size guard');
+  assertFileLineCountAtMost('sidepanel/chatgpt-session-reader-settings.js', 380, 'ChatGPT session reader settings size guard');
+  assertFileLineCountAtMost('sidepanel/upi-info-helper-state.js', 180, 'UPI info helper state size guard');
+	  assertFileLineCountAtMost('sidepanel/auto-run-countdown-view.js', 250, 'sidepanel auto-run countdown view size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-state.js', 280, 'sidepanel auto-run state size guard');
   assertFileLineCountAtMost('sidepanel/config-menu-controller.js', 220, 'sidepanel config menu controller size guard');
   assertFileLineCountAtMost('sidepanel/workflow-action-bindings.js', 80, 'sidepanel workflow action bindings size guard');
