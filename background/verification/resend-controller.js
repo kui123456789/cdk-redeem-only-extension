@@ -47,11 +47,31 @@
     const sleepWithStop = context.sleepWithStop;
     const throwIfStopped = context.throwIfStopped;
     const VERIFICATION_POLL_MAX_ROUNDS = context.VERIFICATION_POLL_MAX_ROUNDS;
+    const externalBuildVerificationPollPayload = context.buildVerificationPollPayload;
     const isRetryableVerificationTransportError = context.isRetryableVerificationTransportError;
+    const getVerificationLogStepKey = typeof context.getVerificationLogStepKey === 'function'
+      ? context.getVerificationLogStepKey
+      : ((step) => {
+        if (step === 4) return 'fetch-signup-code';
+        if (step === 6) return 'set-gpt-password';
+        if (step === 8) return 'fetch-login-code';
+        return '';
+      });
     let activeVerificationLogStep = null;
+
+    function getActiveVerificationLogStep() {
+      return activeVerificationLogStep;
+    }
+
     function addLog(message, level = 'info', options = {}) {
       const nextOptions = options && typeof options === 'object' ? { ...options } : {};
       if (!nextOptions.step && activeVerificationLogStep) nextOptions.step = activeVerificationLogStep;
+      if (!nextOptions.stepKey && nextOptions.step) {
+        const stepKey = getVerificationLogStepKey(Number(nextOptions.step) || 0);
+        if (stepKey) {
+          nextOptions.stepKey = stepKey;
+        }
+      }
       return context.addLog(message, level, nextOptions);
     }
     const getNodeIdForStep = (...args) => context.getNodeIdForStep(...args);
@@ -709,7 +729,7 @@
                 responseTimeoutMs,
                 maxRecoveryAttempts: 2,
                 logStep: activeVerificationLogStep,
-                logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
+                logStepKey: getVerificationLogStepKey(Number(activeVerificationLogStep) || step),
               }
             );
 
@@ -776,7 +796,7 @@
                   responseTimeoutMs: 5000,
                   maxRecoveryAttempts: 1,
                   logStep: activeVerificationLogStep,
-                  logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
+                  logStepKey: getVerificationLogStepKey(Number(activeVerificationLogStep) || step),
                 }
               );
             } catch (_) {
@@ -882,7 +902,7 @@
                     maxRecoveryAttempts: 2,
                     responseTimeoutMs: timeoutWindow.responseTimeoutMs,
                     logStep: activeVerificationLogStep,
-                    logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
+                    logStepKey: getVerificationLogStepKey(Number(activeVerificationLogStep) || step),
                   }
                 );
 
@@ -1203,7 +1223,7 @@
                   maxRecoveryAttempts: 2,
                   responseTimeoutMs: timeoutWindow.responseTimeoutMs,
                   logStep: activeVerificationLogStep,
-                  logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
+                  logStepKey: getVerificationLogStepKey(Number(activeVerificationLogStep) || step),
                 }
               );
 
@@ -1348,7 +1368,7 @@
                 responseTimeoutMs: baseResponseTimeoutMs,
                 logMessage: '认证页正在切换，等待页面重新就绪后继续确认验证码提交结果...',
                 logStep: completionStep,
-                logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
+                logStepKey: getVerificationLogStepKey(Number(activeVerificationLogStep) || step),
               });
             } catch (err) {
               if (step === 4 && isRetryableVerificationTransportError(err)) {
@@ -1878,6 +1898,8 @@
     return {
       getVerificationCodeStateKey,
       getVerificationCodeLabel,
+      getVerificationLogStepKey,
+      getActiveVerificationLogStep,
       normalizeSignupVerificationCodeWaitSeconds,
       waitBeforeFetchingSignupVerificationCode,
       isLikelyLoggedInChatgptHomeUrl,

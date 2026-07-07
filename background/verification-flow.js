@@ -75,6 +75,13 @@
     } = deps;
     let activeVerificationLogStep = null;
 
+    function getVerificationLogStepKey(step) {
+      if (step === 4) return 'fetch-signup-code';
+      if (step === 6) return 'set-gpt-password';
+      if (step === 8) return 'fetch-login-code';
+      return '';
+    }
+
     function normalizeLogStep(value) {
       const step = Math.floor(Number(value) || 0);
       return step > 0 ? step : null;
@@ -94,7 +101,10 @@
       if (step) {
         normalizedOptions.step = step;
         if (!normalizedOptions.stepKey) {
-          normalizedOptions.stepKey = step === 4 ? 'fetch-signup-code' : 'fetch-login-code';
+          const stepKey = getVerificationLogStepKey(step);
+          if (stepKey) {
+            normalizedOptions.stepKey = stepKey;
+          }
         }
       }
       delete normalizedOptions.visibleStep;
@@ -173,9 +183,11 @@
       sleepWithStop,
       throwIfStopped,
       VERIFICATION_POLL_MAX_ROUNDS,
+      buildVerificationPollPayload: externalBuildVerificationPollPayload,
       fetchImpl,
       normalizeLogStep,
       normalizeVerificationLogMessage,
+      getVerificationLogStepKey,
       addLog,
       getNodeIdForStep,
       isRetryableVerificationTransportError,

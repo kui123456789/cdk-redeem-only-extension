@@ -5,14 +5,38 @@
   }
   root.MultiPageVerificationCodeExtractor = api;
 })(typeof self !== 'undefined' ? self : globalThis, function createMultiPageVerificationCodeExtractorModule() {
+  const DEFAULT_HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE = [
+    '(?:सत्यापन|वेरिफिकेशन)\\s*कोड',
+    '(?:अस्थायी|अस्थाई)\\s+(?:सत्यापन|वेरिफिकेशन)\\s*कोड',
+    '(?:chatgpt|openai)\\s*(?:का\\s*)?(?:सत्यापन|वेरिफिकेशन)\\s*कोड',
+    'कोड\\s*(?:दर्ज|प्रविष्ट|डालें|भरें)\\s*(?:करें)?',
+    '(?:दर्ज|प्रविष्ट|डालें|भरें)\\s*(?:करें)?\\s*कोड',
+    'जारी\\s+रखने\\s+के\\s+लिए',
+    '(?:एक\\s*बार|एकबार)\\s*(?:का\\s*)?(?:कोड|पासकोड)',
+    'ओटीपी',
+    'otp',
+  ].join('|');
+
   function createVerificationCodeExtractor(context = {}) {
     const constants = context.constants || {};
-    const { HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE } = constants;
-    const getAssurivoEntryBodyText = (...args) => context.getAssurivoEntryBodyText(...args);
-    const formatAssurivoTimestampForLog = (...args) => context.formatAssurivoTimestampForLog(...args);
-    const extractAssurivoFeedEntryTimestamp = (...args) => context.extractAssurivoFeedEntryTimestamp(...args);
-    const getOrderedAssurivoVerificationEntries = (...args) => context.getOrderedAssurivoVerificationEntries(...args);
-    const getLatestAssurivoEntryTimestamp = (...args) => context.getLatestAssurivoEntryTimestamp(...args);
+    const hindiVerificationKeywordPatternSource = String(
+      constants.HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE || DEFAULT_HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE
+    );
+    const getAssurivoEntryBodyText = typeof context.getAssurivoEntryBodyText === 'function'
+      ? (...args) => context.getAssurivoEntryBodyText(...args)
+      : (() => '');
+    const formatAssurivoTimestampForLog = typeof context.formatAssurivoTimestampForLog === 'function'
+      ? (...args) => context.formatAssurivoTimestampForLog(...args)
+      : (() => '');
+    const extractAssurivoFeedEntryTimestamp = typeof context.extractAssurivoFeedEntryTimestamp === 'function'
+      ? (...args) => context.extractAssurivoFeedEntryTimestamp(...args)
+      : (() => 0);
+    const getOrderedAssurivoVerificationEntries = typeof context.getOrderedAssurivoVerificationEntries === 'function'
+      ? (...args) => context.getOrderedAssurivoVerificationEntries(...args)
+      : ((entries = []) => Array.isArray(entries) ? entries : []);
+    const getLatestAssurivoEntryTimestamp = typeof context.getLatestAssurivoEntryTimestamp === 'function'
+      ? (...args) => context.getLatestAssurivoEntryTimestamp(...args)
+      : (() => 0);
 
         function normalizeDigits(value = '') {
           const digits = String(value || '').replace(/\D+/g, '');
@@ -41,7 +65,7 @@
             '一時(?:的な)?(?:認証|検証)コード',
             '一時(?:認証|検証)コード',
             'コード',
-            HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE,
+            hindiVerificationKeywordPatternSource,
           ].join('|');
           const contextualPatterns = [
             new RegExp(`(?:${verificationKeywordPattern})[^0-9]{0,80}((?:\\d[\\s-]*){6})`, 'gi'),
@@ -114,7 +138,7 @@
           }
           const searchable = htmlToVerificationSearchText(text);
           return /(?:openai|chatgpt)/i.test(searchable)
-            && new RegExp(`(?:verification|verify|temporary|one[-\\s]*time|code|验证码|一次性|認証コード|認證コード|検証コード|確認コード|一時(?:的な)?(?:認証|検証)コード|一時(?:認証|検証)コード|コード|${HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE})`, 'i').test(searchable);
+            && new RegExp(`(?:verification|verify|temporary|one[-\\s]*time|code|验证码|一次性|認証コード|認證コード|検証コード|確認コード|一時(?:的な)?(?:認証|検証)コード|一時(?:認証|検証)コード|コード|${hindiVerificationKeywordPatternSource})`, 'i').test(searchable);
         }
 
         function sanitizeVerificationBodyForBareCodeSearch(value = '') {
@@ -233,7 +257,7 @@
             /(?:कोड|ओटीपी|otp)[^0-9]{0,80}((?:\d[\s-]*){6})/gi,
           ];
           const codes = [];
-          let matchedPrompt = new RegExp(`enter\\s+this\\s+temporary\\s+verification\\s+code\\s+to\\s+continue|your\\s+temporary\\s+chatgpt\\s+(?:login|verification)\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|${HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE}`, 'i').test(text);
+          let matchedPrompt = new RegExp(`enter\\s+this\\s+temporary\\s+verification\\s+code\\s+to\\s+continue|your\\s+temporary\\s+chatgpt\\s+(?:login|verification)\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|${hindiVerificationKeywordPatternSource}`, 'i').test(text);
           for (const pattern of patterns) {
             let match = pattern.exec(text);
             while (match) {
@@ -288,7 +312,7 @@
           if (!text) {
             return { codes: [], promptMatched: false };
           }
-          const promptMatched = new RegExp(`(?:your\\s+temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+openai\\s+verification\\s+code|enter\\s+(?:this|the)\\s+(?:temporary\\s+)?(?:verification\\s+)?code|use\\s+this\\s+code|verification\\s+code|one[-\\s]*time\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|${HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE})`, 'i').test(text);
+          const promptMatched = new RegExp(`(?:your\\s+temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+openai\\s+verification\\s+code|enter\\s+(?:this|the)\\s+(?:temporary\\s+)?(?:verification\\s+)?code|use\\s+this\\s+code|verification\\s+code|one[-\\s]*time\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|${hindiVerificationKeywordPatternSource})`, 'i').test(text);
           const patterns = [
             /enter\s+this\s+temporary\s+verification\s+code\s+to\s+continue[:：]?\s*((?:\d[\s-]*){6})/gi,
             /temporary\s+verification\s+code\s+to\s+continue[:：]?\s*((?:\d[\s-]*){6})/gi,
@@ -301,7 +325,7 @@
             /(?:認証コード|認證コード|検証コード|確認コード)[:：]?\s*((?:\d[\s-]*){6})/gi,
             /(?:जारी\s+रखने\s+के\s+लिए)?[\s\S]{0,160}?(?:अस्थायी|अस्थाई)?\s*(?:सत्यापन|वेरिफिकेशन)\s+कोड(?:\s*(?:को|दर्ज|प्रविष्ट|डालें|भरें|का))?[\s\S]{0,160}?[:：]?\s*((?:\d[\s-]*){6})/gi,
             /(?:कोड|ओटीपी|otp)[^0-9]{0,80}((?:\d[\s-]*){6})/gi,
-            new RegExp(`(?:your\\s+temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+chatgpt\\s+verification\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|verification\\s+code|temporary\\s+code|one[-\\s]*time\\s+code|use\\s+this\\s+code|enter\\s+(?:this|the)\\s+(?:temporary\\s+)?(?:verification\\s+)?code|${HINDI_VERIFICATION_KEYWORD_PATTERN_SOURCE})[\\s\\S]{0,700}?(?:^|[^0-9])((?:\\d[\\s-]*){6})(?![\\s-]*\\d)`, 'gi'),
+            new RegExp(`(?:your\\s+temporary\\s+chatgpt\\s+verification\\s+code|temporary\\s+chatgpt\\s+verification\\s+code|一時(?:的な)?(?:認証|検証)コード|認証コード|認證コード|検証コード|確認コード|verification\\s+code|temporary\\s+code|one[-\\s]*time\\s+code|use\\s+this\\s+code|enter\\s+(?:this|the)\\s+(?:temporary\\s+)?(?:verification\\s+)?code|${hindiVerificationKeywordPatternSource})[\\s\\S]{0,700}?(?:^|[^0-9])((?:\\d[\\s-]*){6})(?![\\s-]*\\d)`, 'gi'),
           ];
           const codes = [];
           for (const pattern of patterns) {

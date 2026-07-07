@@ -9,7 +9,25 @@
     const constants = context.constants || {};
     const { ICLOUD_MAIL_POLL_MIN_ATTEMPTS, ICLOUD_MAIL_POLL_TIMEOUT_MARGIN_MS, ASSURIVO_VERIFICATION_OPEN_URL, ASSURIVO_VERIFICATION_FEED_URL, ASSURIVO_VERIFICATION_FILTER_SKEW_MS, ASSURIVO_RESEND_SAME_CODE_GRACE_MS } = constants;
     const fetchImpl = context.fetchImpl;
-    const addLog = (...args) => context.addLog(...args);
+    function addLog(message, level = 'info', options = {}) {
+      const nextOptions = options && typeof options === 'object' ? { ...options } : {};
+      const activeStep = typeof context.getActiveVerificationLogStep === 'function'
+        ? Math.floor(Number(context.getActiveVerificationLogStep()) || 0)
+        : 0;
+      if (!nextOptions.step && activeStep > 0) {
+        nextOptions.step = activeStep;
+      }
+      if (!nextOptions.stepKey) {
+        const stepValue = Math.floor(Number(nextOptions.step) || activeStep || 0);
+        const stepKey = typeof context.getVerificationLogStepKey === 'function'
+          ? context.getVerificationLogStepKey(stepValue)
+          : '';
+        if (stepKey) {
+          nextOptions.stepKey = stepKey;
+        }
+      }
+      return context.addLog(message, level, nextOptions);
+    }
     const getVerificationCodeLabel = (...args) => context.getVerificationCodeLabel(...args);
     const collectCustomEmailVerificationCodes = (...args) => context.collectCustomEmailVerificationCodes(...args);
     const collectAssurivoOpenPageBodyCodes = (...args) => context.collectAssurivoOpenPageBodyCodes(...args);
