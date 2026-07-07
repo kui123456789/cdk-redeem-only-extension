@@ -213,6 +213,7 @@ function checkCoreFiles() {
     'background/router/redeem-refresh-service.js',
     'background/router/node-protocol-service.js',
     'background/router/payment-session-service.js',
+    'background/router/core-routes.js',
     'background/steps/upi-redeem/session-material.js',
     'background/steps/upi-redeem/free-entry.js',
     'background/steps/upi-redeem/channel-submission.js',
@@ -362,6 +363,7 @@ function checkStaticContracts() {
   const routerRedeemRefreshService = readText('background/router/redeem-refresh-service.js');
   const routerNodeProtocolService = readText('background/router/node-protocol-service.js');
   const routerPaymentSessionService = readText('background/router/payment-session-service.js');
+  const routerCoreRoutes = readText('background/router/core-routes.js');
   const sidepanel = readText('sidepanel/sidepanel.js');
   const sidepanelAppState = readText('sidepanel/app-state.js');
   const sidepanelSettingsController = readText('sidepanel/settings-controller.js');
@@ -847,6 +849,7 @@ function checkStaticContracts() {
   assertIncludes(background, "'background/router/redeem-refresh-service.js'", 'background router redeem refresh service script load');
   assertIncludes(background, "'background/router/node-protocol-service.js'", 'background router node protocol service script load');
   assertIncludes(background, "'background/router/payment-session-service.js'", 'background router payment session service script load');
+  assertIncludes(background, "'background/router/core-routes.js'", 'background router core routes script load');
   assertIncludes(background, "'background/membership/access-token-refresh.js'", 'background access token refresh script load');
   assertIncludes(background, "'background/membership/login-session-executor.js'", 'background login session executor script load');
   assertIncludes(background, "'background/membership/result-state.js'", 'background membership result-state script load');
@@ -892,6 +895,7 @@ function checkStaticContracts() {
   assertBefore(background, "'background/router/redeem-refresh-service.js'", "'background/message-router.js'", 'router redeem refresh service must load before message router');
   assertBefore(background, "'background/router/node-protocol-service.js'", "'background/message-router.js'", 'router node protocol service must load before message router');
   assertBefore(background, "'background/router/payment-session-service.js'", "'background/message-router.js'", 'router payment session service must load before message router');
+  assertBefore(background, "'background/router/core-routes.js'", "'background/message-router.js'", 'router core routes must load before message router');
   assertBefore(background, "'background/membership/access-token-refresh.js'", "'background/upi-credential-membership-checker.js'", 'access token refresh helper must load before membership checker');
   assertBefore(background, "'background/membership/login-session-executor.js'", "'background/upi-credential-membership-checker.js'", 'login session executor must load before membership checker');
   assertBefore(background, "'background/membership/result-state.js'", "'background/membership/results-store.js'", 'membership result-state must load before results store');
@@ -1044,15 +1048,20 @@ function checkStaticContracts() {
   assertIncludes(emailPoolRoutes, 'createEmailPoolRoutes', 'email pool routes factory');
   assertIncludes(emailPoolRoutes, 'FETCH_DUCK_EMAIL', 'email pool Duck route');
   assertIncludes(emailPoolRoutes, 'DELETE_USED_ICLOUD_ALIASES', 'email pool iCloud cleanup route');
-  assertIncludes(router, 'const routeHandlers = {', 'message router route handler table');
+  assertIncludes(routerCoreRoutes, 'MultiPageRouterCoreRoutes', 'router core routes global');
+  assertIncludes(routerCoreRoutes, 'createRouterCoreRoutes', 'router core routes factory');
+  assertIncludes(routerCoreRoutes, 'const routeHandlers = {', 'router core routes handler table');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'router core routes CDK route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageSettingsRoutes?.createSettingsRoutes', 'router core routes settings route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes', 'router core routes account record route registration');
+  assertIncludes(routerCoreRoutes, 'rootScope.MultiPageEmailPoolRoutes?.createEmailPoolRoutes', 'router core routes email pool route registration');
   assertIncludes(router, 'getRouterRedeemRefreshServiceModule', 'message router redeem refresh helper module lookup');
   assertIncludes(router, 'createRouterRedeemRefreshService', 'message router redeem refresh service wiring');
   assertIncludes(router, 'getRouterNodeProtocolServiceModule', 'message router node protocol helper module lookup');
   assertIncludes(router, 'createRouterNodeProtocolService', 'message router node protocol service wiring');
-  assertIncludes(router, 'rootScope.MultiPageCdkeyRoutes?.createCdkeyRoutes', 'message router CDK route registration');
-  assertIncludes(router, 'rootScope.MultiPageSettingsRoutes?.createSettingsRoutes', 'message router settings route registration');
-  assertIncludes(router, 'rootScope.MultiPageAccountRecordRoutes?.createAccountRecordRoutes', 'message router account record route registration');
-  assertIncludes(router, 'rootScope.MultiPageEmailPoolRoutes?.createEmailPoolRoutes', 'message router email pool route registration');
+  assertIncludes(router, 'getRouterCoreRoutesModule', 'message router core routes helper module lookup');
+  assertIncludes(router, 'createRouterCoreRoutes', 'message router core routes factory wiring');
+  assertIncludes(router, 'routeHandlers[type]', 'message router delegated route dispatch');
   assertIncludes(background, "'shared/redeem-channel-state.js'", 'background redeem channel state script load');
   assertIncludes(background, "'shared/membership-credential-format.js'", 'background membership credential format script load');
   assertBefore(
@@ -1306,7 +1315,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/account-records-redeem-actions.js', 500, 'account records redeem actions size guard');
   assertFileLineCountAtMost('sidepanel/account-records-manager.js', 1800, 'account records manager growth guard');
   assertFileLineCountAtMost('background.js', 15400, 'background service worker growth guard');
-  assertFileLineCountAtMost('background/message-router.js', 1800, 'message router size guard');
+  assertFileLineCountAtMost('background/message-router.js', 1200, 'message router size guard');
   assertFileLineCountAtMost('background/settings-normalizers.js', 500, 'settings normalizers size guard');
   assertFileLineCountAtMost('background/flow-definition-resolver.js', 500, 'flow definition resolver size guard');
   assertFileLineCountAtMost('background/bootstrap/auto-run-session.js', 250, 'auto-run session size guard');
@@ -1331,6 +1340,7 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('background/router/redeem-refresh-service.js', 1500, 'router redeem refresh service size guard');
   assertFileLineCountAtMost('background/router/node-protocol-service.js', 700, 'router node protocol service size guard');
   assertFileLineCountAtMost('background/router/payment-session-service.js', 500, 'router payment session service size guard');
+  assertFileLineCountAtMost('background/router/core-routes.js', 500, 'router core routes size guard');
   assertFileLineCountAtMost('background/membership/results-store.js', 120, 'membership results-store size guard');
   assertFileLineCountAtMost('background/membership/trial-eligibility-service.js', 650, 'trial eligibility service size guard');
   assertFileLineCountAtMost('background/membership/membership-result-sync.js', 320, 'membership result sync size guard');
