@@ -339,6 +339,7 @@ function checkSyntax() {
 
 function checkStaticContracts() {
   const background = readText('background.js');
+  const customEmailPoolState = readText('background/custom-email-pool-state.js');
   const settingsNormalizers = readText('background/settings-normalizers.js');
   const flowDefinitionResolver = readText('background/flow-definition-resolver.js');
   const flowRuntime = readText('background/bootstrap/flow-runtime.js');
@@ -1319,12 +1320,12 @@ function checkStaticContracts() {
   );
   assertIncludes(routerRedeemRefreshService, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
   assertMatch(
-    background,
+    customEmailPoolState,
     /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*true;\s*nextEntry\.lastUsedAt\s*=\s*entry\.lastUsedAt\s*\|\|\s*Date\.now\(\);/s,
     'custom email pool ineligible entries must stay used'
   );
   assertNotMatch(
-    background,
+    customEmailPoolState,
     /async function markCurrentCustomEmailPoolEntryTrialIneligible[\s\S]*?if\s*\(!isCustomEmailPoolGenerator\(state\)\)\s*{\s*return\s*{\s*updated:\s*false\s*};\s*}/,
     'custom email pool trial-ineligible marking must not depend on current generator selection'
   );
