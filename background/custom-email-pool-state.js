@@ -454,11 +454,11 @@
         const selectedEmail = String(state?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
         if (selectedEmail) {
           const selectedEntry = structuredEntries.find((entry) => entry.email === selectedEmail);
-          if (selectedEntry) {
+          if (selectedEntry && isCustomEmailPoolEntryAvailable(selectedEntry)) {
             return selectedEntry.email;
           }
         }
-        const nextEntry = structuredEntries.find((entry) => entry.enabled && !entry.used);
+        const nextEntry = structuredEntries.find(isCustomEmailPoolEntryAvailable);
         return nextEntry?.email || '';
       }
       const entries = normalizeCustomEmailPool(state?.customEmailPool);

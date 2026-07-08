@@ -3,8 +3,10 @@
   root.SidepanelWorkflowController = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis, function createSidepanelWorkflowControllerModule(rootScope) {
-  const workflowActionBindingsApi = rootScope.SidepanelWorkflowActionBindings
-    || (typeof require === 'function' ? require('./workflow-action-bindings.js') : null);
+  function getWorkflowActionBindingsApi() {
+    return rootScope.SidepanelWorkflowActionBindings
+      || (typeof require === 'function' ? require('./workflow-action-bindings.js') : null);
+  }
 
   function createWorkflowController(context = {}) {
     const {
@@ -240,6 +242,7 @@
     }
 
     function bindActions() {
+      const workflowActionBindingsApi = getWorkflowActionBindingsApi();
       workflowActionBindings = workflowActionBindingsApi?.createWorkflowActionBindings?.({
         dom: {
           stepsList: dom.stepsList,

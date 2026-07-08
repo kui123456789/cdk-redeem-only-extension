@@ -236,6 +236,7 @@
 
       await persistResolvedEmailState(latestState, email, {
         source: 'generated:custom-pool',
+        selectedCustomEmailPoolEmail: email,
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
       await addLog(`自定义邮箱池：已取用 ${email}`, 'ok');

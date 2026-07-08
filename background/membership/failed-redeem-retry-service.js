@@ -10,8 +10,10 @@
       addLog,
       buildAutoContinuationRedeemCandidates,
       buildRedeemChannelFailurePatch,
+      buildRetryUpdatesPayload,
       getAvailableUpiRedeemCdkeys,
       getFreshUpiRedeemRuntimeState,
+      getRedeemChannelUsage,
       getRedeemChannelFailureCount,
       getRedeemChannelLabel,
       getRedeemLockReason,
@@ -25,6 +27,7 @@
       normalizeResultsPayload,
       normalizeRetryCount,
       normalizeString,
+      normalizeUpiRedeemCdkeyUsage,
       normalizeUpiRedeemRemoteStatus,
       pickRandomUpiRedeemCdkey,
       redeemUpiCredentialWithAccessToken,
@@ -456,77 +459,6 @@
         ),
       };
     }
-
-    const trialEligibilityServiceFactory = getMembershipTrialEligibilityServiceModule().createTrialEligibilityService;
-    if (typeof trialEligibilityServiceFactory !== 'function') {
-      throw new Error('Membership trial eligibility service module is not loaded.');
-    }
-    const trialEligibilityService = trialEligibilityServiceFactory({
-      addLog,
-      checkUpiRedeemAccessTokenEligibility,
-      findBackupCredentialByEmail,
-      getChatGptSessionAccessToken,
-      getErrorMessage,
-      getState,
-      getStoredResults,
-      hasPasskeyCredential,
-      isBatchRunning: () => runtimeFlags.batchRunning,
-      isCdkeyRetryRunning: () => runtimeFlags.cdkeyRetryRunning,
-      isRedeemRunning: () => runtimeFlags.redeemRunning,
-      loginAndReadAccessToken,
-      markCustomEmailPoolEntryTrialEligibility,
-      markRegistrationEmailTrialIneligible,
-      maskAccessToken,
-      mergeCredentialAuthMaterial,
-      mergeCredentialsIntoResultItems,
-      normalizeEmail,
-      normalizeRedeemChannel,
-      normalizeResultItem,
-      normalizeRetryCount,
-      normalizeString,
-      resolveInputCredentials,
-      saveResults,
-      setBatchRunning: (value) => { runtimeFlags.batchRunning = value === true; },
-      setBatchStopRequested: (value) => { batchStopRequested = value === true; },
-      throwIfMembershipStopRequested,
-      upsertResultItem,
-      upsertTrialEligibleFreeCredential,
-    });
-    const { checkUpiCredentialMembershipTrialEligibility } = trialEligibilityService;
-    const importExportServiceFactory = getMembershipImportExportServiceModule().createImportExportService;
-    if (typeof importExportServiceFactory !== 'function') {
-      throw new Error('Membership import/export service module is not loaded.');
-    }
-    const importExportService = importExportServiceFactory({
-      buildRedeemAccountUnlockedPatch,
-      buildResultExportRows,
-      buildTimestampedFileName,
-      deleteUpiCredentialMembershipCheckResults,
-      getActiveRedeemCdkeyUsageEmailSetFromState,
-      getResultItemRedeemChannel,
-      getState,
-      getStoredResults,
-      isActiveUpiCredentialMembershipRedeemResultItem,
-      isBatchRunning: () => runtimeFlags.batchRunning,
-      isCdkeyRetryRunning: () => runtimeFlags.cdkeyRetryRunning,
-      isLikelyVerificationUrl,
-      isPasskeyExportMarker,
-      isRedeemRunning: () => runtimeFlags.redeemRunning,
-      isResultItemHiddenByPlusDeletion,
-      isResultItemPasskeyExportableForStatus,
-      normalizeEmail,
-      normalizeEmailList,
-      normalizeRedeemChannel,
-      normalizeResultItem,
-      normalizeResultsPayload,
-      normalizeString,
-      resolveInputCredentials,
-      saveResults,
-    });
-    const {
-      exportUpiCredentialMembershipCheckResults,
-      importUpiCredentialMembershipFreeResults,
-    } = importExportService;
 
     return {
       retryFailedUpiRedeemCdkey,

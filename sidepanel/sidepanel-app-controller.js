@@ -543,7 +543,7 @@ const actionModalService = window.SidepanelActionModalService?.createActionModal
     optionText: modalOptionText,
     cancelButton: btnAutoStartCancel,
     restartButton: btnAutoStartRestart,
-    continueButton: btnAutoStartContinue,
+    continueButton: btnAutoStartContinue, closeButton: btnAutoStartClose,
   },
 });
 
@@ -643,12 +643,14 @@ const appState = window.SidepanelAppState.createSidepanelAppState({
 });
 
 with (appState.createScope()) {
+  function renderLegacyWalletAccounts() { }
+
   function buildSettingsControllerScopeValues() {
     return {
       btnSaveSettings,
       collectSettingsPayload,
-      sendRuntimeMessageWithTimeout,
       applySettingsState,
+      preserveHotmailAccountsForSettingsSaveResponse,
       syncLatestState,
       updatePanelModeUI,
       updateMailProviderUI,
@@ -838,6 +840,7 @@ with (appState.createScope()) {
       syncPlusManualConfirmationDialog,
       syncRunCountFromConfiguredEmailPool,
       syncRunCountFromCustomMailProviderPool,
+      syncCustomEmailPoolEntriesFromMembershipResults,
       syncStepDefinitionsForMode,
       syncTotpMfaAfterProfileStepDefinitions,
       syncUpiRedeemAfterModeControls,
@@ -906,7 +909,7 @@ with (appState.createScope()) {
   const AUTO_RUN_MAX_RETRIES_PER_ROUND = 3;
   const AUTO_STEP_DELAY_MIN_SECONDS = 0;
   const AUTO_STEP_DELAY_MAX_SECONDS = 600;
-  const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;
+  const AUTO_STEP_DELAY_DEFAULT_SECONDS = 2;
   const VERIFICATION_RESEND_COUNT_MIN = 0;
   const VERIFICATION_RESEND_COUNT_MAX = 20;
   const DEFAULT_VERIFICATION_RESEND_COUNT = 0;
@@ -983,6 +986,90 @@ with (appState.createScope()) {
     getUpiInfoAutoModeEnabledFromResponse,
     normalizeUpiInfoOtpChannelValue,
   } = upiInfoHelperState;
+  function createEmergencyWorkflowDefinitionModule() {
+    const full2faSteps = [
+      { id: 1, order: 10, key: 'open-chatgpt', title: '打开 ChatGPT 官网', sourceId: 'chatgpt', driverId: '', command: 'open-chatgpt' },
+      { id: 2, order: 20, key: 'submit-signup-email', title: '注册并输入邮箱', sourceId: 'openai-auth', driverId: 'content/signup-page', command: 'submit-signup-email' },
+      { id: 3, order: 30, key: 'fill-password', title: '填写密码并继续', sourceId: 'openai-auth', driverId: 'content/signup-page', command: 'fill-password' },
+      { id: 4, order: 40, key: 'fetch-signup-code', title: '获取注册验证码', sourceId: 'openai-auth', driverId: 'content/signup-page', command: 'submit-verification-code', mailRuleId: 'openai-signup-code' },
+      { id: 5, order: 50, key: 'fill-profile', title: '填写姓名和生日', sourceId: 'openai-auth', driverId: 'content/signup-page', command: 'fill-profile' },
+      { id: 6, order: 60, key: 'set-gpt-password', title: '设置 GPT 密码', sourceId: 'openai-auth', driverId: '', command: 'set-gpt-password' },
+      { id: 7, order: 70, key: 'enable-totp-mfa', title: '开通 2FA 并检测资格', sourceId: 'chatgpt', driverId: '', command: 'enable-totp-mfa' },
+    ];
+    const no2faSteps = [
+      ...full2faSteps.filter((step) => Number(step.id) <= 5),
+      { id: 6, order: 60, key: 'persist-no-2fa-free', title: '免 2FA 检测资格并进入 Free', sourceId: 'chatgpt', driverId: '', command: 'persist-no-2fa-free' },
+    ];
+    const passkeySteps = [
+      ...full2faSteps.filter((step) => Number(step.id) <= 6),
+      { id: 7, order: 70, key: 'enable-passkey', title: '开通 Passkey 并检测资格', sourceId: 'chatgpt', driverId: '', command: 'enable-passkey' },
+    ];
+    const normalizeRoute = (value = '') => {
+      const route = String(value || '').trim().toLowerCase();
+      if (route === REGISTRATION_FREE_ROUTE_NO_2FA) return REGISTRATION_FREE_ROUTE_NO_2FA;
+      if (route === REGISTRATION_FREE_ROUTE_PASSKEY) return REGISTRATION_FREE_ROUTE_PASSKEY;
+      return REGISTRATION_FREE_ROUTE_FULL_2FA;
+    };
+    const getRouteSteps = (options = {}) => {
+      const route = normalizeRoute(options?.registrationFreeRoute);
+      if (route === REGISTRATION_FREE_ROUTE_NO_2FA) return no2faSteps;
+      if (route === REGISTRATION_FREE_ROUTE_PASSKEY) return passkeySteps;
+      return full2faSteps;
+    };
+    const getSteps = (options = {}) => {
+      const flowId = String(options?.activeFlowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
+      return getRouteSteps(options).map((step) => ({ ...step, flowId }));
+    };
+    const getNodes = (options = {}) => {
+      const flowId = String(options?.activeFlowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
+      const steps = getRouteSteps(options);
+      return steps.map((step, index) => ({
+        legacyStepId: Number(step.id),
+        nodeId: String(step.key || '').trim(),
+        flowId,
+        title: step.title,
+        displayOrder: Number.isFinite(Number(step.order)) ? Number(step.order) : Number(step.id),
+        nodeType: 'task',
+        sourceId: String(step.sourceId || ''),
+        driverId: String(step.driverId || ''),
+        executeKey: String(step.key || '').trim(),
+        command: String(step.command || step.key || '').trim(),
+        mailRuleId: String(step.mailRuleId || '').trim(),
+        next: steps[index + 1]?.key ? [String(steps[index + 1].key)] : [],
+        retryPolicy: {},
+        recoveryPolicy: {},
+        ui: {},
+      })).filter((node) => node.nodeId);
+    };
+    return { getSteps, getNodes };
+  }
+
+  function isUsableWorkflowDefinitionModule(moduleApi, requestOptions = {}) {
+    try {
+      const steps = typeof moduleApi?.getSteps === 'function' ? moduleApi.getSteps(requestOptions) : [];
+      const nodes = typeof moduleApi?.getNodes === 'function' ? moduleApi.getNodes(requestOptions) : [];
+      return Array.isArray(steps) && steps.length > 0 && Array.isArray(nodes) && nodes.length > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getWorkflowDefinitionModule(requestOptions = {}) {
+    const primary = window.MultiPageStepDefinitions;
+    if (isUsableWorkflowDefinitionModule(primary, requestOptions)) {
+      return primary;
+    }
+    const fallback = window.SidepanelWorkflowDefinitionFallback;
+    if (isUsableWorkflowDefinitionModule(fallback, requestOptions)) {
+      window.MultiPageStepDefinitions = fallback;
+      return fallback;
+    }
+    const emergency = window.SidepanelWorkflowEmergencyDefinitions || createEmergencyWorkflowDefinitionModule();
+    window.SidepanelWorkflowEmergencyDefinitions = emergency;
+    window.MultiPageStepDefinitions = emergency;
+    return emergency;
+  }
+
   function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
     const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID !== 'undefined' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
     const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : 'legacyWallet';
@@ -1032,7 +1119,8 @@ with (appState.createScope()) {
     if (typeof options !== 'string' && options?.panelMode !== undefined) {
       requestOptions.panelMode = options.panelMode;
     }
-    return (window.MultiPageStepDefinitions?.getSteps?.(requestOptions) || [])
+    const definitionModule = getWorkflowDefinitionModule(requestOptions);
+    return (definitionModule?.getSteps?.(requestOptions) || [])
       .sort((left, right) => {
         const leftOrder = Number.isFinite(left.order) ? left.order : left.id;
         const rightOrder = Number.isFinite(right.order) ? right.order : right.id;
@@ -1090,7 +1178,8 @@ with (appState.createScope()) {
     if (typeof options !== 'string' && options?.panelMode !== undefined) {
       requestOptions.panelMode = options.panelMode;
     }
-    const nodes = window.MultiPageStepDefinitions?.getNodes?.(requestOptions);
+    const definitionModule = getWorkflowDefinitionModule(requestOptions);
+    const nodes = definitionModule?.getNodes?.(requestOptions);
     if (Array.isArray(nodes) && nodes.length) {
       return nodes.slice().sort((left, right) => {
         const leftOrder = Number.isFinite(Number(left.displayOrder)) ? Number(left.displayOrder) : Number(left.legacyStepId);
@@ -1141,7 +1230,56 @@ with (appState.createScope()) {
     }
     return getStepIdByKeyForCurrentMode(normalizedNodeId);
   }
-  
+
+  function ensureWorkflowDefinitionsReady(options = {}) {
+    if ((workflowNodes || []).length && (NODE_IDS || []).length) {
+      return false;
+    }
+    const requestOptions = {
+      activeFlowId: String(options.activeFlowId || latestState?.activeFlowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID,
+      plusModeEnabled: options.plusModeEnabled ?? currentPlusModeEnabled,
+      plusPaymentMethod: normalizePlusPaymentMethod(options.plusPaymentMethod || currentPlusPaymentMethod),
+      plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(options.plusAccountAccessStrategy || currentPlusAccountAccessStrategy),
+      signupMethod: normalizeSignupMethod(options.signupMethod || currentSignupMethod),
+      upiRedeemStopAfterRedeem: options.upiRedeemStopAfterRedeem ?? currentUpiRedeemStopAfterRedeem,
+      upiRedeemContinueAfterRedeem: options.upiRedeemContinueAfterRedeem ?? !currentUpiRedeemStopAfterRedeem,
+      totpMfaAfterProfileEnabled: options.totpMfaAfterProfileEnabled ?? currentTotpMfaAfterProfileEnabled,
+      registrationFreeRoute: normalizeRegistrationFreeRoute(options.registrationFreeRoute ?? currentRegistrationFreeRoute),
+    };
+    const emergency = window.SidepanelWorkflowEmergencyDefinitions || createEmergencyWorkflowDefinitionModule();
+    window.SidepanelWorkflowEmergencyDefinitions = emergency;
+    const definitionModule = isUsableWorkflowDefinitionModule(window.MultiPageStepDefinitions, requestOptions)
+      ? window.MultiPageStepDefinitions
+      : emergency;
+    if (definitionModule === emergency) {
+      window.MultiPageStepDefinitions = emergency;
+    }
+    const nextSteps = (definitionModule.getSteps?.(requestOptions) || []).slice().sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left.order)) ? Number(left.order) : Number(left.id);
+      const rightOrder = Number.isFinite(Number(right.order)) ? Number(right.order) : Number(right.id);
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return Number(left.id) - Number(right.id);
+    });
+    const nextNodes = (definitionModule.getNodes?.(requestOptions) || []).slice().sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left.displayOrder)) ? Number(left.displayOrder) : Number(left.legacyStepId);
+      const rightOrder = Number.isFinite(Number(right.displayOrder)) ? Number(right.displayOrder) : Number(right.legacyStepId);
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return String(left.nodeId || '').localeCompare(String(right.nodeId || ''));
+    });
+    if (!nextSteps.length || !nextNodes.length) {
+      return false;
+    }
+    stepDefinitions = nextSteps;
+    workflowNodes = nextNodes;
+    STEP_IDS = stepDefinitions.map((step) => Number(step.id)).filter(Number.isFinite);
+    STEP_DEFAULT_STATUSES = Object.fromEntries(STEP_IDS.map((stepId) => [stepId, 'pending']));
+    SKIPPABLE_STEPS = new Set(STEP_IDS);
+    NODE_IDS = workflowNodes.map((node) => String(node.nodeId || '').trim()).filter(Boolean);
+    NODE_DEFAULT_STATUSES = Object.fromEntries(NODE_IDS.map((nodeId) => [nodeId, 'pending']));
+    SKIPPABLE_NODES = new Set(NODE_IDS);
+    return true;
+  }
+
   function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     currentPlusModeEnabled = Boolean(plusModeEnabled);
     const currentRemovedPaymentWorkerEnabled = Boolean(
@@ -1227,6 +1365,17 @@ with (appState.createScope()) {
     if (typeof SKIPPABLE_NODES !== 'undefined') {
       SKIPPABLE_NODES = new Set(typeof NODE_IDS !== 'undefined' ? NODE_IDS : []);
     }
+    ensureWorkflowDefinitionsReady({
+      ...options,
+      plusModeEnabled: currentPlusModeEnabled,
+      plusPaymentMethod: currentPlusPaymentMethod,
+      plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+      signupMethod: currentSignupMethod,
+      upiRedeemStopAfterRedeem: currentUpiRedeemStopAfterRedeem,
+      upiRedeemContinueAfterRedeem,
+      totpMfaAfterProfileEnabled: currentTotpMfaAfterProfileEnabled,
+      registrationFreeRoute: currentRegistrationFreeRoute,
+    });
   }
   const CONTRIBUTION_CONTENT_PROMPT_DISMISSED_VERSION_STORAGE_KEY = 'multipage-contribution-content-prompt-dismissed-version';
   const AUTO_RUN_FALLBACK_RISK_WARNING_MIN_RUNS = 6;
@@ -1392,17 +1541,13 @@ with (appState.createScope()) {
     syncMail2925PoolAccountOptions(state);
     inputEmailPrefix.value = getManagedAliasBaseEmailForProvider(provider, state);
   }
-  
-  function getCurrentRegistrationEmailUiCopy() {
-    if (isCustomMailProvider()) {
-      return getCustomMailProviderUiCopy();
-    }
-    if (usesGeneratedAliasMailProvider()) {
-      return getManagedAliasProviderUiCopy();
-    }
-    return getEmailGeneratorUiCopy();
-  }
-  
+
+  const registrationEmailUiCopy = window.SidepanelRegistrationEmailUiCopy?.createRegistrationEmailUiCopy?.({
+    constants: { CLOUD_MAIL_PROVIDER, CLOUDFLARE_TEMP_EMAIL_PROVIDER, CUSTOM_EMAIL_POOL_GENERATOR, FREEMAIL_PROVIDER, GMAIL_ALIAS_GENERATOR, ICLOUD_PROVIDER, MOEMAIL_GENERATOR, OUTLOOK_EMAIL_PLUS_GENERATOR, YYDSMAIL_GENERATOR },
+    getters: { getLatestState: () => latestState, getSelectedEmailGenerator: () => getSelectedEmailGenerator(), getSelectedMailProvider: () => selectMailProvider?.value },
+    helpers: { getManagedAliasProviderUiCopy: () => getManagedAliasProviderUiCopy(), isCustomMailProvider: () => isCustomMailProvider(), usesCustomMailProviderPool: () => usesCustomMailProviderPool(), usesGeneratedAliasMailProvider: () => usesGeneratedAliasMailProvider() },
+  }) || null;
+
   function isCurrentRegistrationEmailCompatible(email = inputEmail.value.trim(), provider = selectMailProvider.value, state = latestState) {
     return mailProviderState.isRegistrationEmailCompatible({
       email,
@@ -1472,9 +1617,6 @@ with (appState.createScope()) {
     onUpdate: () => updateSaveButtonState(),
     onError: (error) => showToast('配置操作失败：' + (error?.message || error), 'error'),
   });
-  const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettingsFieldBindings({
-    scheduleSettingsSave,
-  });
   configActionInFlight = false;
   currentReleaseSnapshot = null;
   currentContributionContentSnapshot = null;
@@ -1525,7 +1667,7 @@ with (appState.createScope()) {
       downloadTextFile,
       escapeHtml,
       openConfirmModal,
-      refreshUpiRedeemCdkeyStatuses,
+      refreshUpiRedeemCdkeyStatuses: (...args) => refreshUpiRedeemCdkeyStatuses(...args),
       showToast,
     },
     runtime: {
@@ -2137,8 +2279,7 @@ with (appState.createScope()) {
   }
   
   function openActionModal({ title, message, messageHtml, actions, option, alert, buildResult }) {
-    return actionModalService?.openActionModal?.({ title, message, messageHtml, actions, option, alert, buildResult })
-      || Promise.resolve(null);
+    return actionModalService?.openActionModal?.({ title, message, messageHtml, actions, option, alert, buildResult }) || Promise.resolve(null);
   }
   
   function openAutoStartChoiceDialog(startStep, options = {}) {
@@ -2147,6 +2288,19 @@ with (appState.createScope()) {
   
   async function openConfirmModal({ title, message, confirmLabel = '确认', confirmVariant = 'btn-primary', alert = null }) {
     return Boolean(await actionModalService?.openConfirmModal?.({ title, message, confirmLabel, confirmVariant, alert }));
+  }
+
+  async function openCustomVerificationConfirmDialog(step) {
+    const normalizedStep = Number(step) || 0;
+    const message = normalizedStep ? `步骤 ${normalizedStep} 需要确认是否继续等待/跳过当前验证码处理。` : '当前验证码处理需要确认是否继续。';
+    const confirmed = await openConfirmModal({ title: '验证码确认', message, confirmLabel: '继续', confirmVariant: 'btn-primary' });
+    return { confirmed };
+  }
+
+  async function openLegacyPayOtpInputDialog(payload = {}) {
+    const message = String(payload.message || payload.prompt || '请输入验证码').trim() || '请输入验证码';
+    const code = String(window.prompt(message, String(payload.code || '')) || '').trim();
+    return { cancelled: !code, code };
   }
   
   async function openConfirmModalWithOption({
@@ -2679,6 +2833,7 @@ with (appState.createScope()) {
       legacyOverrideSource: nextState || {},
     });
     syncLocalChatgptSessionReaderDraftFromState(latestState);
+    if (nextState?.upiCredentialMembershipCheckResults !== undefined) syncCustomEmailPoolEntriesFromMembershipResults(latestState.upiCredentialMembershipCheckResults);
   
     renderAccountRecords(latestState);
   }
@@ -3021,6 +3176,7 @@ with (appState.createScope()) {
       inputCustomMailProviderPool.value = normalizeCustomEmailPoolEntryValues(normalizedState?.customMailProviderPool).join('\n');
     }
     setCustomEmailPoolEntriesState(restoreCustomEmailPoolEntriesFromState(normalizedState));
+    renderCustomEmailPoolEntries(getNormalizedCustomEmailPoolEntriesState());
     if (inputSub2ApiUrl) inputSub2ApiUrl.value = normalizedState.sub2apiUrl || '';
     if (inputSub2ApiEmail) inputSub2ApiEmail.value = normalizedState.sub2apiEmail || '';
     if (inputSub2ApiPassword) inputSub2ApiPassword.value = normalizedState.sub2apiPassword || '';
@@ -3223,6 +3379,7 @@ with (appState.createScope()) {
   
   function updateMailProviderUI() {
     panelDisplayController.updateMailProviderUI();
+    registrationEmailUiCopy?.updateRegistrationEmailUiCopy?.({ inputEmail, btnFetchEmail });
   }
   
   function updatePanelModeUI() {
@@ -3278,6 +3435,7 @@ with (appState.createScope()) {
   function initMail2925ListExpandedState() { }
   function queueLuckmailPurchaseRefresh() { }
   function queueIcloudAliasRefresh() { }
+  function showIcloudLoginHelp() { }
   function positionContributionUpdateHint() { }
   
   async function copyTextToClipboard(text) {
@@ -3327,9 +3485,7 @@ with (appState.createScope()) {
       },
       state: {
         getEntries: () => getNormalizedCustomEmailPoolEntriesState(),
-        setEntries: (entries) => {
-          setCustomEmailPoolEntriesState(entries);
-        },
+        setEntries: (entries, options = {}) => setCustomEmailPoolEntriesState(entries, options),
         getCredentialForEmail: (email) => {
           const normalizedEmail = String(email || '').trim().toLowerCase();
           const items = Array.isArray(latestState?.upiCredentialMembershipCheckResults?.items)
@@ -3337,14 +3493,18 @@ with (appState.createScope()) {
             : [];
           return items.find((item) => String(item?.email || '').trim().toLowerCase() === normalizedEmail) || {};
         },
-        getCurrentEmail: () => String(inputEmail?.value || latestState?.email || '').trim().toLowerCase(),
+        getCurrentEmail: () => String(((latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step') ? latestState?.email : inputEmail?.value) || latestState?.email || inputEmail?.value || '').trim().toLowerCase(), isAutoRunning: () => Boolean(latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step'),
         isVisible: () => Boolean(rowCustomEmailPool) && rowCustomEmailPool.style.display !== 'none',
       },
       actions: {
-        persistEntries: async () => {
-          syncRunCountFromConfiguredEmailPool();
-          updateMailProviderUI();
-          await persistCustomEmailPoolSettings();
+        persistEntries: async () => { syncRunCountFromConfiguredEmailPool(); updateMailProviderUI(); await persistCustomEmailPoolSettings(); },
+        reloadEntries: async () => {
+          const state = await chrome.runtime.sendMessage({ type: 'GET_STATE', source: 'sidepanel' });
+          if (state?.error) throw new Error(state.error);
+          syncLatestState(state || {});
+          const entries = restoreCustomEmailPoolEntriesFromState(state || {});
+          if (entries.length > 0 || getNormalizedCustomEmailPoolEntriesState().length === 0) setCustomEmailPoolEntriesState(entries);
+          return entries;
         },
         setRuntimeEmail: async (email) => {
           const selectedEmail = String(email || '').trim().toLowerCase();
@@ -3617,8 +3777,8 @@ with (appState.createScope()) {
       showToast,
       openConfirmModal,
       renderAccountRecords,
-      markSettingsDirty,
-      saveSettings,
+      markSettingsDirty: (...args) => markSettingsDirty(...args),
+      saveSettings: (...args) => saveSettings(...args),
       normalizeUpiRedeemFailedAccountRetryLimit,
       getSelectedPlusPaymentMethod: () => getSelectedPlusPaymentMethod(),
       isAutoRunLockedPhase,
@@ -4272,24 +4432,32 @@ with (appState.createScope()) {
       .map((entry) => entry.email);
   }
   
+  const customEmailPoolStorage = window.SidepanelCustomEmailPoolStorage || {};
+
   function setCustomEmailPoolEntriesState(entries = [], options = {}) {
-    const { syncInput = true } = options;
+    const { syncInput = true, clearBackup = false, persistBackup = true } = options;
     customEmailPoolEntriesState = normalizeCustomEmailPoolEntryObjects(entries);
+    customEmailPoolStorage.syncEntriesBackup?.(customEmailPoolEntriesState, { clearBackup, persistBackup });
     if (syncInput && inputCustomEmailPool) {
       inputCustomEmailPool.value = normalizeCustomEmailPoolEntryValues(
         customEmailPoolEntriesState.filter(isCustomEmailPoolEntryAvailable)
       ).join('\n');
     }
   }
+
+  function syncCustomEmailPoolEntriesFromMembershipResults(results = latestState?.upiCredentialMembershipCheckResults) {
+    const syncer = window.SidepanelCustomEmailPoolMembershipSync?.createCustomEmailPoolMembershipSync?.({
+      normalizeEntries: normalizeCustomEmailPoolEntryObjects,
+      normalizeTrialEligibilityStatus: normalizeCustomEmailPoolTrialEligibilityStatus,
+    });
+    const mergeResult = syncer?.mergeEntriesWithMembershipResults?.(getNormalizedCustomEmailPoolEntriesState(), results);
+    if (!mergeResult?.changed) return false;
+    setCustomEmailPoolEntriesState(mergeResult.entries);
+    return true;
+  }
   
   function restoreCustomEmailPoolEntriesFromState(state = {}) {
-    const rawEntries = Array.isArray(state?.customEmailPoolEntries)
-      ? state.customEmailPoolEntries
-      : [];
-    if (rawEntries.length > 0) {
-      return normalizeCustomEmailPoolEntryObjects(rawEntries);
-    }
-    return normalizeCustomEmailPoolEntryObjects(state?.customEmailPool);
+    return customEmailPoolStorage.restoreEntriesFromState?.(state, normalizeCustomEmailPoolEntryObjects) || [];
   }
   
   function usesCustomEmailPoolGenerator(provider = selectMailProvider.value) {
@@ -5911,6 +6079,9 @@ const {
   saveSettings,
   persistCurrentSettingsForAction,
 } = settingsController;
+const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettingsFieldBindings({
+  scheduleSettingsSave,
+});
   const removedPaymentWorkerController = window.SidepanelRemovedPaymentWorkerController.createRemovedPaymentWorkerController({
     dom: {
       document,
@@ -7448,10 +7619,12 @@ runtimeMessageController.start();
   async function startAutoRun() {
     try {
       await persistCurrentSettingsForAction();
-      const totalRuns = getRunCountValue();
+      if (usesCustomEmailPoolGenerator() && getCustomEmailPoolSize() <= 0) { showToast('自定义邮箱池没有可用邮箱，请先导入或启用至少 1 个邮箱。', 'warn', 2600); return; }
+      const mode = shouldOfferAutoModeChoice(latestState) ? await openAutoStartChoiceDialog(getFirstUnfinishedStep(latestState) || 1, { runningStep: getRunningSteps(latestState)[0] || null }) : 'restart';
+      if (!mode) return;
       const payload = {
-        totalRuns,
-        mode: shouldOfferAutoModeChoice(latestState) ? 'continue' : 'restart',
+        totalRuns: getRunCountValue(),
+        mode,
         autoRunRetryNonFreeTrial: Boolean(inputAutoRunRetryNonFreeTrial?.checked),
         autoRunRetryLegacyWalletCallback: Boolean(inputAutoRunRetryLegacyWalletCallback?.checked),
       };
@@ -7602,8 +7775,36 @@ runtimeMessageController.start();
   // Init
   // ============================================================
   
-  renderStepsList();
-  initializeManualStepActions();
+  ensureWorkflowDefinitionsReady({
+    plusModeEnabled: currentPlusModeEnabled,
+    plusPaymentMethod: currentPlusPaymentMethod,
+    plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+    signupMethod: currentSignupMethod,
+    upiRedeemStopAfterRedeem: currentUpiRedeemStopAfterRedeem,
+    totpMfaAfterProfileEnabled: currentTotpMfaAfterProfileEnabled,
+    registrationFreeRoute: currentRegistrationFreeRoute,
+  });
+  try {
+    renderStepsList();
+    initializeManualStepActions();
+  } catch (err) {
+    console.error('Failed to render workflow list during initialization:', err);
+    ensureWorkflowDefinitionsReady({
+      plusModeEnabled: currentPlusModeEnabled,
+      plusPaymentMethod: currentPlusPaymentMethod,
+      plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+      signupMethod: currentSignupMethod,
+      upiRedeemStopAfterRedeem: currentUpiRedeemStopAfterRedeem,
+      totpMfaAfterProfileEnabled: currentTotpMfaAfterProfileEnabled,
+      registrationFreeRoute: currentRegistrationFreeRoute,
+    });
+    try {
+      renderStepsList();
+      initializeManualStepActions();
+    } catch (retryErr) {
+      console.error('Failed to render workflow list after recovery:', retryErr);
+    }
+  }
   bindConfigMenuEvents();
   bindAccountRecordEvents();
   bindCustomEmailPoolEvents();

@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const resultState = require('../background/membership/result-state.js');
 
@@ -134,4 +136,69 @@ test('normalizeResultsPayload preserves redeemPlusDeletedEmailsByChannel', () =>
     upi: 2,
     ideal: 1,
   });
+});
+
+test('normalizeResultItem clears internal redeem failure-limit errors', () => {
+  for (const message of [
+    'REDEEM_CHANNEL_FAILURE_LIMIT is not defined',
+    'context.parseCdkeyPoolText is not a function',
+  ]) {
+    const item = resultState.normalizeResultItem({
+      email: 'fresh@example.com',
+      status: 'free',
+      planType: 'free',
+      reason: `UPI Free 账号兑换失败：${message}`,
+      redeemStatus: 'failed',
+      redeemReason: message,
+      redeemChannel: 'upi',
+      redeemFailureCount: 3,
+      redeemFailureLimit: 3,
+      upiRedeemFailureCount: 3,
+      idealRedeemFailureCount: 1,
+      redeemLastFailedAt: '2026-07-08T10:00:00.000Z',
+      redeemAttemptedAt: '2026-07-08T09:00:00.000Z',
+      upiRedeemCdkey: 'CDK-TEST',
+      lastFailedUpiRedeemCdkey: 'CDK-TEST',
+      trialEligibilityStatus: 'eligible',
+      trialEligibilityReason: '账号有试用资格。',
+      accessToken: 'at-test',
+    });
+
+    assert.equal(item.status, 'free');
+    assert.equal(item.reason, '账号有试用资格。');
+    assert.equal(item.redeemStatus, '');
+    assert.equal(item.redeemReason, '');
+    assert.equal(item.redeemChannel, '');
+    assert.equal(item.redeemFailureCount, 0);
+    assert.equal(item.upiRedeemFailureCount, 0);
+    assert.equal(item.idealRedeemFailureCount, 0);
+    assert.equal(item.redeemLocked, false);
+    assert.equal(item.redeemLastFailedAt, '');
+    assert.equal(item.redeemAttemptedAt, '');
+    assert.equal(item.upiRedeemCdkey, '');
+    assert.equal(item.lastFailedUpiRedeemCdkey, '');
+  }
+});
+
+test('free membership override fields reset redeem failure state', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'background', 'upi-credential-membership-checker.js'),
+    'utf8'
+  );
+  const match = source.match(/function buildFreeMembershipOverrideFields[\s\S]*?return \{([\s\S]*?)\n\s*\};/);
+  assert.ok(match, 'buildFreeMembershipOverrideFields should exist');
+  const body = match[1];
+
+  for (const field of [
+    'redeemStatus',
+    'redeemReason',
+    'redeemFailureCount',
+    'upiRedeemFailureCount',
+    'idealRedeemFailureCount',
+    'redeemLocked',
+    'redeemLockedReason',
+    'redeemLockedAt',
+  ]) {
+    assert.match(body, new RegExp(`\\b${field}\\b`));
+  }
 });

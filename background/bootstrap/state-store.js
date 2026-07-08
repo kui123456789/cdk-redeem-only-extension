@@ -18,6 +18,39 @@
       setPersistentSettings = async () => {},
     } = deps;
 
+    function hasNonEmptyArray(value) {
+      return Array.isArray(value) && value.length > 0;
+    }
+
+    function protectPersistedCustomEmailPoolOnReload(state = {}, persistedSettings = {}) {
+      const merged = { ...(state || {}) };
+      const sessionEntries = state?.customEmailPoolEntries;
+      const persistedEntries = persistedSettings?.customEmailPoolEntries;
+      const sessionPool = state?.customEmailPool;
+      const persistedPool = persistedSettings?.customEmailPool;
+      const shouldRestoreStructuredEntries = Array.isArray(sessionEntries)
+        && sessionEntries.length === 0
+        && hasNonEmptyArray(persistedEntries);
+      const shouldRestoreLegacyPool = Array.isArray(sessionPool)
+        && sessionPool.length === 0
+        && hasNonEmptyArray(persistedPool);
+
+      if (shouldRestoreStructuredEntries) {
+        merged.customEmailPoolEntries = persistedEntries;
+      }
+      if (shouldRestoreLegacyPool) {
+        merged.customEmailPool = persistedPool;
+      }
+      if (
+        (shouldRestoreStructuredEntries || shouldRestoreLegacyPool)
+        && !String(merged.selectedCustomEmailPoolEmail || '').trim()
+        && String(persistedSettings?.selectedCustomEmailPoolEmail || '').trim()
+      ) {
+        merged.selectedCustomEmailPoolEmail = persistedSettings.selectedCustomEmailPoolEmail;
+      }
+      return merged;
+    }
+
     async function getState() {
       const [state, persistedSettings, persistedAliasState, accountRunHistory, credentialMembershipCheckState] = await Promise.all([
         chromeApi.storage.session.get(null),
@@ -28,11 +61,12 @@
       ]);
       const persistedCredentialMembershipCheckResults = credentialMembershipCheckState?.[membershipResultsStorageKey]
         || defaultState.upiCredentialMembershipCheckResults;
+      const sessionState = protectPersistedCustomEmailPoolOnReload(state, persistedSettings);
       return buildStateViewWithRuntimeState({
         ...defaultState,
         ...persistedSettings,
         ...persistedAliasState,
-        ...state,
+        ...sessionState,
         upiCredentialMembershipCheckResults: persistedCredentialMembershipCheckResults,
         accountRunHistory,
       });

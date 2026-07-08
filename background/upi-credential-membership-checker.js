@@ -898,6 +898,21 @@
       redeemSuccessAt: '',
       upiRedeemCdkey: '',
       cdkey: '',
+      redeemChannel: '',
+      redeemFailureCount: 0,
+      redeemFailureLimit: REDEEM_CHANNEL_FAILURE_LIMIT,
+      redeemLastFailedAt: '',
+      upiRedeemFailureCount: 0,
+      idealRedeemFailureCount: 0,
+      upiRedeemDailyLimitBlockedAt: '',
+      upiRedeemDailyLimitBlockedUntil: '',
+      upiRedeemDailyLimitReason: '',
+      idealRedeemDailyLimitBlockedAt: '',
+      idealRedeemDailyLimitBlockedUntil: '',
+      idealRedeemDailyLimitReason: '',
+      redeemLocked: false,
+      redeemLockedReason: '',
+      redeemLockedAt: '',
       upiRedeemSuccess: false,
       upiRedeemSubscriptionActive: false,
       upiRedeemHasActiveSubscription: false,
@@ -2205,6 +2220,48 @@
       }
     }
 
+    const plusVerificationServiceFactory = getMembershipPlusVerificationServiceModule().createPlusVerificationService;
+    if (typeof plusVerificationServiceFactory !== 'function') {
+      throw new Error('Membership Plus verification service module is not loaded.');
+    }
+    const plusVerificationService = plusVerificationServiceFactory({
+      addLog,
+      buildFreeMembershipOverrideFields,
+      checkCredentialPaidSubscription,
+      checkUpiRedeemSubscriptionStatuses,
+      getErrorMessage,
+      getState,
+      getStoredResults,
+      isMembershipStopError,
+      isPaidPlanType,
+      maskAccessToken,
+      mergeCredentialsIntoResultItems,
+      normalizeEmail,
+      normalizeResultItem,
+      normalizeString,
+      normalizeSubscriptionRuntimeState,
+      resolveInputCredentials,
+      runtimeFlags: {
+        get batchRunning() { return batchRunning; },
+        set batchRunning(value) { batchRunning = value === true; },
+        get batchStopRequested() { return batchStopRequested; },
+        set batchStopRequested(value) { batchStopRequested = value === true; },
+        get redeemRunning() { return redeemRunning; },
+        get cdkeyRetryRunning() { return cdkeyRetryRunning; },
+      },
+      saveResults,
+      throwIfMembershipStopRequested,
+      upsertResultItem,
+    });
+    const plusVerificationIdentifyFreePlus = plusVerificationService?.identifyUpiCredentialMembershipFreePlus;
+    const plusVerificationVerifyPlus = plusVerificationService?.verifyUpiCredentialMembershipPlus;
+    if (typeof plusVerificationIdentifyFreePlus !== 'function') {
+      throw new Error('Membership Plus verification service is missing identifyUpiCredentialMembershipFreePlus.');
+    }
+    if (typeof plusVerificationVerifyPlus !== 'function') {
+      throw new Error('Membership Plus verification service is missing verifyUpiCredentialMembershipPlus.');
+    }
+
     const membershipRedeemServiceFactory = getMembershipRedeemServiceModule().createMembershipRedeemService;
     if (typeof membershipRedeemServiceFactory !== 'function') {
       throw new Error('Membership redeem service module is not loaded.');
@@ -2212,6 +2269,7 @@
     const membershipRedeemService = membershipRedeemServiceFactory({
       BACKUP_STORAGE_KEY,
       DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT,
+      REDEEM_CHANNEL_FAILURE_LIMIT,
       REDEEM_GROUP_CONTINUATION_IDLE_TIMEOUT_MS,
       REDEEM_GROUP_CONTINUATION_IDLE_WAIT_MS,
       addLog,
@@ -2244,7 +2302,7 @@
       getUpiRedeemStateValue,
       hasChatGptSessionPayload,
       hasPasskeyCredential,
-      identifyUpiCredentialMembershipFreePlus,
+      identifyUpiCredentialMembershipFreePlus: plusVerificationIdentifyFreePlus,
       isActiveUpiRedeemRemoteStatus,
       isApproveBlockedError,
       isCdkeyExhaustedError,
@@ -2291,7 +2349,7 @@
       throwIfMembershipStopRequested,
       throwIfStopped,
       upsertResultItem,
-      verifyUpiCredentialMembershipPlus,
+      verifyUpiCredentialMembershipPlus: plusVerificationVerifyPlus,
     });
     const {
       redeemUpiCredentialMembershipFree,
@@ -2307,8 +2365,10 @@
       addLog,
       buildAutoContinuationRedeemCandidates,
       buildRedeemChannelFailurePatch,
+      buildRetryUpdatesPayload,
       getAvailableUpiRedeemCdkeys,
       getFreshUpiRedeemRuntimeState,
+      getRedeemChannelUsage,
       getRedeemChannelFailureCount,
       getRedeemChannelLabel,
       getRedeemLockReason,
@@ -2322,11 +2382,14 @@
       normalizeResultsPayload,
       normalizeRetryCount,
       normalizeString,
+      normalizeUpiRedeemCdkeyUsage,
       normalizeUpiRedeemRemoteStatus,
       pickRandomUpiRedeemCdkey,
       redeemUpiCredentialWithAccessToken,
       runtimeFlags: {
         get batchRunning() { return batchRunning; },
+        get batchStopRequested() { return batchStopRequested; },
+        set batchStopRequested(value) { batchStopRequested = value === true; },
         get redeemRunning() { return redeemRunning; },
         set redeemRunning(value) { redeemRunning = value === true; },
         get redeemStopRequested() { return redeemStopRequested; },
@@ -2339,6 +2402,111 @@
       upsertResultItem,
     });
     const { retryFailedUpiRedeemCdkey } = failedRedeemRetryService;
+
+    const trialEligibilityServiceFactory = getMembershipTrialEligibilityServiceModule().createTrialEligibilityService;
+    if (typeof trialEligibilityServiceFactory !== 'function') {
+      throw new Error('Membership trial eligibility service module is not loaded.');
+    }
+    const trialEligibilityService = trialEligibilityServiceFactory({
+      addLog,
+      checkUpiRedeemAccessTokenEligibility,
+      findBackupCredentialByEmail,
+      getChatGptSessionAccessToken,
+      getErrorMessage,
+      getState,
+      getStoredResults,
+      hasPasskeyCredential,
+      isBatchRunning: () => batchRunning,
+      isCdkeyRetryRunning: () => cdkeyRetryRunning,
+      isRedeemRunning: () => redeemRunning,
+      loginAndReadAccessToken,
+      markCustomEmailPoolEntryTrialEligibility,
+      markRegistrationEmailTrialIneligible,
+      maskAccessToken,
+      mergeCredentialAuthMaterial,
+      mergeCredentialsIntoResultItems,
+      normalizeEmail,
+      normalizeRedeemChannel,
+      normalizeResultItem,
+      normalizeRetryCount,
+      normalizeString,
+      resolveInputCredentials,
+      saveResults,
+      setBatchRunning: (value) => { batchRunning = value === true; },
+      setBatchStopRequested: (value) => { batchStopRequested = value === true; },
+      throwIfMembershipStopRequested,
+      upsertResultItem,
+      upsertTrialEligibleFreeCredential,
+    });
+    const { checkUpiCredentialMembershipTrialEligibility } = trialEligibilityService;
+
+    const importExportServiceFactory = getMembershipImportExportServiceModule().createImportExportService;
+    if (typeof importExportServiceFactory !== 'function') {
+      throw new Error('Membership import/export service module is not loaded.');
+    }
+    const importExportService = importExportServiceFactory({
+      buildRedeemAccountUnlockedPatch,
+      buildResultExportRows,
+      buildTimestampedFileName,
+      deleteUpiCredentialMembershipCheckResults,
+      getActiveRedeemCdkeyUsageEmailSetFromState,
+      getResultItemRedeemChannel,
+      getState,
+      getStoredResults,
+      isActiveUpiCredentialMembershipRedeemResultItem,
+      isBatchRunning: () => batchRunning,
+      isCdkeyRetryRunning: () => cdkeyRetryRunning,
+      isLikelyVerificationUrl,
+      isPasskeyExportMarker,
+      isRedeemRunning: () => redeemRunning,
+      isResultItemHiddenByPlusDeletion,
+      isResultItemPasskeyExportableForStatus,
+      normalizeEmail,
+      normalizeEmailList,
+      normalizeRedeemChannel,
+      normalizeResultItem,
+      normalizeResultsPayload,
+      normalizeString,
+      resolveInputCredentials,
+      saveResults,
+    });
+    const {
+      exportUpiCredentialMembershipCheckResults,
+      importUpiCredentialMembershipFreeResults,
+    } = importExportService;
+
+    const accessTokenSupplementServiceFactory = getMembershipAccessTokenSupplementServiceModule().createAccessTokenSupplementService;
+    if (typeof accessTokenSupplementServiceFactory !== 'function') {
+      throw new Error('Membership access-token supplement service module is not loaded.');
+    }
+    const accessTokenSupplementService = accessTokenSupplementServiceFactory({
+      addLog,
+      findBackupCredentialByEmail,
+      getChatGptSessionAccessToken,
+      getErrorMessage,
+      getState,
+      getStoredResults,
+      hasPasskeyCredential,
+      isBatchRunning: () => batchRunning,
+      isCdkeyRetryRunning: () => cdkeyRetryRunning,
+      isRedeemRunning: () => redeemRunning,
+      loginAndReadAccessToken,
+      maskAccessToken,
+      mergeCredentialAuthMaterial,
+      mergeCredentialsIntoResultItems,
+      normalizeEmail,
+      normalizeResultItem,
+      normalizeString,
+      normalizeTotpSecret,
+      resolveInputCredentials,
+      saveResults,
+      setBatchRunning: (value) => { batchRunning = value === true; },
+      setBatchStopRequested: (value) => { batchStopRequested = value === true; },
+      throwIfMembershipStopRequested,
+      upsertResultItem,
+    });
+    const { fillUpiCredentialMembershipFreeAccessTokens } = accessTokenSupplementService;
+
     async function stopUpiCredentialMembershipRedeem() {
       redeemStopRequested = true;
       const current = await getStoredResults();
@@ -2374,7 +2542,7 @@
       getUpiCredentialMembershipCredentialPool,
       getUpiCredentialMembershipCheckResults: getStoredResults,
       checkUpiCredentialMembershipTrialEligibility,
-      identifyUpiCredentialMembershipFreePlus,
+      identifyUpiCredentialMembershipFreePlus: plusVerificationIdentifyFreePlus,
       importUpiCredentialMembershipFreeResults,
       loginUpiCredentialMembershipAccount,
       moveUpiCredentialMembershipAccountGroup,
@@ -2384,7 +2552,7 @@
       stopUpiCredentialMembershipCheck,
       stopUpiCredentialMembershipRedeem,
       upsertTrialEligibleFreeCredential,
-      verifyUpiCredentialMembershipPlus,
+      verifyUpiCredentialMembershipPlus: plusVerificationVerifyPlus,
     };
   }
 

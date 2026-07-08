@@ -479,6 +479,8 @@ const OUTLOOK_SUBSCRIPTION_USED_KEYWORD = 'ChatGPT Plus Subscription';
 const VERIFICATION_RESEND_COUNT_MIN = 0;
 const VERIFICATION_RESEND_COUNT_MAX = 20;
 const DEFAULT_VERIFICATION_RESEND_COUNT = 0;
+const OLD_AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;
+const AUTO_STEP_DELAY_DEFAULT_MIGRATION_KEY = 'autoStepDelayDefaultMigratedTo2';
 const LEGACY_AUTO_STEP_DELAY_KEYS = ['autoStepRandomDelayMinSeconds', 'autoStepRandomDelayMaxSeconds'];
 const LEGACY_VERIFICATION_RESEND_COUNT_KEYS = ['signupVerificationResendCount', 'loginVerificationResendCount'];
 const DEFAULT_LOCAL_CPA_STEP9_MODE = 'submit';
@@ -642,7 +644,6 @@ function getNodeTitleForState(nodeId, state = {}) {
   return requireFlowDefinitionResolver().getNodeTitleForState(nodeId, state);
 }
 
-initializeSessionStorageAccess();
 setupDeclarativeNetRequestRules();
 
 function setupDeclarativeNetRequestRules() {
@@ -715,7 +716,7 @@ const {
   OUTLOOK_ALIAS_DEFAULT_MAX_PER_ACCOUNT,
   PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
 });
-// Static smoke-audit marker for the extracted persisted default: autoStepDelaySeconds: 10
+// Static smoke-audit marker for the extracted persisted default: autoStepDelaySeconds: 2
 
 const persistentSettingsRegistry = self.MultiPagePersistentSettings?.createPersistentSettingsModule?.(PERSISTED_SETTING_DEFAULTS) || {
   defaults: PERSISTED_SETTING_DEFAULTS,
@@ -2504,7 +2505,20 @@ async function getPersistedSettings() {
     ...LEGACY_UPI_REDEEM_SETTING_KEYS,
     ...LEGACY_AUTO_STEP_DELAY_KEYS,
     ...LEGACY_VERIFICATION_RESEND_COUNT_KEYS,
+    AUTO_STEP_DELAY_DEFAULT_MIGRATION_KEY,
   ]);
+  if (
+    stored[AUTO_STEP_DELAY_DEFAULT_MIGRATION_KEY] !== true
+    && Number(stored.autoStepDelaySeconds) === OLD_AUTO_STEP_DELAY_DEFAULT_SECONDS
+  ) {
+    stored.autoStepDelaySeconds = PERSISTED_SETTING_DEFAULTS.autoStepDelaySeconds;
+    chrome.storage.local.set({
+      autoStepDelaySeconds: PERSISTED_SETTING_DEFAULTS.autoStepDelaySeconds,
+      [AUTO_STEP_DELAY_DEFAULT_MIGRATION_KEY]: true,
+    }).catch((err) => {
+      console.warn(LOG_PREFIX, 'Failed to migrate auto step delay default:', err?.message || err);
+    });
+  }
   return alignUpiRedeemCdkeyAliasStatePatch(buildPersistentSettingsPayload(stored, { fillDefaults: true }));
 }
 
@@ -2559,6 +2573,10 @@ async function initializeSessionStorageAccess() {
   return backgroundStateStore.initializeSessionStorageAccess();
 }
 
+initializeSessionStorageAccess().catch((err) => {
+  handleBackgroundStartupError('initialize session storage access', err);
+});
+
 const backgroundLegacyCleanup = self.MultiPageBackgroundLegacyCleanup.createBackgroundLegacyCleanup({
   chrome,
   logPrefix: LOG_PREFIX,
@@ -2574,6 +2592,9 @@ async function setState(updates) {
 
 async function setPersistentSettings(updates) {
   const persistedUpdates = buildPersistentSettingsPayload(updates);
+  if (Object.prototype.hasOwnProperty.call(persistedUpdates, 'autoStepDelaySeconds')) {
+    persistedUpdates[AUTO_STEP_DELAY_DEFAULT_MIGRATION_KEY] = true;
+  }
 
   if (Object.keys(persistedUpdates).length > 0) {
     await chrome.storage.local.set(persistedUpdates);
@@ -2724,6 +2745,18 @@ async function setEmailStateSilently(email, options = {}) {
   } else if (!preserveAccountIdentity && String(currentState?.accountIdentifierType || '').trim().toLowerCase() === 'email') {
     updates.accountIdentifierType = null;
     updates.accountIdentifier = '';
+  }
+
+  const selectedCustomEmailPoolEmail = String(options?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+  const normalizedSelectedEmail = String(normalizedEmail || '').trim().toLowerCase();
+  if (selectedCustomEmailPoolEmail && selectedCustomEmailPoolEmail === normalizedSelectedEmail) {
+    updates.selectedCustomEmailPoolEmail = selectedCustomEmailPoolEmail;
+  } else if (
+    normalizedSelectedEmail
+    && String(options?.source || '').trim().toLowerCase() === 'generated:custom-pool'
+    && isCustomEmailPoolGenerator(currentState)
+  ) {
+    updates.selectedCustomEmailPoolEmail = normalizedSelectedEmail;
   }
 
   await setState(updates);
@@ -11557,7 +11590,10 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
           : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
       );
     }
-    await setEmailState(queuedEmail);
+    await setEmailState(queuedEmail, {
+      source: 'generated:custom-pool',
+      selectedCustomEmailPoolEmail: queuedEmail,
+    });
     await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试）===`, 'ok');
     return queuedEmail;
   }
@@ -11709,7 +11745,10 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
           : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
       );
     }
-    await setEmailState(queuedEmail);
+    await setEmailState(queuedEmail, {
+      source: 'generated:custom-pool',
+      selectedCustomEmailPoolEmail: queuedEmail,
+    });
     await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试）===`, 'ok');
     return queuedEmail;
   }
@@ -11780,6 +11819,29 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
   return resumedState.email;
 }
 
+async function preselectCustomEmailPoolEmailForAutoRun(targetRun, totalRuns, attemptRuns) {
+  const currentState = await getState();
+  if (!isCustomEmailPoolGenerator(currentState)) {
+    return '';
+  }
+  const queuedEmail = getCustomEmailPoolEmailForRun(currentState, targetRun);
+  if (!queuedEmail) {
+    return '';
+  }
+  const normalizedQueuedEmail = String(queuedEmail || '').trim().toLowerCase();
+  const currentEmail = String(currentState.email || '').trim().toLowerCase();
+  const currentSelectedEmail = String(currentState.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+  if (currentEmail === normalizedQueuedEmail && currentSelectedEmail === normalizedQueuedEmail) {
+    return normalizedQueuedEmail;
+  }
+  await setEmailStateSilently(normalizedQueuedEmail, {
+    source: 'generated:custom-pool',
+    selectedCustomEmailPoolEmail: normalizedQueuedEmail,
+  });
+  await addLog(`自定义邮箱池：本轮已预选注册邮箱 ${normalizedQueuedEmail}（目标 ${targetRun}/${totalRuns}，第 ${attemptRuns} 次尝试）。`, 'info');
+  return normalizedQueuedEmail;
+}
+
 async function runAutoSequenceFromNode(startNodeId, context = {}) {
   const state = await getState();
   const normalizedStartNodeId = String(startNodeId || '').trim();
@@ -11815,6 +11877,9 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   let currentStartNodeId = String(startNodeId || '').trim();
   let continueCurrentAttempt = continued;
   await ensureResolvedSignupMethodForRun();
+  if (!continueCurrentAttempt && currentStartNodeId === 'open-chatgpt') {
+    await preselectCustomEmailPoolEmailForAutoRun(targetRun, totalRuns, attemptRuns);
+  }
   const getNodeStatusForNode = (state, nodeId) => (
     String(state?.nodeStatuses?.[nodeId] || 'pending').trim() || 'pending'
   );
@@ -12349,6 +12414,7 @@ const signupExecutorRegistry = self.MultiPageBackgroundSignupExecutorRegistry.cr
   isVerificationMailPollingError,
   markCurrentRegistrationAccountTrialIneligible: registrationAccountStateRegistry.markCurrentRegistrationAccountTrialIneligible,
   markCurrentRegistrationAccountUsed: registrationAccountStateRegistry.markCurrentRegistrationAccountUsed,
+  markCustomEmailPoolEntryTrialEligibility: customEmailPoolStateRegistry.markCustomEmailPoolEntryTrialEligibility,
   normalizeCodex2ApiUrl,
   normalizeHotmailLocalBaseUrl,
   normalizeSub2ApiUrl,

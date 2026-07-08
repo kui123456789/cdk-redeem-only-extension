@@ -6,6 +6,15 @@
   const runtimeMessageHandlersApi = rootScope.SidepanelRuntimeMessageHandlers
     || (typeof require === 'function' ? require('./runtime-message-handlers.js') : null);
 
+  const WINDOW_BOUND_GLOBAL_FUNCTIONS = new Set([
+    'clearInterval',
+    'clearTimeout',
+    'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'setInterval',
+    'setTimeout',
+  ]);
+
   function createCombinedScope(appState, scopeValues = {}) {
     const stateScope = appState?.createScope?.() || {};
     const globalScope = typeof globalThis !== 'undefined' ? globalThis : {};
@@ -26,7 +35,10 @@
         if (prop in stateScope) {
           return stateScope[prop];
         }
-        return globalScope[prop];
+        const globalValue = globalScope[prop];
+        return WINDOW_BOUND_GLOBAL_FUNCTIONS.has(prop) && typeof globalValue === 'function'
+          ? globalValue.bind(globalScope)
+          : globalValue;
       },
       set(_target, prop, value) {
         if (typeof prop === 'string' && prop in scopeValues) {

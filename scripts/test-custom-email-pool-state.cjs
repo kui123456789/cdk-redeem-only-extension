@@ -70,3 +70,97 @@ test('custom email pool state marks ineligible entries used and persists state',
   assert.equal(writes.some((write) => write.kind === 'state'), true);
   assert.equal(logs[0].level, 'warn');
 });
+
+test('custom email pool state marks eligible entries used and stores access token', async () => {
+  const writes = [];
+  let currentState = {
+    customEmailPoolEntries: [
+      {
+        id: 'entry-1',
+        email: 'sample+alias@icloud.com',
+        enabled: true,
+        used: false,
+      },
+    ],
+    selectedCustomEmailPoolEmail: 'sample+alias@icloud.com',
+  };
+  const state = createCustomEmailPoolState({
+    broadcastDataUpdate: (payload) => writes.push({ kind: 'broadcast', payload }),
+    getState: async () => currentState,
+    normalizeCustomEmailVerificationUrl,
+    parseCustomEmailPoolEntryValue,
+    parseHiddenEmailCredential,
+    setPersistentSettings: async (payload) => writes.push({ kind: 'persist', payload }),
+    setState: async (payload) => {
+      currentState = { ...currentState, ...payload };
+      writes.push({ kind: 'state', payload });
+    },
+  });
+
+  const result = await state.markCustomEmailPoolEntryTrialEligibility(currentState, {
+    email: 'sample+alias@icloud.com',
+    status: 'eligible',
+    reason: '账号有试用资格。',
+    checkedAt: '2026-07-08T00:00:00.000Z',
+    accessToken: 'at-test-token',
+    markUsed: true,
+  });
+
+  assert.equal(result.updated, true);
+  assert.equal(result.customEmailPoolEntries[0].used, true);
+  assert.equal(result.customEmailPoolEntries[0].trialEligibilityStatus, 'eligible');
+  assert.equal(result.customEmailPoolEntries[0].accessToken, 'at-test-token');
+  assert.deepEqual(result.customEmailPool, []);
+  assert.equal(currentState.selectedCustomEmailPoolEmail, '');
+  assert.equal(writes.some((write) => write.kind === 'persist'), true);
+  assert.equal(writes.some((write) => write.kind === 'broadcast'), true);
+});
+
+test('custom email pool run selection keeps selected email only while available', () => {
+  const state = createCustomEmailPoolState({
+    normalizeCustomEmailVerificationUrl,
+    parseCustomEmailPoolEntryValue,
+    parseHiddenEmailCredential,
+  });
+
+  assert.equal(
+    state.getCustomEmailPoolEmailForRun({
+      selectedCustomEmailPoolEmail: 'selected@example.com',
+      customEmailPoolEntries: [
+        { email: 'selected@example.com', enabled: true, used: false },
+        { email: 'next@example.com', enabled: true, used: false },
+      ],
+    }),
+    'selected@example.com'
+  );
+});
+
+test('custom email pool run selection skips stale selected entries', () => {
+  const state = createCustomEmailPoolState({
+    normalizeCustomEmailVerificationUrl,
+    parseCustomEmailPoolEntryValue,
+    parseHiddenEmailCredential,
+  });
+
+  for (const staleSelectedEntry of [
+    { email: 'selected@example.com', enabled: true, used: true },
+    { email: 'selected@example.com', enabled: false, used: false },
+    {
+      email: 'selected@example.com',
+      enabled: true,
+      used: false,
+      trialEligibilityStatus: 'ineligible',
+    },
+  ]) {
+    assert.equal(
+      state.getCustomEmailPoolEmailForRun({
+        selectedCustomEmailPoolEmail: 'selected@example.com',
+        customEmailPoolEntries: [
+          staleSelectedEntry,
+          { email: 'next@example.com', enabled: true, used: false },
+        ],
+      }),
+      'next@example.com'
+    );
+  }
+});

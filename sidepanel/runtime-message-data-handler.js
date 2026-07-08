@@ -29,7 +29,31 @@
 
     function handleDataUpdated(message, sender, sendResponse) {
       const messageScope = buildMessageScope(message, sender, sendResponse);
+      messageScope.__sidepanelRuntimeIsArray = Array.isArray;
       with (messageScope) {
+        const currentCustomEmailPoolEntries = (() => {
+          try {
+            return typeof getNormalizedCustomEmailPoolEntriesState === 'function'
+              ? getNormalizedCustomEmailPoolEntriesState()
+              : [];
+          } catch (_) {
+            return [];
+          }
+        })();
+        if (
+          __sidepanelRuntimeIsArray(message?.payload?.customEmailPoolEntries)
+          && message.payload.customEmailPoolEntries.length === 0
+          && currentCustomEmailPoolEntries.length > 0
+          && !(__sidepanelRuntimeIsArray(message.payload.customEmailPool) && message.payload.customEmailPool.length > 0)
+        ) {
+          message = {
+            ...message,
+            payload: {
+              ...message.payload,
+              customEmailPoolEntries: currentCustomEmailPoolEntries,
+            },
+          };
+        }
         syncLatestState(message.payload);
         if (
           message.payload.upiCredentialMembershipCheckResults !== undefined
@@ -46,6 +70,11 @@
           || message.payload.upiAccountCredentialBackups !== undefined
         ) {
           renderAccountRecords(latestState);
+          if (message.payload.upiCredentialMembershipCheckResults !== undefined) {
+            syncCustomEmailPoolEntriesFromMembershipResults?.(latestState?.upiCredentialMembershipCheckResults);
+            renderCustomEmailPoolEntries();
+            queueCustomEmailPoolRefresh();
+          }
           if (message.payload.upiAccountCredentialBackups !== undefined) {
             accountRecordsManager?.reloadUpiCredentialMembershipAfterRuntimeImport?.({ silent: true }).catch(() => null);
           }
@@ -55,6 +84,10 @@
         }
         if (message.payload.email !== undefined) {
           inputEmail.value = message.payload.email || '';
+          renderCustomEmailPoolEntries();
+          queueCustomEmailPoolRefresh();
+        } else if (message.payload.selectedCustomEmailPoolEmail !== undefined) {
+          renderCustomEmailPoolEntries();
           queueCustomEmailPoolRefresh();
         }
         if (
@@ -390,13 +423,18 @@
             setManagedAliasBaseEmailInputForProvider('2925', latestState);
           }
         }
-        if (message.payload.customEmailPoolEntries !== undefined || message.payload.customEmailPool !== undefined) {
+        if (message.payload.customEmailPoolEntries !== undefined) {
           const restoredCustomEmailPoolEntries = restoreCustomEmailPoolEntriesFromState({
             ...latestState,
             ...message.payload,
           });
           setCustomEmailPoolEntriesState(restoredCustomEmailPoolEntries);
-          renderCustomEmailPoolEntries(restoredCustomEmailPoolEntries);
+          syncCustomEmailPoolEntriesFromMembershipResults?.(latestState?.upiCredentialMembershipCheckResults);
+          renderCustomEmailPoolEntries();
+          syncRunCountFromConfiguredEmailPool();
+          queueCustomEmailPoolRefresh();
+        } else if (message.payload.customEmailPool !== undefined) {
+          renderCustomEmailPoolEntries();
           syncRunCountFromConfiguredEmailPool();
           queueCustomEmailPoolRefresh();
         }

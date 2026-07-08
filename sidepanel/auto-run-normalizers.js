@@ -29,7 +29,7 @@
       autoRunThreadIntervalDefaultMinutes = 0,
       autoRunThreadIntervalMaxMinutes = 1440,
       autoRunThreadIntervalMinMinutes = 0,
-      autoStepDelayDefaultSeconds = 10,
+      autoStepDelayDefaultSeconds = 2,
       autoStepDelayMaxSeconds = 600,
       autoStepDelayMinSeconds = 0,
     } = config;

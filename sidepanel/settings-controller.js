@@ -3,6 +3,15 @@
   root.SidepanelSettingsController = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis, function createSidepanelSettingsControllerModule() {
+  const WINDOW_BOUND_GLOBAL_FUNCTIONS = new Set([
+    'clearInterval',
+    'clearTimeout',
+    'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'setInterval',
+    'setTimeout',
+  ]);
+
   function createCombinedScope(appState, scopeValues = {}) {
   const stateScope = appState?.createScope?.() || {};
   const globalScope = typeof globalThis !== 'undefined' ? globalThis : {};
@@ -23,7 +32,10 @@
       if (prop in stateScope) {
         return stateScope[prop];
       }
-      return globalScope[prop];
+      const globalValue = globalScope[prop];
+      return WINDOW_BOUND_GLOBAL_FUNCTIONS.has(prop) && typeof globalValue === 'function'
+        ? globalValue.bind(globalScope)
+        : globalValue;
     },
     set(_target, prop, value) {
       if (typeof prop === 'string' && prop in scopeValues) {
@@ -151,7 +163,12 @@
           }
       
           if (response?.state) {
-            applySettingsState(preserveHotmailAccountsForSettingsSaveResponse(response.state, payload));
+            const nextState = preserveHotmailAccountsForSettingsSaveResponse(response.state, payload);
+            if (Array.isArray(payload.customEmailPoolEntries) && payload.customEmailPoolEntries.length > 0 && (!Array.isArray(nextState.customEmailPoolEntries) || nextState.customEmailPoolEntries.length === 0)) {
+              nextState.customEmailPoolEntries = payload.customEmailPoolEntries;
+              nextState.customEmailPool = payload.customEmailPool;
+            }
+            applySettingsState(nextState);
           } else {
             syncLatestState(payload);
             markSettingsDirty(false);
@@ -206,9 +223,11 @@
           throw new Error(response.error);
         }
       
+        const responseEntries = response?.state?.customEmailPoolEntries;
+        const usePayloadEntries = Array.isArray(payload.customEmailPoolEntries) && payload.customEmailPoolEntries.length > 0 && (!Array.isArray(responseEntries) || responseEntries.length === 0);
         syncLatestState({
-          customEmailPoolEntries: response?.state?.customEmailPoolEntries ?? payload.customEmailPoolEntries,
-          customEmailPool: response?.state?.customEmailPool ?? payload.customEmailPool,
+          customEmailPoolEntries: usePayloadEntries ? payload.customEmailPoolEntries : (responseEntries ?? payload.customEmailPoolEntries),
+          customEmailPool: usePayloadEntries ? payload.customEmailPool : (response?.state?.customEmailPool ?? payload.customEmailPool),
           selectedCustomEmailPoolEmail: response?.state?.selectedCustomEmailPoolEmail ?? payload.selectedCustomEmailPoolEmail,
           ...(Object.prototype.hasOwnProperty.call(payload, 'email')
             ? { email: response?.state?.email ?? payload.email }

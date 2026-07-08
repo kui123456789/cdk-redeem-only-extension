@@ -142,3 +142,38 @@ test('page detector and verification helper use shared action detectors', () => 
   });
   assert.equal(verification.findResendVerificationCodeTrigger(), resend);
 });
+
+test('verification helper falls back to visible Resend email text nodes', () => {
+  const clickableParent = makeAction('', { attrs: { role: 'button' } });
+  const resendText = {
+    textContent: 'Resend email',
+    value: '',
+    visible: true,
+    disabled: false,
+    getAttribute(name) {
+      return name === 'aria-disabled' ? 'false' : '';
+    },
+    closest() {
+      return clickableParent;
+    },
+  };
+  const verification = globalThis.MultiPageSignupVerificationPage.createSignupVerificationPage({
+    ...domContext,
+    authPageDetectors: detectors,
+    documentRef: {
+      ...makeDocument([]),
+      querySelectorAll(selector) {
+        return String(selector || '').includes('span') ? [resendText] : [];
+      },
+    },
+    locationRef: { pathname: '/email-verification' },
+    verificationCodeInputSelector: 'input[name="code"]',
+    loginTotpVerificationPattern: /totp/i,
+    oneTimeCodeLoginPattern: /one-time/i,
+    resendVerificationCodePattern: /resend/i,
+    invalidVerificationCodePattern: /invalid/i,
+    getAssociatedInputText: () => '',
+  });
+
+  assert.equal(verification.findResendVerificationCodeTrigger(), clickableParent);
+});

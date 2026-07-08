@@ -197,12 +197,55 @@
       return normalized;
     }
 
+    function enrichEntryFromStoredCredential(entry = {}) {
+      const storedCredential = state.getCredentialForEmail?.(entry.email) || {};
+      const storedStatus = normalizeTrialEligibilityStatus(storedCredential.trialEligibilityStatus);
+      if (storedStatus !== 'eligible') {
+        return entry;
+      }
+      const accessToken = String(
+        entry.accessToken
+        || storedCredential.accessToken
+        || storedCredential.token
+        || storedCredential.access_token
+        || storedCredential.upiRedeemAccessToken
+        || ''
+      ).trim();
+      return {
+        ...entry,
+        used: true,
+        lastUsedAt: entry.lastUsedAt || Number(storedCredential.lastUsedAt || storedCredential.updatedAt || 0) || Date.now(),
+        accessToken,
+        accessTokenMasked: entry.accessTokenMasked || storedCredential.accessTokenMasked || maskAccessToken(accessToken),
+        accessTokenUpdatedAt: entry.accessTokenUpdatedAt || storedCredential.accessTokenUpdatedAt || storedCredential.trialEligibilityCheckedAt || '',
+        trialEligibilityStatus: 'eligible',
+        trialEligibilityReason: entry.trialEligibilityReason || storedCredential.trialEligibilityReason || '账号有试用资格。',
+        trialEligibilityReasonCode: entry.trialEligibilityReasonCode || storedCredential.trialEligibilityReasonCode || '',
+        trialEligibilityCheckedAt: entry.trialEligibilityCheckedAt || storedCredential.trialEligibilityCheckedAt || '',
+        trialEligibilityRetryable: false,
+        trialEligibilityTransientFailure: false,
+        trialEligibilityLastError: '',
+      };
+    }
+
     function withCurrentFlag(entries = renderedEntries) {
       const currentEmail = normalizeEmail(state.getCurrentEmail?.());
-      return normalizeEntries(entries).map((entry) => ({
-        ...entry,
-        current: Boolean(currentEmail) && entry.email === currentEmail,
-      }));
+      const enrichedEntries = normalizeEntries(entries).map((entry) => enrichEntryFromStoredCredential(entry));
+      const autoRunning = Boolean(state.isAutoRunning?.());
+      const currentEntry = currentEmail
+        ? enrichedEntries.find((entry) => entry.email === currentEmail)
+        : null;
+      const currentMatches = Boolean(currentEntry) && (!autoRunning || isAvailableEntry(currentEntry));
+      const fallbackCurrentEmail = !currentMatches && autoRunning
+        ? normalizeEmail(enrichedEntries.find(isAvailableEntry)?.email)
+        : '';
+      const effectiveCurrentEmail = currentMatches ? currentEmail : fallbackCurrentEmail;
+      return enrichedEntries.map((enrichedEntry) => {
+        return {
+          ...enrichedEntry,
+          current: Boolean(effectiveCurrentEmail) && enrichedEntry.email === effectiveCurrentEmail,
+        };
+      });
     }
 
     function normalizeSearchText(value = '') {
@@ -287,6 +330,12 @@
       updateBulkUi(getFilteredEntries());
     }
 
+    function renderEmptyCustomEmailPoolList() {
+      if (dom.customEmailPoolList) {
+        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">还没有自定义邮箱，先导入一批邮箱再开始。</div>';
+      }
+    }
+
     function renderCustomEmailPoolEntries(entries = state.getEntries?.()) {
       if (!dom.customEmailPoolList || !dom.customEmailPoolSummary) {
         return;
@@ -298,7 +347,7 @@
 
       if (!renderedEntries.length) {
         selectedEntryIds.clear();
-        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">还没有自定义邮箱，先导入一批邮箱再开始。</div>';
+        renderEmptyCustomEmailPoolList();
         dom.customEmailPoolSummary.textContent = '导入你提前准备好的注册邮箱，每行一个邮箱地址，或 邮箱----取码URL/查询码。';
         if (dom.btnCustomEmailPoolClearUsed) dom.btnCustomEmailPoolClearUsed.disabled = true;
         if (dom.btnCustomEmailPoolDeleteAll) dom.btnCustomEmailPoolDeleteAll.disabled = true;
@@ -497,11 +546,12 @@
       const nextEntries = normalizeEntries(mutator(previousEntries.map((entry) => ({ ...entry }))));
 
       setLoadingState(true, '正在更新自定义邮箱池...');
-      state.setEntries?.(nextEntries);
+      state.setEntries?.(nextEntries, { persistBackup: false });
       renderCustomEmailPoolEntries(nextEntries);
 
       try {
         await actions.persistEntries?.();
+        state.setEntries?.(nextEntries, { clearBackup: nextEntries.length === 0 });
       } catch (error) {
         state.setEntries?.(previousEntries);
         renderCustomEmailPoolEntries(previousEntries);
@@ -587,11 +637,12 @@
 
       const nextEntries = normalizeEntries([...previousEntries, ...importedEntries]);
       setLoadingState(true, '正在导入邮箱...');
-      state.setEntries?.(nextEntries);
+      state.setEntries?.(nextEntries, { persistBackup: false });
       renderCustomEmailPoolEntries(nextEntries);
 
       try {
         await actions.persistEntries?.();
+        state.setEntries?.(nextEntries);
         if (dom.inputCustomEmailPoolImport) {
           dom.inputCustomEmailPoolImport.value = '';
         }
@@ -620,7 +671,22 @@
       if (!silent) {
         setLoadingState(true, '正在刷新自定义邮箱池...');
       }
-      renderCustomEmailPoolEntries(state.getEntries?.());
+      const currentEntries = normalizeEntries(state.getEntries?.() || []);
+      let nextEntries = currentEntries;
+      try {
+        const reloadedEntries = normalizeEntries(await actions.reloadEntries?.() || []);
+        if (reloadedEntries.length > 0 || currentEntries.length === 0) {
+          nextEntries = reloadedEntries;
+        }
+      } catch (error) {
+        if (!silent) {
+          helpers.showToast(`刷新自定义邮箱池失败：${error.message}`, 'error');
+        }
+      }
+      renderCustomEmailPoolEntries(nextEntries);
+      if (!silent && nextEntries.length > 0) {
+        helpers.showToast(`已刷新自定义邮箱池：${nextEntries.length} 个邮箱。`, 'success', 1600);
+      }
       if (!silent) {
         setLoadingState(false);
       }
@@ -641,13 +707,7 @@
       filterMode = 'all';
       if (dom.inputCustomEmailPoolSearch) dom.inputCustomEmailPoolSearch.value = '';
       if (dom.selectCustomEmailPoolFilter) dom.selectCustomEmailPoolFilter.value = 'all';
-      if (dom.customEmailPoolList) {
-        dom.customEmailPoolList.innerHTML = '';
-      }
-      if (dom.customEmailPoolSummary) {
-        dom.customEmailPoolSummary.textContent = '导入你提前准备好的注册邮箱，每行一个邮箱地址，或 邮箱----取码URL/查询码。';
-      }
-      updateBulkUi([]);
+      renderCustomEmailPoolEntries(state.getEntries?.());
     }
 
     function bindEvents() {

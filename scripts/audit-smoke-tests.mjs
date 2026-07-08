@@ -126,6 +126,9 @@ function checkManifest() {
   if (manifest.side_panel?.default_path !== 'sidepanel/sidepanel.html') {
     fail('manifest side_panel.default_path must be sidepanel/sidepanel.html.');
   }
+  if (manifest.action?.default_title !== 'CDK Redeem Only') {
+    fail('manifest action.default_title must keep toolbar click entry available.');
+  }
   for (const permission of ['sidePanel', 'storage', 'tabs', 'scripting', 'downloads']) {
     if (!manifest.permissions?.includes(permission)) {
       fail(`manifest is missing permission: ${permission}`);
@@ -316,6 +319,7 @@ function checkCoreFiles() {
     'sidepanel/sidepanel.js',
     'sidepanel/account-records-manager.js',
     'sidepanel/custom-email-pool-manager.js',
+    'sidepanel/custom-email-pool-membership-sync.js',
     'shared/session-to-json-converter.js',
   ].forEach((relativePath) => readText(relativePath));
 }
@@ -486,8 +490,14 @@ function checkStaticContracts() {
   const signupPage = readText('content/signup-page.js');
   const gitignore = readText('.gitignore');
 
-  assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
-  assertIncludes(sidepanelAppController, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel app controller step delay default');
+  assertMatch(background, /autoStepDelaySeconds:\s*2\b/, 'background default settings');
+  assertBefore(
+    background,
+    'const backgroundStateStore = self.MultiPageBackgroundStateStore.createBackgroundStateStore',
+    'initializeSessionStorageAccess().catch',
+    'background state store must be created before session storage initialization'
+  );
+  assertIncludes(sidepanelAppController, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 2;', 'sidepanel app controller step delay default');
   assertIncludes(sidepanelAppController, 'requestTextFileSaveTarget', 'sidepanel app controller export picker support');
   assertMatch(
     sidepanelAppController,
@@ -521,6 +531,8 @@ function checkStaticContracts() {
   assertIncludes(sidepanelOperationDelayController, 'createOperationDelayController', 'sidepanel operation delay controller factory');
   assertIncludes(sidepanelAppController, 'SidepanelAppController', 'sidepanel app controller global');
   assertIncludes(sidepanelAppController, 'createSidepanelApp', 'sidepanel app controller factory');
+  assertIncludes(sidepanelAppController, 'createEmergencyWorkflowDefinitionModule', 'sidepanel app controller emergency workflow definitions');
+  assertIncludes(sidepanelAppController, 'getWorkflowDefinitionModule', 'sidepanel app controller workflow definition fallback resolver');
   assertIncludes(workflowController, 'SidepanelWorkflowController', 'sidepanel workflow controller global');
   assertIncludes(workflowController, 'createWorkflowController', 'sidepanel workflow controller factory');
   assertIncludes(workflowController, 'ensureStepsListRendered', 'sidepanel workflow controller missing list render recovery');
@@ -540,6 +552,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelHtml, 'src="auto-run-normalizers.js"', 'sidepanel auto-run normalizers script load');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-state.js"', 'sidepanel CDK pool state script load');
   assertIncludes(sidepanelHtml, 'src="settings-normalization.js"', 'sidepanel settings normalization script load');
+  assertIncludes(sidepanelHtml, 'src="custom-email-pool-membership-sync.js"', 'sidepanel custom email pool membership sync script load');
   assertIncludes(sidepanelHtml, 'src="chatgpt-session-reader-settings.js"', 'sidepanel ChatGPT session reader settings script load');
   assertIncludes(sidepanelHtml, 'src="upi-info-helper-state.js"', 'sidepanel UPI info helper state script load');
   assertIncludes(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'sidepanel auto-run countdown view script load');
@@ -572,6 +585,7 @@ function checkStaticContracts() {
   assertBefore(sidepanelHtml, 'src="auto-run-normalizers.js"', 'src="sidepanel.js"', 'sidepanel auto-run normalizers must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="cdk-pool-state.js"', 'src="sidepanel.js"', 'sidepanel CDK pool state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="settings-normalization.js"', 'src="sidepanel.js"', 'sidepanel settings normalization must load before sidepanel.js');
+  assertBefore(sidepanelHtml, 'src="custom-email-pool-membership-sync.js"', 'src="sidepanel-app-controller.js"', 'custom email pool membership sync must load before app controller');
   assertBefore(sidepanelHtml, 'src="chatgpt-session-reader-settings.js"', 'src="sidepanel.js"', 'sidepanel ChatGPT session reader settings must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="upi-info-helper-state.js"', 'src="sidepanel.js"', 'sidepanel UPI info helper state must load before sidepanel.js');
   assertBefore(sidepanelHtml, 'src="auto-run-countdown-view.js"', 'src="sidepanel.js"', 'sidepanel auto-run countdown view must load before sidepanel.js');
@@ -1337,12 +1351,19 @@ function checkStaticContracts() {
   );
   assertMatch(
     sidepanelRuntimeMessageDataHandler,
-    /const restoredCustomEmailPoolEntries\s*=\s*restoreCustomEmailPoolEntriesFromState\(\{[\s\S]*?setCustomEmailPoolEntriesState\(restoredCustomEmailPoolEntries\);\s*renderCustomEmailPoolEntries\(restoredCustomEmailPoolEntries\);/,
+    /const restoredCustomEmailPoolEntries\s*=\s*restoreCustomEmailPoolEntriesFromState\(\{[\s\S]*?setCustomEmailPoolEntriesState\(restoredCustomEmailPoolEntries\);\s*syncCustomEmailPoolEntriesFromMembershipResults\?\.\(latestState\?\.upiCredentialMembershipCheckResults\);\s*renderCustomEmailPoolEntries\(\);/,
     'custom email pool DATA_UPDATED messages must immediately re-render visible entries'
   );
 
   assertIncludes(upiRedeem, 'UPI_AUTO_REDEEM_REMOTE_REFRESH_INTERVAL_MS = 5000', 'auto redeem remote refresh interval');
   assertIncludes(upiRedeem, 'autoRedeemQueuedFreeCredentialsForChannel', 'main flow queued Free auto redeem');
+  assertBefore(
+    checker,
+    'const plusVerificationServiceFactory = getMembershipPlusVerificationServiceModule().createPlusVerificationService',
+    'const membershipRedeemServiceFactory = getMembershipRedeemServiceModule().createMembershipRedeemService',
+    'membership checker must create Plus verification service before redeem service dependencies'
+  );
+  assertIncludes(checker, 'set batchRunning(value)', 'Plus verification runtime flags must update batch running state');
   assertIncludes(checker, 'REDEEM_GROUP_CONTINUATION_IDLE_WAIT_MS = 5000', 'group continuation CDK refresh interval');
   assertIncludes(membershipRedeemService, 'disableGroupContinuation', 'controlled group continuation flag');
 
@@ -1385,7 +1406,8 @@ function checkModuleSizeGuard() {
   assertFileLineCountAtMost('sidepanel/removed-payment-worker-controller.js', 700, 'sidepanel RemovedPaymentWorker controller size guard');
   assertFileLineCountAtMost('sidepanel/auto-run-status-controller.js', 250, 'sidepanel auto-run status controller size guard');
   assertFileLineCountAtMost('sidepanel/operation-delay-controller.js', 140, 'sidepanel operation delay controller size guard');
-  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7650, 'sidepanel app controller decomposition guard');
+  assertFileLineCountAtMost('sidepanel/custom-email-pool-membership-sync.js', 180, 'custom email pool membership sync size guard');
+  assertFileLineCountAtMost('sidepanel/sidepanel-app-controller.js', 7850, 'sidepanel app controller decomposition guard');
   assertFileLineCountAtMost('sidepanel/sidepanel-bootstrap.js', 700, 'sidepanel bootstrap size guard');
   assertFileLineCountAtMost('sidepanel/download-service.js', 500, 'download service size guard');
   assertFileLineCountAtMost('sidepanel/settings-transfer-manager.js', 500, 'settings transfer manager size guard');

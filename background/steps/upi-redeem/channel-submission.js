@@ -61,6 +61,7 @@
 
         const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
         const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
+        const UPI_REDEEM_GLOBAL_AUTH_PATTERN = /(?:external\s*)?api[\s_-]*key|apikey|x[\s_-]*external[\s_-]*api[\s_-]*key|csrf|x[\s_-]*client[\s_-]*id|client[\s_-]*id|authorization|bearer|(?:外部|远端|接口|后端)[\s\S]*(?:密钥|API\s*Key|ApiKey|鉴权|认证|权限|CSRF)|(?:密钥|API\s*Key|ApiKey|鉴权|认证|权限|CSRF)[\s\S]*(?:外部|远端|接口|后端)/i;
 
 
         function getRedeemChannelFailureField(channel = 'upi') {
@@ -926,12 +927,14 @@
         }
 
 
+        const isUpiRedeemGlobalAuthFailureMessage = (message = '') => UPI_REDEEM_GLOBAL_AUTH_PATTERN.test(normalizeString(message));
+
+
         function isUpiRedeemApiAuthError(error) {
           const rawMessage = normalizeString(error?.message || error);
           const message = getErrorMessage(error);
           return rawMessage.startsWith(UPI_REDEEM_AUTH_ERROR_PREFIX)
-            || /UPI[\s\S]*(?:HTTP\s*40[13]|API\s*Key|ApiKey|External API Key|认证失败|权限不足|无权限|forbidden|unauthorized)/i.test(message)
-            || /(?:HTTP\s*40[13]|API\s*Key|ApiKey|External API Key|认证失败|权限不足|无权限|forbidden|unauthorized)[\s\S]*UPI/i.test(message);
+            || (/UPI|兑换|redeem|远端|接口/i.test(message) && isUpiRedeemGlobalAuthFailureMessage(message));
         }
 
 
@@ -1149,7 +1152,8 @@
                 throw new Error(`${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}ChatGPT session 已过期或当前会话失效：${payloadError || '请刷新当前 ChatGPT 页面后重新读取完整 session。'}`);
               }
               if (statusCode === 401 || statusCode === 403) {
-                throw new Error(`${UPI_REDEEM_AUTH_ERROR_PREFIX}UPI 远端接口拒绝请求（HTTP ${statusCode}）：请求：${apiUrl}。当前发送 Key：${maskExternalApiKey(externalApiKey)}。${payloadError ? `后端：${payloadError}` : '没有返回明确原因。'}`);
+                if (!payloadError || isUpiRedeemGlobalAuthFailureMessage(payloadError)) throw new Error(`${UPI_REDEEM_AUTH_ERROR_PREFIX}UPI 远端接口拒绝请求（HTTP ${statusCode}）：请求：${apiUrl}。当前发送 Key：${maskExternalApiKey(externalApiKey)}。${payloadError ? `后端：${payloadError}` : '没有返回明确原因。'}`);
+                throw new Error(`UPI 兑换接口请求失败（HTTP ${statusCode}）：${payloadError}`);
               }
               throw new Error(`UPI 兑换接口请求失败（HTTP ${response?.status || 0}）${payloadError ? `：${payloadError}` : ''}`);
             }

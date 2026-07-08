@@ -314,6 +314,17 @@
     return root.MultiPageMembershipCredentialFormat || {};
   }
 
+  function isInternalRedeemImplementationError(item = {}) {
+    const text = [
+      item?.redeemReason,
+      item?.reason,
+      item?.lastError,
+      item?.remoteMessage,
+    ].map(normalizeString).join(' ');
+    return /\bREDEEM_CHANNEL_FAILURE_LIMIT\s+is\s+not\s+defined\b/i.test(text)
+      || /\bcontext\.parseCdkeyPoolText\s+is\s+not\s+a\s+function\b/i.test(text);
+  }
+
   function normalizeResultItem(item = {}) {
     const email = normalizeEmail(item.email);
     const rawAccessToken = normalizeString(item.accessToken || item.token || item.access_token || item.upiRedeemAccessToken);
@@ -326,16 +337,18 @@
     const status = ['paid', 'free', 'failed'].includes(normalizeString(item.status))
       ? normalizeString(item.status)
       : 'failed';
+    const shouldClearInternalRedeemFailure = isInternalRedeemImplementationError(item);
     const rawRedeemChannel = normalizeString(item.redeemChannel || item.channel || item.paymentChannel);
-    const redeemChannel = rawRedeemChannel ? normalizeRedeemChannel(rawRedeemChannel) : '';
+    const redeemChannel = shouldClearInternalRedeemFailure ? '' : (rawRedeemChannel ? normalizeRedeemChannel(rawRedeemChannel) : '');
     const legacyFailureCount = Math.max(0, Math.floor(Number(item.redeemFailureCount) || 0));
-    const upiRedeemFailureCount = Math.max(0, Math.floor(Number(
+    const upiRedeemFailureCount = shouldClearInternalRedeemFailure ? 0 : Math.max(0, Math.floor(Number(
       item.upiRedeemFailureCount ?? (redeemChannel === 'upi' ? legacyFailureCount : 0)
     ) || 0));
-    const idealRedeemFailureCount = Math.max(0, Math.floor(Number(
+    const idealRedeemFailureCount = shouldClearInternalRedeemFailure ? 0 : Math.max(0, Math.floor(Number(
       item.idealRedeemFailureCount ?? (redeemChannel === 'ideal' ? legacyFailureCount : 0)
     ) || 0));
-    const redeemLocked = normalizeBoolean(item.redeemLocked) || idealRedeemFailureCount >= REDEEM_CHANNEL_FAILURE_LIMIT;
+    const redeemLocked = !shouldClearInternalRedeemFailure
+      && (normalizeBoolean(item.redeemLocked) || idealRedeemFailureCount >= REDEEM_CHANNEL_FAILURE_LIMIT);
     const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(item);
     const normalized = {
       email,
@@ -359,7 +372,9 @@
       status,
       planType: normalizePlanType(item.planType),
       checkedAt: normalizeString(item.checkedAt),
-      reason: normalizeString(item.reason),
+      reason: shouldClearInternalRedeemFailure
+        ? (normalizeString(item.trialEligibilityReason) || '账号有试用资格，可进行 CDK 兑换')
+        : normalizeString(item.reason),
       trialEligibilityStatus: normalizeString(item.trialEligibilityStatus),
       trialEligibilityReason: normalizeString(item.trialEligibilityReason),
       trialEligibilityCheckedAt: normalizeString(item.trialEligibilityCheckedAt),
@@ -384,10 +399,10 @@
       accessToken,
       accessTokenMasked: accessToken ? (normalizeString(item.accessTokenMasked) || maskAccessToken(accessToken)) : '',
       accessTokenUpdatedAt,
-      redeemStatus: normalizeString(item.redeemStatus),
-      redeemReason: normalizeString(item.redeemReason),
-      redeemFailureCount: Math.max(0, Math.floor(Number(item.redeemFailureCount) || 0)),
-      redeemFailureLimit: Math.max(0, Math.floor(Number(item.redeemFailureLimit) || 0)),
+      redeemStatus: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemStatus),
+      redeemReason: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemReason),
+      redeemFailureCount: shouldClearInternalRedeemFailure ? 0 : Math.max(0, Math.floor(Number(item.redeemFailureCount) || 0)),
+      redeemFailureLimit: shouldClearInternalRedeemFailure ? REDEEM_CHANNEL_FAILURE_LIMIT : Math.max(0, Math.floor(Number(item.redeemFailureLimit) || 0)),
       upiRedeemFailureCount,
       idealRedeemFailureCount,
       redeemLocked,
@@ -395,12 +410,12 @@
         ? (normalizeString(item.redeemLockedReason) || 'IDEAL 已失败 3 次，账号已封存，不再使用')
         : '',
       redeemLockedAt: redeemLocked ? normalizeString(item.redeemLockedAt) : '',
-      redeemLastFailedAt: normalizeString(item.redeemLastFailedAt),
-      redeemAttemptedAt: normalizeString(item.redeemAttemptedAt),
+      redeemLastFailedAt: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemLastFailedAt),
+      redeemAttemptedAt: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemAttemptedAt),
       redeemSuccessAt: normalizeString(item.redeemSuccessAt),
       redeemChannel,
-      upiRedeemCdkey: normalizeString(item.upiRedeemCdkey || item.cdkey),
-      lastFailedUpiRedeemCdkey: normalizeString(item.lastFailedUpiRedeemCdkey || item.failedUpiRedeemCdkey),
+      upiRedeemCdkey: shouldClearInternalRedeemFailure ? '' : normalizeString(item.upiRedeemCdkey || item.cdkey),
+      lastFailedUpiRedeemCdkey: shouldClearInternalRedeemFailure ? '' : normalizeString(item.lastFailedUpiRedeemCdkey || item.failedUpiRedeemCdkey),
       upiRedeemPendingVerifySince: normalizeString(item.upiRedeemPendingVerifySince),
       upiRedeemPendingVerifyLastCheckedAt: normalizeString(item.upiRedeemPendingVerifyLastCheckedAt),
       upiRedeemPendingVerifyLoggedAt: normalizeString(item.upiRedeemPendingVerifyLoggedAt),

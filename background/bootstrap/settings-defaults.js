@@ -78,7 +78,7 @@
       autoRunDelayEnabled: false,
       operationDelayEnabled: false,
       autoRunDelayMinutes: 30,
-      autoStepDelaySeconds: 10,
+      autoStepDelaySeconds: 2,
       step6CookieCleanupEnabled: false,
       signupMethod: DEFAULT_SIGNUP_METHOD,
       verificationResendCount: DEFAULT_VERIFICATION_RESEND_COUNT,

@@ -1,5 +1,8 @@
 {
   "name": "cdk-redeem-only-extension",
   "license": "MIT",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
 }

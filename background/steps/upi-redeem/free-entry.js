@@ -17,6 +17,7 @@
     const throwIfStopped = context.throwIfStopped;
     const upsertTrialEligibleFreeCredential = context.upsertTrialEligibleFreeCredential;
     const markCurrentRegistrationAccountTrialIneligible = context.markCurrentRegistrationAccountTrialIneligible;
+    const markCustomEmailPoolEntryTrialEligibility = context.markCustomEmailPoolEntryTrialEligibility;
 
     const normalizeString = (...args) => context.normalizeString(...args);
     const maskAccessToken = (...args) => context.maskAccessToken(...args);
@@ -258,9 +259,32 @@
                 resetRedeemState: true,
               });
             const persistedFreeResults = await ensureTrialEligibleFreeCredentialPersisted(freeResults, email, visibleStep);
+            let emailPoolStatusUpdated = false;
+            if (typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+              const latestEmailPoolState = await getMergedState({
+                ...runtimeState,
+                ...patch,
+                email,
+                accessToken,
+                upiRedeemAccessToken: accessToken,
+                accessTokenUpdatedAt: checkedAt,
+              });
+              const markResult = await markCustomEmailPoolEntryTrialEligibility(latestEmailPoolState, {
+                email,
+                status: 'eligible',
+                reason,
+                checkedAt,
+                accessToken,
+                accessTokenUpdatedAt: checkedAt,
+                markUsed: true,
+                clearSelectedEmail: true,
+                log: false,
+              });
+              emailPoolStatusUpdated = Boolean(markResult?.updated);
+            }
             await addStepLog(
               visibleStep,
-              `UPI 注册后试用资格检查通过，已保存到 Free 结果表：${email || 'unknown'}；侧边栏刷新后会按当前 Free/Plus 显示规则重新计算数量。`,
+              `UPI 注册后试用资格检查通过，已保存到 Free 结果表：${email || 'unknown'}；${emailPoolStatusUpdated ? '已同步邮箱池为“已用/有试用资格”。' : '未找到源邮箱池条目可同步。'}侧边栏刷新后会按当前 Free/Plus 显示规则重新计算数量。`,
               'ok'
             );
             return {

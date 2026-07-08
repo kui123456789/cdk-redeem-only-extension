@@ -12,6 +12,7 @@
       cancelButton,
       restartButton,
       continueButton,
+      closeButton,
     } = dom;
 
     let modalChoiceResolver = null;
@@ -63,6 +64,12 @@
       currentModalActions = [];
     }
 
+    function resetActionModalCloseButton() {
+      if (!closeButton) return;
+      closeButton.disabled = false;
+      closeButton.onclick = null;
+    }
+
     function configureActionModalButton(button, action) {
       if (!button) return;
       if (!action) {
@@ -76,6 +83,12 @@
       button.textContent = action.label;
       button.className = `btn ${action.variant || 'btn-outline'} btn-sm`;
       button.onclick = () => resolveModalChoice(action.id);
+    }
+
+    function configureActionModalCloseButton() {
+      if (!closeButton) return;
+      closeButton.disabled = false;
+      closeButton.onclick = () => resolveModalChoice(null);
     }
 
     function configureActionModalOption(option) {
@@ -120,6 +133,7 @@
       }
       modalResultBuilder = null;
       resetActionModalButtons();
+      resetActionModalCloseButton();
       resetActionModalAlert();
       resetActionModalOption();
       if (modal) {
@@ -149,6 +163,7 @@
       buttonSlots.forEach((button, index) => {
         configureActionModalButton(button, currentModalActions[index]);
       });
+      configureActionModalCloseButton();
       configureActionModalAlert(alertConfig);
       configureActionModalOption(option);
       modal.hidden = false;

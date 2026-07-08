@@ -86,18 +86,29 @@
       const candidates = documentRef.querySelectorAll(
         'button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"]'
       );
+      const isResendCandidate = (el) => {
+        const text = getActionText(el);
+        return typeof authPageDetectors.isResendEmailText === 'function'
+          ? authPageDetectors.isResendEmailText(text)
+          : Boolean(text && resendVerificationCodePattern.test(text));
+      };
 
       for (const el of candidates) {
         if (!isVisibleElement(el)) continue;
         if (!allowDisabled && !isActionEnabled(el)) continue;
 
-        const text = getActionText(el);
-        const resendMatched = typeof authPageDetectors.isResendEmailText === 'function'
-          ? authPageDetectors.isResendEmailText(text)
-          : Boolean(text && resendVerificationCodePattern.test(text));
-        if (resendMatched) {
+        if (isResendCandidate(el)) {
           return el;
         }
+      }
+
+      const textCandidates = documentRef.querySelectorAll('span, div, p, label');
+      for (const el of textCandidates) {
+        if (!isVisibleElement(el) || !isResendCandidate(el)) continue;
+        const clickable = el.closest('button, a, [role="button"], [role="link"]') || el;
+        if (!isVisibleElement(clickable)) continue;
+        if (!allowDisabled && !isActionEnabled(clickable)) continue;
+        return clickable;
       }
 
       return null;

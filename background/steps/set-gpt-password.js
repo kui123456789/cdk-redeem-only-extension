@@ -21,6 +21,9 @@
   const SET_PASSWORD_RESET_PREPARE_WAIT_MS = 8000;
   const SET_PASSWORD_RESET_PREPARE_RETRY_DELAY_MS = 1000;
   const PASSWORD_SETUP_CODE_RESEND_LIMIT = 2;
+  const PASSWORD_SETUP_RESEND_BUTTON_TIMEOUT_MS = 25000;
+  const PASSWORD_SETUP_RESEND_MESSAGE_TIMEOUT_MS = 45000;
+  const PASSWORD_SETUP_RESEND_RETRY_DELAY_MS = 1500;
 
   function normalizeString(value = '') {
     return String(value || '').trim();
@@ -1100,13 +1103,61 @@
       return result;
     }
 
-    async function requestPasswordSetupCodeResend(visibleStep = 6, reason = '') {
+    async function requestPasswordSetupCodeResend(tabId, visibleStep = 6, reason = '') {
       const reasonSuffix = reason ? `（${reason}）` : '';
       await addStepLog(visibleStep, `设置 GPT 密码：正在请求重新发送邮箱验证码${reasonSuffix}。`, 'warn');
-      const result = await sendSetPasswordPageMessage('RESEND_VERIFICATION_CODE', {
-        step: visibleStep,
-        visibleStep,
-      }, visibleStep, 45000);
+      let result = null;
+      let lastTransportError = null;
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          if (tabId) {
+            await ensureSetPasswordContentScriptReady(tabId, visibleStep, 'OpenAI 设置密码邮箱验证码页');
+          }
+          result = await sendSetPasswordPageMessage('RESEND_VERIFICATION_CODE', {
+            step: visibleStep,
+            visibleStep,
+            nodeId: 'set-gpt-password',
+            resendTimeoutMs: PASSWORD_SETUP_RESEND_BUTTON_TIMEOUT_MS,
+          }, visibleStep, PASSWORD_SETUP_RESEND_MESSAGE_TIMEOUT_MS);
+          lastTransportError = null;
+          break;
+        } catch (error) {
+          if (!isRetryableContentScriptTransportError(error)) {
+            throw error;
+          }
+          lastTransportError = error;
+          if (attempt < 2) {
+            await addStepLog(
+              visibleStep,
+              `设置 GPT 密码：页面切换中暂未点到重新发送按钮，等待页面稳定后重试：${error?.message || error}`,
+              'warn'
+            );
+            if (typeof waitForTabStableComplete === 'function' && tabId) {
+              await waitForTabStableComplete(tabId, {
+                timeoutMs: 10000,
+                retryDelayMs: 300,
+                stableMs: 800,
+                initialDelayMs: PASSWORD_SETUP_RESEND_RETRY_DELAY_MS,
+              }).catch(() => {});
+            } else {
+              await sleepWithStop(PASSWORD_SETUP_RESEND_RETRY_DELAY_MS);
+            }
+          }
+        }
+      }
+      if (lastTransportError) {
+        await addStepLog(
+          visibleStep,
+          `设置 GPT 密码：页面切换中仍未点到重新发送按钮，本轮不会假定已有新邮件：${lastTransportError?.message || lastTransportError}`,
+          'warn'
+        );
+        return {
+          requestedAt: Date.now(),
+          resent: false,
+          transient: true,
+          errorText: normalizeString(lastTransportError?.message || lastTransportError),
+        };
+      }
       const requestedAt = Date.now();
       if (result?.codeStageComplete || result?.alreadyOnNewPasswordPage || result?.emailAlreadyVerified) {
         await addStepLog(
@@ -1262,12 +1313,15 @@
             ) {
               try {
                 const resendResult = await requestPasswordSetupCodeResend(
+                  authTabId,
                   visibleStep,
                   '连续未取到本轮新验证码'
                 );
-                nextFilterAfterTimestamp = resendResult?.requestedAt || Date.now();
-                resendCount += 1;
                 lastResendAttempt = attempt;
+                if (resendResult?.resent || resendResult?.codeStageComplete) {
+                  nextFilterAfterTimestamp = resendResult?.requestedAt || Date.now();
+                  resendCount += 1;
+                }
                 if (resendResult?.codeStageComplete) {
                   codeStageComplete = true;
                   acceptedCodeResult = {
@@ -1320,12 +1374,15 @@
               if (resendCount < PASSWORD_SETUP_CODE_RESEND_LIMIT) {
                 try {
                   const resendResult = await requestPasswordSetupCodeResend(
+                    authTabId,
                     visibleStep,
                     '当前验证码被页面拒绝'
                   );
-                  nextFilterAfterTimestamp = resendResult?.requestedAt || Date.now();
-                  resendCount += 1;
                   lastResendAttempt = attempt;
+                  if (resendResult?.resent || resendResult?.codeStageComplete) {
+                    nextFilterAfterTimestamp = resendResult?.requestedAt || Date.now();
+                    resendCount += 1;
+                  }
                   if (resendResult?.codeStageComplete) {
                     codeStageComplete = true;
                     acceptedCodeResult = {

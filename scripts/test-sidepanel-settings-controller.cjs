@@ -102,3 +102,44 @@ test('settings controller saves settings through runtime bridge and clears dirty
   assert.equal(appState.get('settingsSaveInFlight'), false);
   assert.equal(btnSaveSettings.textContent, '保存');
 });
+
+test('settings controller preserves custom email pool when save response omits it', async () => {
+  const appState = appStateModule.createSidepanelAppState({
+    latestState: {},
+    settingsDirty: true,
+    settingsSaveInFlight: false,
+    settingsAutoSaveTimer: null,
+    settingsSaveRevision: 1,
+    customPasswordSaveRevision: 0,
+  });
+  const btnSaveSettings = createButton();
+  const appliedStates = [];
+  const payload = {
+    customEmailPool: ['sample@example.com'],
+    customEmailPoolEntries: [{ id: 'entry-1', email: 'sample@example.com', enabled: true, used: false }],
+  };
+
+  const controller = settingsControllerModule.createSettingsController({
+    appState,
+    scopeValues: {
+      btnSaveSettings,
+      collectSettingsPayload: () => payload,
+      applySettingsState: (state) => appliedStates.push(state),
+      preserveHotmailAccountsForSettingsSaveResponse: (state) => ({ ...state }),
+      syncLatestState: () => {},
+      updatePanelModeUI: () => {},
+      updateMailProviderUI: () => {},
+      updateButtonStates: () => {},
+      updateConfigMenuControls: () => {},
+      showToast: () => {},
+      currentAutoRun: { autoRunning: false },
+      chrome: { runtime: { sendMessage: async () => ({ state: { customEmailPool: [], customEmailPoolEntries: [] } }) } },
+    },
+  });
+
+  await controller.saveSettings({ silent: true, force: true });
+
+  assert.equal(appliedStates.length, 1);
+  assert.deepEqual(appliedStates[0].customEmailPoolEntries, payload.customEmailPoolEntries);
+  assert.deepEqual(appliedStates[0].customEmailPool, payload.customEmailPool);
+});

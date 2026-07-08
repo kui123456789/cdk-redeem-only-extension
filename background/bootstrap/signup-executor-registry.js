@@ -354,6 +354,7 @@
       getState: deps.getState,
       getTabId: deps.getTabId,
       isTabAlive: deps.isTabAlive,
+      markCustomEmailPoolEntryTrialEligibility: deps.markCustomEmailPoolEntryTrialEligibility,
       markCurrentRegistrationAccountUsed: deps.markCurrentRegistrationAccountUsed,
       registerTab: deps.registerTab,
       sendTabMessageUntilStopped: deps.sendTabMessageUntilStopped,

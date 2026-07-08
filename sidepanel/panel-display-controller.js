@@ -24,8 +24,12 @@
       const useIcloud = provider === constants.ICLOUD_PROVIDER
         || provider === constants.ICLOUD_API_PROVIDER
         || emailGenerator === constants.ICLOUD_PROVIDER;
+      const providerAllowsGenerator = !useCustomProvider
+        && !use2925
+        && !useLuckmail
+        && provider !== 'hotmail-api';
       const useCustomPool = provider === constants.CUSTOM_EMAIL_POOL_GENERATOR
-        || emailGenerator === constants.CUSTOM_EMAIL_POOL_GENERATOR;
+        || (providerAllowsGenerator && emailGenerator === constants.CUSTOM_EMAIL_POOL_GENERATOR);
       const useCloudflareTempEmail = provider === constants.CLOUDFLARE_TEMP_EMAIL_PROVIDER
         || emailGenerator === constants.CLOUDFLARE_TEMP_EMAIL_PROVIDER;
       const useCloudMail = provider === constants.CLOUD_MAIL_PROVIDER

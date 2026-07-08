@@ -163,7 +163,11 @@
         }
         return outcome;
       }
-      const credentials = Array.isArray(inputCredentials)
+      const hasExplicitCredentials = Array.isArray(inputCredentials);
+      if (!hasExplicitCredentials) {
+        await refreshUpiCredentialMembershipCheckResults().catch(() => null);
+      }
+      const credentials = hasExplicitCredentials
         ? inputCredentials
         : getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);
       const singleEmail = normalizeUpiCredentialMembershipEmail(options.singleEmail || '');
@@ -283,6 +287,7 @@
     }
 
     async function startUpiCredentialMembershipAllRedeem() {
+      await refreshUpiCredentialMembershipCheckResults().catch(() => null);
       const results = getUpiCredentialMembershipCheckResults();
       if (
         getUpiCredentialMembershipAllRedeemBusy()

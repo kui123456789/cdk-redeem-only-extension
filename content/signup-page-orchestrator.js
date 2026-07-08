@@ -135,7 +135,7 @@
         case 'RESEND_VERIFICATION_CODE':
           return await resendVerificationCode(
             Number(message.step || message.payload?.step || message.payload?.visibleStep) || 4,
-            undefined,
+            Math.max(1000, Math.floor(Number(message.payload?.resendTimeoutMs) || 45000)),
             message.payload || {}
           );
         case 'ENSURE_SIGNUP_ENTRY_READY':
