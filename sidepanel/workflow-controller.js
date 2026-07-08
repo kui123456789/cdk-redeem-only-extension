@@ -17,6 +17,7 @@
     } = context;
 
     let workflowActionBindings = null;
+    let renderingMissingStepsList = false;
 
     function getLatestState() {
       return state.getLatestState?.() || {};
@@ -26,12 +27,32 @@
       return workflow.getNodeIds?.() || [];
     }
 
+    function getWorkflowNodes() {
+      return workflow.getWorkflowNodes?.() || [];
+    }
+
     function getNodeStatuses(currentState = getLatestState()) {
       return workflow.getNodeStatuses?.(currentState) || {};
     }
 
     function renderStepsList() {
       managers.workflowStateView?.renderStepsList?.();
+    }
+
+    function ensureStepsListRendered() {
+      if (renderingMissingStepsList || !dom.stepsList) {
+        return false;
+      }
+      if (!getWorkflowNodes().length || dom.stepsList.querySelector?.('.step-row')) {
+        return false;
+      }
+      renderingMissingStepsList = true;
+      try {
+        renderStepsList();
+      } finally {
+        renderingMissingStepsList = false;
+      }
+      return true;
     }
 
     function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOrOptions = {}, maybeOptions = {}) {
@@ -118,6 +139,7 @@
     }
 
     function updateButtonStates() {
+      ensureStepsListRendered();
       const statuses = getNodeStatuses(getLatestState());
       const anyRunning = Object.values(statuses).some((status) => status === 'running');
       const autoLocked = workflow.isAutoRunLockedPhase?.() || false;

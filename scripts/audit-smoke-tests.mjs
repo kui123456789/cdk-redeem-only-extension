@@ -523,6 +523,7 @@ function checkStaticContracts() {
   assertIncludes(sidepanelAppController, 'createSidepanelApp', 'sidepanel app controller factory');
   assertIncludes(workflowController, 'SidepanelWorkflowController', 'sidepanel workflow controller global');
   assertIncludes(workflowController, 'createWorkflowController', 'sidepanel workflow controller factory');
+  assertIncludes(workflowController, 'ensureStepsListRendered', 'sidepanel workflow controller missing list render recovery');
   assertIncludes(sidepanelBootstrap, 'createSidepanelApp', 'sidepanel bootstrap app factory');
   assertIncludes(sidepanelHtml, 'src="download-service.js"', 'download service script load');
   assertIncludes(sidepanelHtml, 'src="settings-transfer-manager.js"', 'settings transfer manager script load');
