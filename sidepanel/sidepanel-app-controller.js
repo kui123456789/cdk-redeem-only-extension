@@ -1149,6 +1149,7 @@ with (appState.createScope()) {
       ?? (typeof inputRemovedPaymentWorkerEnabled !== 'undefined' && inputRemovedPaymentWorkerEnabled ? inputRemovedPaymentWorkerEnabled.checked : latestState?.removedPaymentWorkerEnabled)
     );
     const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : 'legacyWallet';
+    const defaultAccountAccessStrategy = typeof PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH === 'string' ? PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH : 'oauth';
     const rawPaymentMethod = typeof options === 'string'
       ? options
       : (options.plusPaymentMethod || currentPlusPaymentMethod || defaultMethod);

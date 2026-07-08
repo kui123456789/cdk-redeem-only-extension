@@ -489,6 +489,11 @@ function checkStaticContracts() {
   assertMatch(background, /autoStepDelaySeconds:\s*10\b/, 'background default settings');
   assertIncludes(sidepanelAppController, 'const AUTO_STEP_DELAY_DEFAULT_SECONDS = 10;', 'sidepanel app controller step delay default');
   assertIncludes(sidepanelAppController, 'requestTextFileSaveTarget', 'sidepanel app controller export picker support');
+  assertMatch(
+    sidepanelAppController,
+    /function rebuildStepDefinitionState[\s\S]*?const defaultAccountAccessStrategy\s*=/,
+    'sidepanel workflow rebuild must declare default account access strategy'
+  );
   assertIncludes(sidepanel, 'SidepanelBootstrap?.createSidepanelApp', 'sidepanel compatibility entrypoint bootstrap wiring');
   assertIncludes(sidepanelAppState, 'createSidepanelAppState', 'sidepanel app state factory');
   assertIncludes(sidepanelSettingsController, 'createSettingsController', 'sidepanel settings controller factory');
