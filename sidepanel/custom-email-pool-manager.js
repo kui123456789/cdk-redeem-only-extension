@@ -123,6 +123,34 @@
         : {};
     }
 
+    function getCredentialTrialStatus(credential = {}) {
+      const explicitStatus = normalizeTrialEligibilityStatus(
+        credential.trialEligibilityStatus
+        || credential.trialEligibility
+        || credential.eligibilityStatus
+        || credential.eligibleStatus
+        || ''
+      );
+      if (explicitStatus) return explicitStatus;
+      const status = String(credential.status || credential.planType || '').trim().toLowerCase();
+      const accessToken = String(
+        credential.accessToken
+        || credential.token
+        || credential.access_token
+        || credential.upiRedeemAccessToken
+        || ''
+      ).trim();
+      if (status === 'free' && (
+        credential.trialEligibilityCheckedAt
+        || credential.trialEligibilityReason
+        || credential.checkedAt
+        || accessToken
+      )) {
+        return 'eligible';
+      }
+      return '';
+    }
+
     function getTrialEligibilityBadgeHtml(entry = {}) {
       const status = normalizeTrialEligibilityStatus(entry.trialEligibilityStatus);
       if (status === 'eligible') {
@@ -199,7 +227,7 @@
 
     function enrichEntryFromStoredCredential(entry = {}) {
       const storedCredential = state.getCredentialForEmail?.(entry.email) || {};
-      const storedStatus = normalizeTrialEligibilityStatus(storedCredential.trialEligibilityStatus);
+      const storedStatus = getCredentialTrialStatus(storedCredential);
       if (storedStatus !== 'eligible') {
         return entry;
       }

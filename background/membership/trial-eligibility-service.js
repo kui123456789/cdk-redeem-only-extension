@@ -165,7 +165,7 @@
             trialEligibilityRetryable: extra.trialEligibilityRetryable === true,
             trialEligibilityTransientFailure: extra.trialEligibilityTransientFailure === true,
             markUsed: extra.markUsed === true,
-            clearSelectedEmail: false,
+            clearSelectedEmail: extra.clearSelectedEmail === true || extra.markUsed === true || status === 'ineligible',
             logPrefix: extra.logPrefix || '邮箱池试用资格检查',
             level: extra.level || (status === 'eligible' ? 'ok' : 'warn'),
           });
@@ -193,7 +193,7 @@
         }
         if (isTrialEligibilityAccountIneligibleDecision({ ...decision, ...patch })) {
           if (emailPoolOnly) {
-            await syncCustomEmailPoolEntry('ineligible', { accessToken: normalizeString(accessToken || credential.accessToken), reason: reason || '账号无试用资格', level: 'warn' });
+            await syncCustomEmailPoolEntry('ineligible', { accessToken: normalizeString(accessToken || credential.accessToken), markUsed: true, clearSelectedEmail: true, reason: reason || '账号无试用资格', level: 'warn' });
             ineligible.push({ email, reason: reason || '账号无试用资格' });
             await addLog(`邮箱池试用资格检查：${email} -> 无试用资格，仅更新邮箱池，不进入 Free：${reason || 'not-eligible'}`, 'warn');
             return;
@@ -216,6 +216,9 @@
             ...patch,
             status: 'free',
             planType: 'free',
+            accessToken: normalizeString(accessToken || credential.accessToken),
+            accessTokenMasked: maskAccessToken(accessToken || credential.accessToken),
+            accessTokenUpdatedAt: checkedAt,
             checkedAt,
             reason: reason || '账号无试用资格',
             redeemStatus: 'blocked',
@@ -346,9 +349,10 @@
             continue;
           }
 
+          let resolvedAccessToken = accessTokenFromCredential;
           try {
             await saveProgress(accessTokenFromCredential ? 'trial-eligibility' : 'token', email);
-            let accessToken = accessTokenFromCredential;
+            let accessToken = resolvedAccessToken;
             let session = null;
             if (!accessToken) {
               session = await loginAndReadAccessToken(credential, {
@@ -363,6 +367,13 @@
             if (!accessToken) {
               throw new Error('未读取到 ChatGPT accessToken，无法检查资格。');
             }
+            resolvedAccessToken = accessToken;
+            credential = normalizeResultItem({
+              ...credential,
+              accessToken,
+              accessTokenMasked: maskAccessToken(accessToken),
+              accessTokenUpdatedAt: checkedAt,
+            });
             await saveProgress('subscription-check', email);
             const response = await checkUpiRedeemAccessTokenEligibility({
               state: {
@@ -378,12 +389,6 @@
             const decision = response?.item?.trialEligibilityDecision
               || response?.trialEligibilityDecision
               || normalizeTrialEligibilityApiItem(response?.item || response || {});
-            credential = normalizeResultItem({
-              ...credential,
-              accessToken,
-              accessTokenMasked: maskAccessToken(accessToken),
-              accessTokenUpdatedAt: checkedAt,
-            });
             await handleDecisionForCredential(credential, decision, accessToken, checkedAt);
             await saveProgress('subscription-check', email);
           } catch (error) {
@@ -396,7 +401,7 @@
                   }
                 : null);
             if (decision) {
-              await handleDecisionForCredential(credential, decision, credential.accessToken, checkedAt);
+              await handleDecisionForCredential(credential, decision, resolvedAccessToken || credential.accessToken, checkedAt);
               await saveProgress('subscription-check', email);
               continue;
             }

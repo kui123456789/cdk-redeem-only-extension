@@ -213,9 +213,20 @@
             if (!eligibility) {
               throw lastEligibilityError || new Error('UPI 注册后试用资格检查未返回结果。');
             }
-            const eligibilityDecision = eligibility?.item?.trialEligibilityDecision
-              || normalizeTrialEligibilityApiItem(eligibility?.item || {});
+            const eligibilityDecision = eligibility?.item?.trialEligibilityDecision || normalizeTrialEligibilityApiItem(eligibility?.item || {});
             const eligibilityPatch = buildTrialEligibilityResultPatch(eligibilityDecision);
+            const eligibilityStatus = normalizeString(eligibilityPatch.trialEligibilityStatus || eligibilityDecision.trialEligibilityStatus).toLowerCase();
+            if (eligibilityStatus && eligibilityStatus !== 'eligible') {
+              const statusReason = normalizeString(eligibilityPatch.trialEligibilityReason || eligibilityDecision.trialEligibilityReason) || (eligibilityStatus === 'ineligible' ? '账号无试用资格。' : 'UPI 试用资格检测失败。');
+              const statusError = new Error(eligibilityStatus === 'ineligible' ? `UPI 试用资格检查确认无资格：${statusReason}` : statusReason);
+              statusError.trialEligibilityDecision = {
+                ...eligibilityDecision,
+                ...eligibilityPatch,
+                trialEligibilityStatus: eligibilityStatus,
+                trialEligibilityReason: statusReason,
+              };
+              throw statusError;
+            }
             const reason = normalizeString(eligibilityPatch.trialEligibilityReason)
               || normalizeString(eligibility?.item?.message || eligibility?.item?.reason)
               || '账号有试用资格，已进入 Free 分组';
@@ -306,24 +317,28 @@
               ? 'ineligible'
               : 'failed';
             let emailPoolStatusUpdated = false;
-            if (trialEligibilityStatus === 'ineligible' && typeof markCurrentRegistrationAccountTrialIneligible === 'function') {
-              const markResult = await markCurrentRegistrationAccountTrialIneligible({
-                ...runtimeState,
-                ...patch,
-                email,
-                accessToken,
-                upiRedeemAccessToken: accessToken,
-                accessTokenUpdatedAt: failedAt,
-              }, {
-                email,
-                reason: message,
-                checkedAt: failedAt,
-                accessToken,
-                accessTokenUpdatedAt: failedAt,
-                logPrefix: '第 7 步 UPI 资格检查',
-                level: 'warn',
-              });
-              emailPoolStatusUpdated = Boolean(markResult?.updated);
+            if (trialEligibilityStatus === 'ineligible') {
+              const ineligibleStatePatch = { ...runtimeState, ...patch, email, accessToken, upiRedeemAccessToken: accessToken, accessTokenUpdatedAt: failedAt };
+              const markOptions = { email, reason: message, checkedAt: failedAt, accessToken, accessTokenUpdatedAt: failedAt };
+              if (typeof markCurrentRegistrationAccountTrialIneligible === 'function') {
+                const markResult = await markCurrentRegistrationAccountTrialIneligible(ineligibleStatePatch, {
+                  ...markOptions,
+                  logPrefix: '第 7 步 UPI 资格检查',
+                  level: 'warn',
+                });
+                emailPoolStatusUpdated = Boolean(markResult?.updated);
+              }
+              if (!emailPoolStatusUpdated && typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+                const latestEmailPoolState = await getMergedState(ineligibleStatePatch);
+                const markResult = await markCustomEmailPoolEntryTrialEligibility(latestEmailPoolState, {
+                  ...markOptions,
+                  status: 'ineligible',
+                  markUsed: true,
+                  clearSelectedEmail: true,
+                  log: false,
+                });
+                emailPoolStatusUpdated = Boolean(markResult?.updated);
+              }
             }
             await addStepLog(
               visibleStep,

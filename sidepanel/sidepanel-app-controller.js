@@ -3488,10 +3488,10 @@ with (appState.createScope()) {
         setEntries: (entries, options = {}) => setCustomEmailPoolEntriesState(entries, options),
         getCredentialForEmail: (email) => {
           const normalizedEmail = String(email || '').trim().toLowerCase();
-          const items = Array.isArray(latestState?.upiCredentialMembershipCheckResults?.items)
-            ? latestState.upiCredentialMembershipCheckResults.items
-            : [];
-          return items.find((item) => String(item?.email || '').trim().toLowerCase() === normalizedEmail) || {};
+          const items = Array.isArray(latestState?.upiCredentialMembershipCheckResults?.items) ? latestState.upiCredentialMembershipCheckResults.items : [];
+          const matches = items.filter((item) => String(item?.email || '').trim().toLowerCase() === normalizedEmail);
+          const scoreCredential = (item = {}) => { const trialStatus = String(item.trialEligibilityStatus || item.trialEligibility || item.eligibilityStatus || '').trim().toLowerCase().replace(/[\s-]+/g, '_'); const token = String(item.accessToken || item.token || item.access_token || item.upiRedeemAccessToken || '').trim(); const checkedAt = Date.parse(String(item.trialEligibilityCheckedAt || item.checkedAt || item.updatedAt || item.accessTokenUpdatedAt || item.recordedAt || '').trim()) || 0; return (trialStatus === 'eligible' ? 1000000 : 0) + (String(item.status || item.planType || '').trim().toLowerCase() === 'free' ? 100000 : 0) + (token ? 10000 : 0) + Math.min(9999, Math.max(0, Math.floor(checkedAt / 1000000000))); };
+          return matches.reduce((best, item) => (scoreCredential(item) > scoreCredential(best) ? item : best), {});
         },
         getCurrentEmail: () => String(((latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step') ? latestState?.email : inputEmail?.value) || latestState?.email || inputEmail?.value || '').trim().toLowerCase(), isAutoRunning: () => Boolean(latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step'),
         isVisible: () => Boolean(rowCustomEmailPool) && rowCustomEmailPool.style.display !== 'none',

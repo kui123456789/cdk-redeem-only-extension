@@ -132,3 +132,32 @@ test('custom email pool marks first available entry current while auto-running w
     globalThis.document = previousDocument;
   }
 });
+
+test('custom email pool renders saved Free credential as used and eligible', () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement: () => createRenderedItemStub() };
+  try {
+    const { dom, manager } = createManager([
+      { id: 'entry', email: 'saved-free@example.com', enabled: true, used: false },
+    ], {
+      state: {
+        getCredentialForEmail: () => ({
+          email: 'saved-free@example.com',
+          status: 'free',
+          accessToken: 'at-test-token',
+          checkedAt: '2026-07-09T11:14:06.000Z',
+          reason: '账号有试用资格。',
+        }),
+      },
+    });
+
+    manager.renderCustomEmailPoolEntries();
+
+    const html = dom.customEmailPoolList.children[0].innerHTML;
+    assert.match(html, /有试用资格/);
+    assert.match(html, /luckmail-tag used\">已用/);
+    assert.doesNotMatch(html, /luckmail-tag active\">未用/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});

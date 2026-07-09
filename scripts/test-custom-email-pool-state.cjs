@@ -116,6 +116,53 @@ test('custom email pool state marks eligible entries used and stores access toke
   assert.equal(writes.some((write) => write.kind === 'broadcast'), true);
 });
 
+test('custom email pool state uses persisted entries when provided runtime state is stale', async () => {
+  const writes = [];
+  let currentState = {
+    customEmailPoolEntries: [
+      {
+        id: 'entry-1',
+        email: 'stale-runtime@example.com',
+        enabled: true,
+        used: false,
+      },
+    ],
+    customEmailPool: ['stale-runtime@example.com'],
+    selectedCustomEmailPoolEmail: 'stale-runtime@example.com',
+  };
+  const state = createCustomEmailPoolState({
+    broadcastDataUpdate: (payload) => writes.push({ kind: 'broadcast', payload }),
+    getState: async () => currentState,
+    normalizeCustomEmailVerificationUrl,
+    parseCustomEmailPoolEntryValue,
+    parseHiddenEmailCredential,
+    setPersistentSettings: async (payload) => writes.push({ kind: 'persist', payload }),
+    setState: async (payload) => {
+      currentState = { ...currentState, ...payload };
+      writes.push({ kind: 'state', payload });
+    },
+  });
+
+  const result = await state.markCustomEmailPoolEntryTrialEligibility({
+    email: 'stale-runtime@example.com',
+    customEmailPoolEntries: [],
+    customEmailPool: [],
+    selectedCustomEmailPoolEmail: 'stale-runtime@example.com',
+  }, {
+    email: 'stale-runtime@example.com',
+    status: 'ineligible',
+    reason: 'not-eligible',
+    checkedAt: '2026-07-08T00:00:00.000Z',
+  });
+
+  assert.equal(result.updated, true);
+  assert.equal(result.customEmailPoolEntries[0].used, true);
+  assert.equal(result.customEmailPoolEntries[0].trialEligibilityStatus, 'ineligible');
+  assert.deepEqual(result.customEmailPool, []);
+  assert.equal(currentState.selectedCustomEmailPoolEmail, '');
+  assert.equal(writes.some((write) => write.kind === 'persist'), true);
+});
+
 test('custom email pool run selection keeps selected email only while available', () => {
   const state = createCustomEmailPoolState({
     normalizeCustomEmailVerificationUrl,

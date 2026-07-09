@@ -217,17 +217,50 @@
       return String(entry?.credential || '').trim();
     }
 
+    function hasCustomEmailPoolEntryForEmail(state = {}, email = '') {
+      const normalizedEmail = String(email || '').trim().toLowerCase();
+      if (!normalizedEmail) return false;
+      return getCustomEmailPoolEntries(state).some((entry) => entry.email === normalizedEmail);
+    }
+
+    function mergeCustomEmailPoolStateForTarget(currentState = {}, providedState = {}, email = '') {
+      const currentPatch = currentState && typeof currentState === 'object' ? currentState : {};
+      const providedPatch = providedState && typeof providedState === 'object' ? providedState : {};
+      const latestState = {
+        ...currentPatch,
+        ...providedPatch,
+      };
+      const normalizedEmail = String(email || '').trim().toLowerCase();
+      if (!normalizedEmail) {
+        return latestState;
+      }
+
+      const latestHasTarget = hasCustomEmailPoolEntryForEmail(latestState, normalizedEmail);
+      const currentHasTarget = hasCustomEmailPoolEntryForEmail(currentPatch, normalizedEmail);
+      const providedHasTarget = hasCustomEmailPoolEntryForEmail(providedPatch, normalizedEmail);
+      if (latestHasTarget || !currentHasTarget || providedHasTarget) {
+        return latestState;
+      }
+
+      return {
+        ...latestState,
+        customEmailPoolEntries: currentPatch.customEmailPoolEntries,
+        customEmailPool: currentPatch.customEmailPool,
+        ...(Object.prototype.hasOwnProperty.call(currentPatch, 'selectedCustomEmailPoolEmail')
+          ? { selectedCustomEmailPoolEmail: currentPatch.selectedCustomEmailPoolEmail }
+          : {}),
+      };
+    }
+
     async function markCustomEmailPoolEntryTrialEligibility(state = {}, options = {}) {
       const providedState = state && typeof state === 'object' ? state : {};
       const currentState = await getState();
-      const latestState = {
-        ...(currentState && typeof currentState === 'object' ? currentState : {}),
-        ...providedState,
-      };
-      const currentEmail = String(options.email || latestState?.email || '').trim().toLowerCase();
+      const currentStatePatch = currentState && typeof currentState === 'object' ? currentState : {};
+      const currentEmail = String(options.email || providedState?.email || currentStatePatch?.email || '').trim().toLowerCase();
       if (!currentEmail) {
         return { updated: false };
       }
+      const latestState = mergeCustomEmailPoolStateForTarget(currentStatePatch, providedState, currentEmail);
 
       const entries = getCustomEmailPoolEntries(latestState);
       if (!entries.length) {
