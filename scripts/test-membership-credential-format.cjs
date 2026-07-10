@@ -168,3 +168,27 @@ test('distinguishes URL-free no-2FA timestamps from numeric legacy TOTP secrets'
   assert.equal(row.password, 'pw');
   assert.equal(row.totpMfaSecret, '222222');
 });
+
+test('exports mail.334401 JSON retrieval URL as the web show page', () => {
+  const sourceUrl = 'https://mail.334401.xyz/json/token-1/user%2Btag%40icloud.com';
+
+  assert.equal(format.formatFreeCredentialLine({
+    email: 'user@icloud.com',
+    password: 'pw',
+    totpMfaSecret: 'SECRET',
+    verificationUrl: sourceUrl,
+    accessToken: 'at-token',
+    checkedAt: '2026-07-10 12:00:00',
+  }), 'user@icloud.com---pw---SECRET---https://mail.334401.xyz/show/token-1/user%2Btag%40icloud.com---at-token---2026-07-10 12:00:00');
+});
+
+test('stores imported mail.334401 show page as the JSON retrieval URL', () => {
+  const row = format.parseCredentialLine(
+    'user@icloud.com---pw---SECRET---https://mail.334401.xyz/show/token-1/user%2Btag%40icloud.com---at-token---2026-07-10 12:00:00'
+  );
+
+  assert.equal(
+    row.verificationUrl,
+    'https://mail.334401.xyz/json/token-1/user%2Btag%40icloud.com'
+  );
+});

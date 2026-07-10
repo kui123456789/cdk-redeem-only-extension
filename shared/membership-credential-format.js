@@ -31,7 +31,7 @@
       || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(text);
   }
 
-  function normalizeVerificationUrlForExport(value = '') {
+  function normalizeVerificationUrlForCredential(value = '') {
     const text = normalizeText(value);
     if (!text) return '';
     try {
@@ -42,9 +42,34 @@
       ) {
         parsed.pathname = '/console/open.php';
       }
+      if (
+        /^mail\.334401\.xyz$/i.test(parsed.hostname)
+        && /^\/show\//i.test(parsed.pathname)
+      ) {
+        parsed.pathname = parsed.pathname.replace(/^\/show\//i, '/json/');
+      }
       return parsed.toString();
     } catch (_error) {
-      return text.replace('/console/feed.php', '/console/open.php');
+      return text
+        .replace('/console/feed.php', '/console/open.php')
+        .replace(/^(https?:\/\/mail\.334401\.xyz)\/show\//i, '$1/json/');
+    }
+  }
+
+  function normalizeVerificationUrlForExport(value = '') {
+    const normalized = normalizeVerificationUrlForCredential(value);
+    if (!normalized) return '';
+    try {
+      const parsed = new URL(normalized);
+      if (
+        /^mail\.334401\.xyz$/i.test(parsed.hostname)
+        && /^\/json\//i.test(parsed.pathname)
+      ) {
+        parsed.pathname = parsed.pathname.replace(/^\/json\//i, '/show/');
+      }
+      return parsed.toString();
+    } catch (_error) {
+      return normalized.replace(/^(https?:\/\/mail\.334401\.xyz)\/json\//i, '$1/show/');
     }
   }
 
@@ -136,7 +161,7 @@
       password: no2faFreeRoute ? '' : normalizeText(fields.password),
       gptPassword: no2faFreeRoute ? '' : normalizeText(fields.gptPassword || fields.password),
       totpMfaSecret: no2faFreeRoute || passkeyEnabled ? '' : normalizeTotpSecret(fields.totpMfaSecret),
-      verificationUrl: normalizeVerificationUrlForExport(fields.verificationUrl),
+      verificationUrl: normalizeVerificationUrlForCredential(fields.verificationUrl),
       accessToken: normalizeText(fields.accessToken),
       accessTokenUpdatedAt: timestamp,
       checkedAt: normalizeText(fields.checkedAt || timestamp),

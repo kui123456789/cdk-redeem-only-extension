@@ -39,6 +39,37 @@ test('deleted UPI Plus tombstones do not hide IDEAL Plus exports', () => {
   }, 'paid', 'upi'), []);
 });
 
+test('Plus exports mail.334401 retrieval URLs as web show pages', () => {
+  const rows = resultState.buildResultExportRows({
+    items: [
+      {
+        email: 'twofa@example.com',
+        password: 'pw-2fa',
+        totpMfaSecret: 'abcd efgh',
+        verificationUrl: 'https://mail.334401.xyz/json/token-1/twofa%40example.com',
+        status: 'paid',
+        redeemChannel: 'upi',
+        redeemSuccessAt: '2026-07-10T01:02:03.000Z',
+      },
+      {
+        email: 'passkey@example.com',
+        password: 'pw-passkey',
+        passkeyEnabled: true,
+        passkeyCredentialId: 'cred-123',
+        verificationUrl: 'https://mail.334401.xyz/json/token-2/passkey%40example.com',
+        status: 'paid',
+        redeemChannel: 'ideal',
+        redeemSuccessAt: '2026-07-10T02:03:04.000Z',
+      },
+    ],
+  }, 'paid');
+
+  assert.deepEqual(rows, [
+    'twofa@example.com----pw-2fa---ABCDEFGH---https://mail.334401.xyz/show/token-1/twofa%40example.com---2026-07-10T01:02:03.000Z',
+    'passkey@example.com----pw-passkey---PASSKEY:cred-123---https://mail.334401.xyz/show/token-2/passkey%40example.com---2026-07-10T02:03:04.000Z',
+  ]);
+});
+
 test('duplicate emails keep the newest updated result', () => {
   const items = resultState.dedupeResultItemsByEmail([
     {

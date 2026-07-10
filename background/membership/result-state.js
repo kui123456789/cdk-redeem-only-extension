@@ -133,6 +133,10 @@
 
   function normalizeNo2faFreeVerificationUrlForExport(value = '') {
     const raw = normalizeString(value);
+    const sharedNormalizer = getMembershipCredentialFormat().normalizeVerificationUrlForExport;
+    if (typeof sharedNormalizer === 'function') {
+      return sharedNormalizer(raw);
+    }
     if (!/^https?:\/\//i.test(raw)) {
       return raw;
     }
@@ -145,9 +149,15 @@
         url.pathname = '/console/open.php';
         return url.toString();
       }
+      if (
+        url.hostname.toLowerCase() === 'mail.334401.xyz'
+        && /^\/json\//i.test(url.pathname)
+      ) {
+        url.pathname = url.pathname.replace(/^\/json\//i, '/show/');
+      }
       return url.toString();
     } catch {
-      return raw;
+      return raw.replace(/^(https?:\/\/mail\.334401\.xyz)\/json\//i, '$1/show/');
     }
   }
 
@@ -619,10 +629,19 @@
           return buildResultExportRowsFreeFallback(item, options);
         }
         const timestamp = item.redeemSuccessAt || item.upiRedeemSubscriptionCheckedAt || item.checkedAt || '';
+        const verificationUrl = includeVerificationUrl && item.verificationUrl
+          ? normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl)
+          : '';
         if (item.passkeyEnabled === true && item.password && !item.totpMfaSecret) {
-          return `${item.email}----${item.password}---${buildPasskeyExportMarker(item)}---${timestamp}`;
+          const prefix = `${item.email}----${item.password}---${buildPasskeyExportMarker(item)}`;
+          return verificationUrl
+            ? `${prefix}---${verificationUrl}---${timestamp}`
+            : `${prefix}---${timestamp}`;
         }
-        return `${item.email}----${item.password}---${item.totpMfaSecret}---${timestamp}`;
+        const prefix = `${item.email}----${item.password}---${item.totpMfaSecret}`;
+        return verificationUrl
+          ? `${prefix}---${verificationUrl}---${timestamp}`
+          : `${prefix}---${timestamp}`;
       })
       .filter(Boolean);
   }
