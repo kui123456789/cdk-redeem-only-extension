@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CDK Redeem Only",
-  "version": "1.0.9",
-  "version_name": "CDK Redeem Only V1.0.9",
+  "version": "1.0.10",
+  "version_name": "CDK Redeem Only V1.0.10",
   "description": "CDK 兑换专用版，保留注册、设置密码、2FA、会员核验与补兑能力",
   "permissions": [
     "sidePanel",

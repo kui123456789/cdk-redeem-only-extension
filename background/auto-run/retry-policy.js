@@ -122,8 +122,12 @@
         Math.floor(Number(options.maxAttemptsForRound) || getMaxAttemptsForRound(options))
       );
       const maxRetryAttempts = Math.max(1, Math.floor(Number(deps.AUTO_RUN_MAX_RETRIES_PER_ROUND) || 0) + 1);
-      const reason = String(getErrorMessage(error) || '').trim()
+      const rawReason = String(getErrorMessage(error) || '').trim()
         || String(error?.message || error || '未知错误');
+      const blockedByCustomEmailPoolEmpty = /CUSTOM_EMAIL_POOL_EXHAUSTED::|自定义邮箱池(?:为空|没有可用邮箱|可用邮箱不足|第\s*\d+\s*个邮箱不存在)/i.test(rawReason);
+      const reason = blockedByCustomEmailPoolEmpty
+        ? rawReason.replace(/^CUSTOM_EMAIL_POOL_EXHAUSTED::/i, '').trim()
+        : rawReason;
 
       const blockedByUpiAccountIneligible = isUpiAccountIneligibleFailure(error);
       const blockedByPlusNonFreeTrial = !blockedByUpiAccountIneligible
@@ -166,6 +170,7 @@
       const retryableHostedCheckoutCardFallback = blockedByHostedCheckoutCardFallback
         && attemptRun < maxRetryAttempts;
       const canRetry = !blockedByUpiAccountIneligible
+        && !blockedByCustomEmailPoolEmpty
         && !blockedByPlusNonFreeTrial
         && !blockedByUpiRedeemBackendFailure
         && !blockedByUpiRedeemNetworkFailure
@@ -188,6 +193,7 @@
         maxRetryAttempts,
         blockedByCardHelperTaskEnded,
         blockedByCloudCheckoutAlreadyPaid,
+        blockedByCustomEmailPoolEmpty,
         blockedByHostedCheckoutCardFallback,
         blockedByHostedCheckoutGenericError,
         blockedByHostedCheckoutVerificationResendLimit,
@@ -209,6 +215,14 @@
     }
 
     function selectFailureAction(result = {}) {
+      if (result.blockedByCustomEmailPoolEmpty) {
+        return {
+          code: 'fail_custom_email_pool_empty',
+          forceFreshTabsNextRun: false,
+          shouldFailRound: true,
+          shouldStop: true,
+        };
+      }
       if (result.retryablePlusNonFreeTrial) {
         return {
           code: 'retry_plus_non_free_trial',

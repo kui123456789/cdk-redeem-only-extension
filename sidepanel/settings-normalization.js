@@ -128,8 +128,15 @@
       return normalizeCustomEmailPoolTrialEligibilityStatus(entry?.trialEligibilityStatus) === 'ineligible';
     }
 
+    function isCustomEmailPoolEntryRegistrationBlocked(entry = {}) {
+      return entry?.registrationBlocked === true;
+    }
+
     function isCustomEmailPoolEntryAvailable(entry = {}) {
-      return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
+      return Boolean(entry?.enabled)
+        && !entry?.used
+        && !isCustomEmailPoolEntryTrialIneligible(entry)
+        && !isCustomEmailPoolEntryRegistrationBlocked(entry);
     }
 
     function normalizeCustomEmailPoolEntryObjects(value = []) {
@@ -155,15 +162,22 @@
           || (accessToken
             ? `${accessToken.slice(0, 8)}****${accessToken.slice(-6)}`
             : '');
+        const note = String(asObject.note || '').trim();
+        const manualSkipped = asObject.manualSkipped === true || note === '手动跳过';
         entries.push({
           id: String(asObject.id || createCustomEmailPoolEntryId()),
           email,
           credential: parsedEntry.verificationUrl ? '' : (parsedEntry.credential || String(asObject.credential || '').trim()),
           verificationUrl: normalizeCustomEmailVerificationUrl(asObject.verificationUrl || asObject.url || parsedEntry.verificationUrl || ''),
           enabled: asObject.enabled !== undefined ? Boolean(asObject.enabled) : true,
-          used: Boolean(asObject.used),
-          note: String(asObject.note || '').trim(),
+          used: Boolean(asObject.used) && (Boolean(accessToken) || manualSkipped),
+          manualSkipped,
+          note,
           lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+          registrationBlocked: asObject.registrationBlocked === true,
+          registrationBlockedReason: String(asObject.registrationBlockedReason || '').trim(),
+          registrationBlockedReasonCode: String(asObject.registrationBlockedReasonCode || '').trim(),
+          registrationBlockedAt: String(asObject.registrationBlockedAt || '').trim(),
           accessToken,
           accessTokenMasked,
           accessTokenUpdatedAt: String(asObject.accessTokenUpdatedAt || asObject.tokenUpdatedAt || asObject.checkedAt || '').trim(),
@@ -213,6 +227,7 @@
       createCustomEmailPoolEntryId,
       normalizeCustomEmailPoolTrialEligibilityStatus,
       isCustomEmailPoolEntryTrialIneligible,
+      isCustomEmailPoolEntryRegistrationBlocked,
       isCustomEmailPoolEntryAvailable,
       normalizeCustomEmailPoolEntryObjects,
       formatCustomEmailPoolEntryValue,

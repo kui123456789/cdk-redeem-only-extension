@@ -1341,8 +1341,8 @@ function checkStaticContracts() {
   assertIncludes(routerRedeemRefreshService, 'skipAutoRetry', 'remote refresh skip-auto-retry flag');
   assertMatch(
     customEmailPoolState,
-    /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*true;\s*nextEntry\.lastUsedAt\s*=\s*entry\.lastUsedAt\s*\|\|\s*Date\.now\(\);/s,
-    'custom email pool ineligible entries must stay used'
+    /if\s*\(status\s*===\s*['"]ineligible['"]\)\s*{\s*nextEntry\.used\s*=\s*canMarkUsed\s*\?\s*true\s*:\s*Boolean\(entry\.used\s*&&\s*entry\.manualSkipped\);/s,
+    'custom email pool ineligible entries must only be used with AT or manual skip'
   );
   assertNotMatch(
     customEmailPoolState,

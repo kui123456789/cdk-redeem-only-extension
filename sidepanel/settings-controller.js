@@ -143,6 +143,16 @@
         }
       
         const payload = collectSettingsPayload();
+        const autoRunPhase = String(latestState?.autoRunPhase || '').trim().toLowerCase();
+        const shouldProtectAutoRunPoolState = Boolean(latestState?.autoRunning)
+          || ['running', 'waiting_step', 'retrying', 'waiting_interval', 'scheduled'].includes(autoRunPhase);
+        if (shouldProtectAutoRunPoolState) {
+          // The background owns pool transitions while a run is active. A delayed UI autosave
+          // may otherwise restore a stale selection and skip an available email.
+          delete payload.customEmailPoolEntries;
+          delete payload.customEmailPool;
+          delete payload.selectedCustomEmailPoolEmail;
+        }
         const saveRevision = settingsSaveRevision;
         settingsSaveInFlight = true;
         updateSaveButtonState();
@@ -192,9 +202,19 @@
       }
       
       function buildCustomEmailPoolSettingsPayload(extraPayload = {}) {
-        const entries = typeof getNormalizedCustomEmailPoolEntriesState === 'function'
+        let entries = typeof getNormalizedCustomEmailPoolEntriesState === 'function'
           ? getNormalizedCustomEmailPoolEntriesState()
           : [];
+        if (
+          entries.length === 0
+          && extraPayload.allowEmptyCustomEmailPool !== true
+          && typeof getCustomEmailPoolBackupEntries === 'function'
+        ) {
+          const backupEntries = getCustomEmailPoolBackupEntries();
+          if (Array.isArray(backupEntries) && backupEntries.length > 0) {
+            entries = backupEntries;
+          }
+        }
         const activeEmails = typeof getActiveCustomEmailPoolEmails === 'function'
           ? getActiveCustomEmailPoolEmails(entries)
           : [];
@@ -207,6 +227,9 @@
         };
         if (Object.prototype.hasOwnProperty.call(extraPayload, 'email')) {
           payload.email = String(extraPayload.email || '').trim().toLowerCase();
+        }
+        if (extraPayload.allowEmptyCustomEmailPool === true) {
+          payload.allowEmptyCustomEmailPool = true;
         }
         return payload;
       }

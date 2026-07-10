@@ -38,6 +38,7 @@
       isStopError,
       launchAutoRunTimerPlan,
       logAutoRunFinalSummary,
+      markCurrentRegistrationAccountRegistrationBlocked = null,
       normalizeAutoRunFallbackThreadIntervalMinutes,
       persistAutoRunTimerPlan,
       replayPreviousSuccessfulAutoRunRoundLogSnapshot,
@@ -119,7 +120,7 @@
         fireAt: Date.now() + fallbackThreadIntervalMinutes * 60 * 1000,
         currentRun: targetRun,
         totalRuns,
-        attemptRun: currentRuntime.autoRunAttemptRun,
+        attemptRun: 1,
         autoRunSessionId: currentRuntime.autoRunSessionId,
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
@@ -208,10 +209,10 @@
       const autoRunRetryNonFreeTrial = Boolean(options.autoRunRetryNonFreeTrial);
       const autoRunRetryLegacyWalletCallback = Boolean(options.autoRunRetryLegacyWalletCallback);
       const initialMode = options.mode === 'continue' ? 'continue' : 'restart';
-      const resumeCurrentRun = Number.isInteger(options.resumeCurrentRun) && options.resumeCurrentRun > 0
+      let resumeCurrentRun = Number.isInteger(options.resumeCurrentRun) && options.resumeCurrentRun > 0
         ? Math.min(totalRuns, options.resumeCurrentRun)
         : 1;
-      const resumeAttemptRun = Number.isInteger(options.resumeAttemptRun) && options.resumeAttemptRun > 0
+      let resumeAttemptRun = Number.isInteger(options.resumeAttemptRun) && options.resumeAttemptRun > 0
         ? Math.min(AUTO_RUN_MAX_RETRIES_PER_ROUND + 1, options.resumeAttemptRun)
         : 1;
       let continueCurrentOnFirstAttempt = initialMode === 'continue';
@@ -219,6 +220,20 @@
       let stoppedEarly = false;
       let parkedByTimer = false;
       const roundSummaries = buildAutoRunRoundSummaries(totalRuns, options.resumeRoundSummaries);
+      if (resumeCurrentRun > 1 && resumeAttemptRun > 1) {
+        const currentSummary = roundSummaries[resumeCurrentRun - 1];
+        const previousSummary = roundSummaries[resumeCurrentRun - 2];
+        const currentHasAttemptHistory = currentSummary?.status !== 'pending'
+          || Math.max(0, Math.floor(Number(currentSummary?.attempts) || 0)) > 0
+          || (Array.isArray(currentSummary?.failureReasons) && currentSummary.failureReasons.length > 0);
+        const previousHasRetryHistory = previousSummary?.status === 'pending' && (
+          Math.max(0, Math.floor(Number(previousSummary?.attempts) || 0)) > 0
+          || (Array.isArray(previousSummary?.failureReasons) && previousSummary.failureReasons.length > 0)
+        );
+        if (!currentHasAttemptHistory && previousHasRetryHistory) {
+          resumeCurrentRun -= 1;
+        }
+      }
 
       if (continueCurrentOnFirstAttempt && resumeCurrentRun > 1) {
         for (let round = 1; round < resumeCurrentRun; round += 1) {
@@ -390,6 +405,10 @@
               inbucketMailbox: prevState.inbucketMailbox,
               cloudflareDomain: prevState.cloudflareDomain,
               cloudflareDomains: prevState.cloudflareDomains,
+              customEmailPoolEntries: prevState.customEmailPoolEntries,
+              customEmailPool: prevState.customEmailPool,
+              customMailProviderPool: prevState.customMailProviderPool,
+              selectedCustomEmailPoolEmail: prevState.selectedCustomEmailPoolEmail,
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               autoRunSessionId: sessionId,
               tabRegistry: {},
@@ -416,7 +435,12 @@
           }
 
           if (forceFreshTabsNextRun) {
-            await addLog(`上一轮尝试已放弃，当前开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试。`, 'warn');
+            await addLog(
+              attemptRun > 1
+                ? `上一次尝试已放弃，当前继续第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试。`
+                : `上一轮已结束，当前开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试。`,
+              'warn'
+            );
             forceFreshTabsNextRun = false;
           }
 
@@ -543,6 +567,21 @@
             const reason = failureResult.reason;
             roundSummary.failureReasons.push(reason);
             await persistRoundSummaries();
+
+            if (failureAction.code === 'fail_custom_email_pool_empty') {
+              await markRoundFailed(reason, error);
+              cancelPendingCommands('自定义邮箱池没有可用邮箱。');
+              await broadcastStopToContentScripts();
+              await addLog(`自定义邮箱池没有可用邮箱，自动运行已停止：${reason}`, 'error');
+              stoppedEarly = true;
+              await broadcastAutoRunStatus('stopped', {
+                currentRun: targetRun,
+                totalRuns,
+                attemptRun,
+                sessionId: 0,
+              });
+              break;
+            }
 
             if (failureAction.code === 'retry_plus_non_free_trial') {
               const retryIndex = attemptRun;
@@ -827,6 +866,15 @@
             }
 
             if (failureAction.code === 'fail_signup_user_already_exists') {
+              if (typeof markCurrentRegistrationAccountRegistrationBlocked === 'function') {
+                const latestState = await getState();
+                await markCurrentRegistrationAccountRegistrationBlocked(latestState, {
+                  reason,
+                  reasonCode: 'user_already_exists',
+                  logPrefix: '自动运行 user_already_exists',
+                  level: 'warn',
+                });
+              }
               await markRoundFailed(reason, error);
               cancelPendingCommands('当前轮因 user_already_exists 已终止。');
               await broadcastStopToContentScripts();

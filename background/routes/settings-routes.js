@@ -66,6 +66,23 @@
     async function saveSetting(payload = {}) {
       const currentState = await requireHandler(getState, 'getState')();
       const updates = requireHandler(buildPersistentSettingsPayload, 'buildPersistentSettingsPayload')(payload || {});
+      const allowEmptyCustomEmailPool = payload?.allowEmptyCustomEmailPool === true;
+      if (
+        !allowEmptyCustomEmailPool
+        && hasOwn(updates, 'customEmailPoolEntries')
+        && Array.isArray(updates.customEmailPoolEntries)
+        && updates.customEmailPoolEntries.length === 0
+        && Array.isArray(currentState?.customEmailPoolEntries)
+        && currentState.customEmailPoolEntries.length > 0
+      ) {
+        delete updates.customEmailPoolEntries;
+        if (hasOwn(updates, 'customEmailPool') && Array.isArray(updates.customEmailPool) && updates.customEmailPool.length === 0) {
+          delete updates.customEmailPool;
+        }
+        if (hasOwn(updates, 'selectedCustomEmailPoolEmail') && !normalizeString(updates.selectedCustomEmailPoolEmail)) {
+          delete updates.selectedCustomEmailPoolEmail;
+        }
+      }
       if (
         hasOwn(updates, 'hotmailAccounts')
         && requireHandler(normalizeHotmailAccounts, 'normalizeHotmailAccounts')(updates.hotmailAccounts).length === 0

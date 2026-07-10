@@ -34,6 +34,20 @@ test('custom email pool storage falls back to backup when state is empty', () =>
   assert.deepEqual(restored, [{ email: 'backup@example.com' }]);
 });
 
+test('custom email pool storage identifies backup recovery for background resync', () => {
+  storage.writeEntriesBackup([{ email: 'backup@example.com' }]);
+
+  const restored = storage.restoreEntriesFromStateWithSource({
+    customEmailPoolEntries: [],
+    customEmailPool: [],
+  }, normalizeEntries);
+
+  assert.deepEqual(restored, {
+    entries: [{ email: 'backup@example.com' }],
+    source: 'backup',
+  });
+});
+
 test('custom email pool storage clears backup only when requested', () => {
   storage.writeEntriesBackup([{ email: 'backup@example.com' }]);
   storage.syncEntriesBackup([], { clearBackup: true });

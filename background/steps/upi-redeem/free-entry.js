@@ -122,22 +122,6 @@
               updates.customMailProviderPool = nextCustomMailProviderPool;
             }
 
-            const currentStructuredEntries = normalizeCustomEmailPoolEntryObjectsForCleanup(state.customEmailPoolEntries);
-            if (currentStructuredEntries.length) {
-              const nextStructuredEntries = currentStructuredEntries.filter((entry) => entry.email !== normalizedEmail);
-              if (nextStructuredEntries.length !== currentStructuredEntries.length) {
-                updates.customEmailPoolEntries = nextStructuredEntries;
-                updates.customEmailPool = nextStructuredEntries
-                  .filter((entry) => entry.enabled && !entry.used)
-                  .map((entry) => entry.email);
-              }
-            } else {
-              const nextCustomEmailPool = removeEmailFromPoolValues(state.customEmailPool, normalizedEmail);
-              if (normalizeEmailPoolValues(nextCustomEmailPool).join('\n') !== normalizeEmailPoolValues(state.customEmailPool).join('\n')) {
-                updates.customEmailPool = nextCustomEmailPool;
-              }
-            }
-
             if (normalizeString(state.selectedCustomEmailPoolEmail).toLowerCase() === normalizedEmail) {
               updates.selectedCustomEmailPoolEmail = '';
             }
@@ -271,13 +255,18 @@
               });
             const persistedFreeResults = await ensureTrialEligibleFreeCredentialPersisted(freeResults, email, visibleStep);
             let emailPoolStatusUpdated = false;
+            let emailPoolStatusChanged = false;
             if (typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+              const persistedFreeItem = findMembershipResultItem(persistedFreeResults, email)
+                || findMembershipResultItem(freeResults, email);
+              const emailPoolAccessToken = accessToken
+                || normalizeString(persistedFreeItem?.accessToken || persistedFreeItem?.token || persistedFreeItem?.access_token || persistedFreeItem?.upiRedeemAccessToken);
               const latestEmailPoolState = await getMergedState({
                 ...runtimeState,
                 ...patch,
                 email,
-                accessToken,
-                upiRedeemAccessToken: accessToken,
+                accessToken: emailPoolAccessToken,
+                upiRedeemAccessToken: emailPoolAccessToken,
                 accessTokenUpdatedAt: checkedAt,
               });
               const markResult = await markCustomEmailPoolEntryTrialEligibility(latestEmailPoolState, {
@@ -285,17 +274,25 @@
                 status: 'eligible',
                 reason,
                 checkedAt,
-                accessToken,
+                accessToken: emailPoolAccessToken,
                 accessTokenUpdatedAt: checkedAt,
                 markUsed: true,
                 clearSelectedEmail: true,
                 log: false,
               });
-              emailPoolStatusUpdated = Boolean(markResult?.updated);
+              emailPoolStatusChanged = Boolean(markResult?.updated);
+              const markedEntry = (Array.isArray(markResult?.customEmailPoolEntries) ? markResult.customEmailPoolEntries : [])
+                .find((entry) => parsePoolEntryEmail(entry?.email) === email);
+              emailPoolStatusUpdated = Boolean(
+                markedEntry
+                && markedEntry.used === true
+                && (normalizeString(markedEntry.accessToken || markedEntry.token || markedEntry.access_token || markedEntry.upiRedeemAccessToken) || markedEntry.manualSkipped === true)
+                && normalizeString(markedEntry.trialEligibilityStatus).toLowerCase() === 'eligible'
+              );
             }
             await addStepLog(
               visibleStep,
-              `UPI 注册后试用资格检查通过，已保存到 Free 结果表：${email || 'unknown'}；${emailPoolStatusUpdated ? '已同步邮箱池为“已用/有试用资格”。' : '未找到源邮箱池条目可同步。'}侧边栏刷新后会按当前 Free/Plus 显示规则重新计算数量。`,
+              `UPI 注册后试用资格检查通过，已保存到 Free 结果表：${email || 'unknown'}；${emailPoolStatusUpdated ? '已同步邮箱池为“已用/有试用资格”。' : (emailPoolStatusChanged ? '已尝试同步邮箱池，但未形成“已用+AT”状态，请刷新后复核。' : '未找到源邮箱池条目可同步。')}侧边栏刷新后会按当前 Free/Plus 显示规则重新计算数量。`,
               'ok'
             );
             return {
@@ -339,12 +336,38 @@
                 });
                 emailPoolStatusUpdated = Boolean(markResult?.updated);
               }
+            } else if (typeof markCustomEmailPoolEntryTrialEligibility === 'function') {
+              const failedStatePatch = {
+                ...runtimeState,
+                ...patch,
+                email,
+                accessToken,
+                upiRedeemAccessToken: accessToken,
+                accessTokenUpdatedAt: failedAt,
+              };
+              const markResult = await markCustomEmailPoolEntryTrialEligibility(
+                await getMergedState(failedStatePatch),
+                {
+                  email,
+                  status: 'failed',
+                  reason: message,
+                  checkedAt: failedAt,
+                  accessToken,
+                  accessTokenUpdatedAt: failedAt,
+                  trialEligibilityRetryable: true,
+                  trialEligibilityTransientFailure: decision?.trialEligibilityTransientFailure === true,
+                  markUsed: Boolean(accessToken),
+                  clearSelectedEmail: Boolean(accessToken),
+                  log: false,
+                }
+              );
+              emailPoolStatusUpdated = Boolean(markResult?.updated);
             }
             await addStepLog(
               visibleStep,
               trialEligibilityStatus === 'ineligible'
                 ? `UPI 注册后试用资格检查确认无资格，${emailPoolStatusUpdated ? '已在邮箱池标记“无试用资格”' : '未找到源邮箱池条目'}，不会写入 Free：${email || 'unknown'}：${message}`
-                : `UPI 注册后试用资格检查失败，账号未进入 Free 组：${email || 'unknown'}：${message}`,
+                : `UPI 注册后试用资格检查失败，${emailPoolStatusUpdated ? '已在邮箱池标记“已用/资格待重试”，可点击“检查资格”重新检测' : '未找到源邮箱池条目'}，账号未进入 Free 组：${email || 'unknown'}：${message}`,
               trialEligibilityStatus === 'ineligible' ? 'warn' : 'error'
             );
             return {

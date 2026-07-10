@@ -167,14 +167,14 @@
       }
       await applyContributionMode(message);
       const state = await getState();
-      const autoRunStartValidation = validateAutoRunStart(state, { state });
+      const totalRuns = normalizeRunCount(message.payload?.totalRuns || 1);
+      const autoRunStartValidation = validateAutoRunStart(state, { state, totalRuns });
       if (autoRunStartValidation?.ok === false) {
         throw new Error(autoRunStartValidation.errors?.[0]?.message || '当前设置不支持启动自动流程。');
       }
       if (getPendingAutoRunTimerPlan(state)) {
         throw new Error('已有自动运行倒计时计划，请先取消或立即开始。');
       }
-      const totalRuns = normalizeRunCount(message.payload?.totalRuns || 1);
       const autoRunSkipFailures = true;
       const autoRunRetryNonFreeTrial = Boolean(message.payload?.autoRunRetryNonFreeTrial);
       const autoRunRetryLegacyWalletCallback = Boolean(message.payload?.autoRunRetryLegacyWalletCallback);
@@ -191,11 +191,11 @@
       }
       await applyContributionMode(message);
       const state = await getState();
-      const autoRunStartValidation = validateAutoRunStart(state, { state });
+      const totalRuns = normalizeRunCount(message.payload?.totalRuns || 1);
+      const autoRunStartValidation = validateAutoRunStart(state, { state, totalRuns });
       if (autoRunStartValidation?.ok === false) {
         throw new Error(autoRunStartValidation.errors?.[0]?.message || '当前设置不支持启动自动流程。');
       }
-      const totalRuns = normalizeRunCount(message.payload?.totalRuns || 1);
       return await scheduleAutoRun(totalRuns, {
         delayMinutes: message.payload?.delayMinutes,
         autoRunSkipFailures: true,

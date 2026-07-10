@@ -124,8 +124,27 @@
       return normalizeCustomEmailPoolTrialEligibilityStatus(entry?.trialEligibilityStatus) === 'ineligible';
     }
 
+    function isCustomEmailPoolEntryRegistrationBlocked(entry = {}) {
+      return entry?.registrationBlocked === true;
+    }
+
     function isCustomEmailPoolEntryAvailable(entry = {}) {
-      return Boolean(entry?.enabled) && !entry?.used && !isCustomEmailPoolEntryTrialIneligible(entry);
+      return Boolean(entry?.enabled)
+        && !entry?.used
+        && !isCustomEmailPoolEntryTrialIneligible(entry)
+        && !isCustomEmailPoolEntryRegistrationBlocked(entry);
+    }
+
+    function getNextAvailableCustomEmailPoolEmail(entries = [], currentEmail = '') {
+      const normalizedCurrentEmail = String(currentEmail || '').trim().toLowerCase();
+      const startIndex = entries.findIndex((entry) => entry.email === normalizedCurrentEmail);
+      const orderedEntries = startIndex >= 0
+        ? entries.slice(startIndex + 1).concat(entries.slice(0, startIndex))
+        : entries;
+      const nextEntry = orderedEntries.find((entry) => {
+        return entry.email !== normalizedCurrentEmail && isCustomEmailPoolEntryAvailable(entry);
+      });
+      return String(nextEntry?.email || '').trim().toLowerCase();
     }
 
     function maskCustomEmailPoolAccessToken(token = '') {
@@ -160,15 +179,22 @@
         const accessToken = String(asObject.accessToken || asObject.access_token || asObject.upiRedeemAccessToken || '').trim();
         const accessTokenMasked = String(asObject.accessTokenMasked || '').trim()
           || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
+        const note = String(asObject.note || '').trim();
+        const manualSkipped = asObject.manualSkipped === true || note === '手动跳过';
         entries.push({
           id: String(asObject.id || `custom-pool-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
           email,
           credential: parsedEntry.verificationUrl ? '' : (parsedEntry.credential || String(asObject.credential || '').trim()),
           verificationUrl: normalizeCustomEmailVerificationUrlForState(asObject.verificationUrl || asObject.url || parsedEntry.verificationUrl || ''),
           enabled: asObject.enabled !== undefined ? Boolean(asObject.enabled) : true,
-          used: Boolean(asObject.used),
-          note: String(asObject.note || '').trim(),
+          used: Boolean(asObject.used) && (Boolean(accessToken) || manualSkipped),
+          manualSkipped,
+          note,
           lastUsedAt: Number.isFinite(Number(asObject.lastUsedAt)) ? Number(asObject.lastUsedAt) : 0,
+          registrationBlocked: asObject.registrationBlocked === true,
+          registrationBlockedReason: String(asObject.registrationBlockedReason || '').trim(),
+          registrationBlockedReasonCode: String(asObject.registrationBlockedReasonCode || '').trim(),
+          registrationBlockedAt: String(asObject.registrationBlockedAt || '').trim(),
           accessToken,
           accessTokenMasked,
           accessTokenUpdatedAt: String(asObject.accessTokenUpdatedAt || asObject.tokenUpdatedAt || asObject.checkedAt || '').trim(),
@@ -202,6 +228,38 @@
       return normalizeCustomEmailPool(state?.customEmailPool);
     }
 
+    function buildCustomEmailPoolRecoveryPatch(runtimeState = {}, persistedState = {}) {
+      if (!isCustomEmailPoolGenerator(runtimeState) && !isCustomEmailPoolGenerator(persistedState)) {
+        return null;
+      }
+
+      // A populated runtime pool may include newer used/blocked flags than storage.
+      // Only recover when the runtime copy has disappeared completely.
+      if (getCustomEmailPoolEntries(runtimeState).length > 0) {
+        return null;
+      }
+
+      const persistedEntries = getCustomEmailPoolEntries(persistedState);
+      const availableEmails = getCustomEmailPool(persistedState);
+      if (persistedEntries.length === 0 || availableEmails.length === 0) {
+        return null;
+      }
+
+      const runtimeSelectedEmail = String(runtimeState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+      const persistedSelectedEmail = String(persistedState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+      const selectedEmail = availableEmails.includes(runtimeSelectedEmail)
+        ? runtimeSelectedEmail
+        : availableEmails.includes(persistedSelectedEmail)
+          ? persistedSelectedEmail
+          : availableEmails[0];
+
+      return {
+        customEmailPoolEntries: persistedEntries,
+        customEmailPool: availableEmails,
+        selectedCustomEmailPoolEmail: selectedEmail,
+      };
+    }
+
     function getCustomEmailPoolEntries(state = {}) {
       const entries = normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries);
       if (entries.length > 0) {
@@ -231,21 +289,17 @@
         ...providedPatch,
       };
       const normalizedEmail = String(email || '').trim().toLowerCase();
-      if (!normalizedEmail) {
-        return latestState;
-      }
-
-      const latestHasTarget = hasCustomEmailPoolEntryForEmail(latestState, normalizedEmail);
-      const currentHasTarget = hasCustomEmailPoolEntryForEmail(currentPatch, normalizedEmail);
-      const providedHasTarget = hasCustomEmailPoolEntryForEmail(providedPatch, normalizedEmail);
-      if (latestHasTarget || !currentHasTarget || providedHasTarget) {
+      const currentEntries = getCustomEmailPoolEntries(currentPatch);
+      if (!currentEntries.length) {
         return latestState;
       }
 
       return {
         ...latestState,
-        customEmailPoolEntries: currentPatch.customEmailPoolEntries,
-        customEmailPool: currentPatch.customEmailPool,
+        // Step payloads may include only the account currently being processed.
+        // Never let that partial snapshot replace the full persisted email pool.
+        customEmailPoolEntries: currentEntries,
+        customEmailPool: getCustomEmailPool(currentPatch),
         ...(Object.prototype.hasOwnProperty.call(currentPatch, 'selectedCustomEmailPoolEmail')
           ? { selectedCustomEmailPoolEmail: currentPatch.selectedCustomEmailPoolEmail }
           : {}),
@@ -275,8 +329,12 @@
       const accessTokenMasked = String(options.accessTokenMasked || '').trim()
         || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
       const accessTokenUpdatedAt = String(options.accessTokenUpdatedAt || checkedAt || '').trim();
-      const shouldClearSelectedEmail = options.clearSelectedEmail !== false
-        && String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase() === currentEmail;
+      const selectedEmail = String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+      const shouldAdvanceSelectedEmail = options.clearSelectedEmail !== false && (
+        selectedEmail === currentEmail
+        || options.markUsed === true
+        || status === 'ineligible'
+      );
       let matched = false;
       let changed = false;
 
@@ -286,6 +344,8 @@
         }
         matched = true;
         const nextEntry = { ...entry };
+        const entryAccessToken = accessToken || String(entry.accessToken || entry.token || entry.access_token || entry.upiRedeemAccessToken || '').trim();
+        const canMarkUsed = Boolean(entryAccessToken) || options.manualSkipped === true;
         if (status) {
           nextEntry.trialEligibilityStatus = status;
           nextEntry.trialEligibilityReason = reason || (
@@ -301,20 +361,21 @@
           nextEntry.trialEligibilityTransientFailure = options.trialEligibilityTransientFailure === true;
           nextEntry.trialEligibilityLastError = status === 'failed' ? nextEntry.trialEligibilityReason : '';
           if (status === 'ineligible') {
-            nextEntry.used = true;
-            nextEntry.lastUsedAt = entry.lastUsedAt || Date.now();
+            nextEntry.used = canMarkUsed ? true : Boolean(entry.used && entry.manualSkipped);
+            nextEntry.lastUsedAt = canMarkUsed ? (entry.lastUsedAt || Date.now()) : entry.lastUsedAt;
             nextEntry.note = entry.note || '无试用资格';
           } else if (status === 'eligible') {
             nextEntry.note = entry.note === '无试用资格' ? '' : entry.note;
           }
         }
-        if (options.markUsed === true) {
+        if (options.markUsed === true && canMarkUsed) {
           nextEntry.used = true;
           nextEntry.lastUsedAt = entry.lastUsedAt || Date.now();
+          nextEntry.manualSkipped = options.manualSkipped === true;
         }
-        if (accessToken) {
-          nextEntry.accessToken = accessToken;
-          nextEntry.accessTokenMasked = accessTokenMasked;
+        if (entryAccessToken) {
+          nextEntry.accessToken = entryAccessToken;
+          nextEntry.accessTokenMasked = accessTokenMasked || entry.accessTokenMasked || maskCustomEmailPoolAccessToken(entryAccessToken);
           nextEntry.accessTokenUpdatedAt = accessTokenUpdatedAt;
         }
         changed = changed || JSON.stringify(entry) !== JSON.stringify(nextEntry);
@@ -329,7 +390,7 @@
         .filter(isCustomEmailPoolEntryAvailable)
         .map((entry) => entry.email);
 
-      if (!changed && !shouldClearSelectedEmail) {
+      if (!changed && !shouldAdvanceSelectedEmail) {
         return {
           updated: true,
           unchanged: true,
@@ -342,7 +403,9 @@
         };
       }
 
-      const selectionUpdate = shouldClearSelectedEmail ? { selectedCustomEmailPoolEmail: '' } : {};
+      const selectionUpdate = shouldAdvanceSelectedEmail
+        ? { selectedCustomEmailPoolEmail: getNextAvailableCustomEmailPoolEmail(nextEntries, currentEmail) }
+        : {};
       await setPersistentSettings({
         customEmailPoolEntries: nextEntries,
         customEmailPool: nextCustomEmailPool,
@@ -381,32 +444,45 @@
     }
 
     async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
-      if (!isCustomEmailPoolGenerator(state)) {
-        return { updated: false };
-      }
-
-      const currentEmail = String(state?.email || '').trim().toLowerCase();
+      const providedState = state && typeof state === 'object' ? state : {};
+      const currentState = await getState();
+      const currentStatePatch = currentState && typeof currentState === 'object' ? currentState : {};
+      const currentEmail = String(options.email || providedState?.email || currentStatePatch?.email || '').trim().toLowerCase();
       if (!currentEmail) {
         return { updated: false };
       }
 
-      const entries = getCustomEmailPoolEntries(state);
+      const latestState = mergeCustomEmailPoolStateForTarget(currentStatePatch, providedState, currentEmail);
+      if (!isCustomEmailPoolGenerator(latestState)) {
+        return { updated: false };
+      }
+
+      const entries = getCustomEmailPoolEntries(latestState);
       if (!entries.length) {
         return { updated: false };
       }
-      const shouldClearSelectedEmail = String(state?.selectedCustomEmailPoolEmail || '').trim().toLowerCase() === currentEmail;
-      const selectionUpdate = shouldClearSelectedEmail ? { selectedCustomEmailPoolEmail: '' } : {};
+      const shouldAdvanceSelectedEmail = options.advanceSelectedEmail !== false;
 
       let changed = false;
       const now = Date.now();
-      const accessToken = String(state.accessToken || state.upiRedeemAccessToken || '').trim();
-      const accessTokenMasked = String(state.accessTokenMasked || '').trim()
-        || (accessToken ? maskCustomEmailPoolAccessToken(accessToken) : '');
+      const accessToken = String(latestState.accessToken || latestState.upiRedeemAccessToken || '').trim();
+      const currentEntry = entries.find((entry) => entry.email === currentEmail) || {};
+      const effectiveAccessToken = accessToken || String(currentEntry.accessToken || currentEntry.token || currentEntry.access_token || currentEntry.upiRedeemAccessToken || '').trim();
+      const accessTokenMasked = String(latestState.accessTokenMasked || currentEntry.accessTokenMasked || '').trim()
+        || (effectiveAccessToken ? maskCustomEmailPoolAccessToken(effectiveAccessToken) : '');
+      const manualSkipped = options.manualSkipped === true;
+      if (!effectiveAccessToken && !manualSkipped) {
+        if (options.log !== false) {
+          const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱池：流程成功后';
+          await addLog(`${logPrefix}未读取到 AT，已保留该邮箱为未用，避免产生缺 AT 的已用账号：${currentEmail}`, options.level || 'warn');
+        }
+        return { updated: false, skipped: true, reason: 'missing_access_token', email: currentEmail };
+      }
       const nextEntries = entries.map((entry) => {
         if (entry.email !== currentEmail) {
           return entry;
         }
-        if (entry.used && entry.lastUsedAt && (!accessToken || entry.accessToken === accessToken)) {
+        if (entry.used && entry.lastUsedAt && (!effectiveAccessToken || entry.accessToken === effectiveAccessToken)) {
           return entry;
         }
         changed = true;
@@ -414,21 +490,25 @@
           ...entry,
           used: true,
           lastUsedAt: now,
-          ...(accessToken ? {
-            accessToken,
+          manualSkipped,
+          ...(effectiveAccessToken ? {
+            accessToken: effectiveAccessToken,
             accessTokenMasked,
-            accessTokenUpdatedAt: String(state.accessTokenUpdatedAt || state.checkedAt || new Date().toISOString()).trim(),
+            accessTokenUpdatedAt: String(latestState.accessTokenUpdatedAt || latestState.checkedAt || new Date().toISOString()).trim(),
           } : {}),
         };
       });
 
-      if (!changed && !shouldClearSelectedEmail) {
+      if (!changed && !shouldAdvanceSelectedEmail) {
         return { updated: false };
       }
 
       const nextCustomEmailPool = nextEntries
         .filter(isCustomEmailPoolEntryAvailable)
         .map((entry) => entry.email);
+      const selectionUpdate = shouldAdvanceSelectedEmail
+        ? { selectedCustomEmailPoolEmail: getNextAvailableCustomEmailPoolEmail(nextEntries, currentEmail) }
+        : {};
       await setPersistentSettings({
         customEmailPoolEntries: nextEntries,
         customEmailPool: nextCustomEmailPool,
@@ -448,6 +528,110 @@
       await addLog(`${logPrefix}已将 ${currentEmail} 标记为已用。`, options.level || 'ok');
       return {
         updated: true,
+        customEmailPoolEntries: nextEntries,
+        customEmailPool: nextCustomEmailPool,
+      };
+    }
+
+    async function markCurrentCustomEmailPoolEntryRegistrationBlocked(state = {}, options = {}) {
+      const providedState = state && typeof state === 'object' ? state : {};
+      const currentState = await getState();
+      const currentStatePatch = currentState && typeof currentState === 'object' ? currentState : {};
+      const currentEmail = String(
+        options.email
+        || providedState?.email
+        || currentStatePatch?.email
+        || providedState?.selectedCustomEmailPoolEmail
+        || currentStatePatch?.selectedCustomEmailPoolEmail
+        || ''
+      ).trim().toLowerCase();
+      if (!currentEmail) {
+        return { updated: false };
+      }
+      const latestState = mergeCustomEmailPoolStateForTarget(currentStatePatch, providedState, currentEmail);
+      if (!isCustomEmailPoolGenerator(latestState)) {
+        return { updated: false };
+      }
+
+      const entries = getCustomEmailPoolEntries(latestState);
+      if (!entries.length) {
+        return { updated: false };
+      }
+
+      const reason = String(options.reason || '当前邮箱已注册，不能继续用于注册流程。').trim();
+      const reasonCode = String(options.reasonCode || options.registrationBlockedReasonCode || 'user_already_exists').trim();
+      const blockedAt = String(options.blockedAt || new Date().toISOString()).trim();
+      const selectedEmail = String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+      const shouldAdvanceSelectedEmail = options.clearSelectedEmail !== false && selectedEmail === currentEmail;
+      let matched = false;
+      let changed = false;
+
+      const nextEntries = entries.map((entry) => {
+        if (entry.email !== currentEmail) {
+          return entry;
+        }
+        matched = true;
+        const nextEntry = {
+          ...entry,
+          registrationBlocked: true,
+          registrationBlockedReason: reason,
+          registrationBlockedReasonCode: reasonCode,
+          registrationBlockedAt: blockedAt,
+          note: entry.note || '已注册',
+        };
+        changed = changed || JSON.stringify(entry) !== JSON.stringify(nextEntry);
+        return nextEntry;
+      });
+
+      if (!matched) {
+        return { updated: false };
+      }
+
+      const nextCustomEmailPool = nextEntries
+        .filter(isCustomEmailPoolEntryAvailable)
+        .map((entry) => entry.email);
+
+      if (!changed && !shouldAdvanceSelectedEmail) {
+        return {
+          updated: true,
+          unchanged: true,
+          email: currentEmail,
+          reason,
+          reasonCode,
+          customEmailPoolEntries: nextEntries,
+          customEmailPool: nextCustomEmailPool,
+        };
+      }
+
+      const selectionUpdate = shouldAdvanceSelectedEmail
+        ? { selectedCustomEmailPoolEmail: getNextAvailableCustomEmailPoolEmail(nextEntries, currentEmail) }
+        : {};
+      await setPersistentSettings({
+        customEmailPoolEntries: nextEntries,
+        customEmailPool: nextCustomEmailPool,
+        ...selectionUpdate,
+      });
+      await setState({
+        customEmailPoolEntries: nextEntries,
+        customEmailPool: nextCustomEmailPool,
+        ...selectionUpdate,
+      });
+      broadcastDataUpdate({
+        customEmailPoolEntries: nextEntries,
+        customEmailPool: nextCustomEmailPool,
+        ...selectionUpdate,
+      });
+
+      if (options.log !== false) {
+        const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱池';
+        await addLog(`${logPrefix}：${currentEmail} 已标记为已注册并从可注册邮箱池排除${reason ? `：${reason}` : ''}`, options.level || 'warn');
+      }
+
+      return {
+        updated: true,
+        email: currentEmail,
+        reason,
+        reasonCode,
         customEmailPoolEntries: nextEntries,
         customEmailPool: nextCustomEmailPool,
       };
@@ -510,6 +694,7 @@
     }
 
     return {
+      buildCustomEmailPoolRecoveryPatch,
       getCustomEmailPool,
       getCustomEmailPoolCredentialForEmail,
       getCustomEmailPoolEmailForRun,
@@ -517,9 +702,11 @@
       getCustomMailProviderPool,
       getCustomMailProviderPoolEmailForRun,
       isCustomEmailPoolEntryAvailable,
+      isCustomEmailPoolEntryRegistrationBlocked,
       isCustomEmailPoolEntryTrialIneligible,
       isCustomEmailPoolGenerator,
       markCustomEmailPoolEntryTrialEligibility,
+      markCurrentCustomEmailPoolEntryRegistrationBlocked,
       markCurrentCustomEmailPoolEntryTrialIneligible,
       markCurrentCustomEmailPoolEntryUsed,
       maskCustomEmailPoolAccessToken,

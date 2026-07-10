@@ -122,6 +122,43 @@
     return '本地CPA JSON 有RT';
   }
 
+  function isCustomEmailPoolGenerator(value = '') {
+    const normalized = String(value || '').trim().toLowerCase();
+    return ['custom-pool', 'custom-email-pool', 'custom_email_pool'].includes(normalized);
+  }
+
+  function getCustomEmailPoolAvailableCount(state = {}) {
+    const structuredEntries = Array.isArray(state?.customEmailPoolEntries)
+      ? state.customEmailPoolEntries
+      : [];
+    if (structuredEntries.length > 0) {
+      return structuredEntries.filter((entry) => {
+        const source = entry && typeof entry === 'object' ? entry : { email: entry };
+        const email = String(source.email || source.credential || '').split('----')[0].trim().toLowerCase();
+        const eligibilityStatus = String(source.trialEligibilityStatus || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[\s-]+/g, '_');
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+          && source.enabled !== false
+          && source.used !== true
+          && source.registrationBlocked !== true
+          && !['ineligible', 'not_eligible', 'no_trial', 'trial_ineligible', 'rejected'].includes(eligibilityStatus);
+      }).length;
+    }
+
+    const legacyPool = Array.isArray(state?.customEmailPool)
+      ? state.customEmailPool
+      : String(state?.customEmailPool || '').split(/[\r\n,，;；]+/);
+    return new Set(legacyPool
+      .map((entry) => String(entry && typeof entry === 'object' ? entry.email || entry.credential || '' : entry || '')
+        .split('----')[0]
+        .trim()
+        .toLowerCase())
+      .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
+      .size;
+  }
+
   function createFlowCapabilityRegistry(deps = {}) {
     const {
       defaultFlowCapabilities = DEFAULT_FLOW_CAPABILITIES,
@@ -252,6 +289,7 @@
       const state = options?.state || {};
       const capabilityState = resolveSidepanelCapabilities(options);
       const errors = [];
+      const totalRuns = Math.max(1, Math.floor(Number(options?.totalRuns) || 1));
 
       if (
         Array.isArray(capabilityState.supportedPanelModes)
@@ -276,6 +314,21 @@
           code: 'contribution_mode_unsupported',
           message: '当前 flow 不支持贡献模式。',
         });
+      }
+
+      if (isCustomEmailPoolGenerator(state?.emailGenerator)) {
+        const availableEmailCount = getCustomEmailPoolAvailableCount(state);
+        if (availableEmailCount === 0) {
+          errors.push({
+            code: 'custom_email_pool_empty',
+            message: '自定义邮箱池没有可用邮箱，无法启动自动运行。请先导入或启用至少 1 个未使用邮箱。',
+          });
+        } else if (totalRuns > availableEmailCount) {
+          errors.push({
+            code: 'custom_email_pool_insufficient',
+            message: `自定义邮箱池只有 ${availableEmailCount} 个可用邮箱，不能启动 ${totalRuns} 轮自动运行。`,
+          });
+        }
       }
 
       return {

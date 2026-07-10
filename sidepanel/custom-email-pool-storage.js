@@ -24,11 +24,20 @@
   }
 
   function restoreEntriesFromState(state = {}, normalizeEntries = (entries) => entries) {
+    return restoreEntriesFromStateWithSource(state, normalizeEntries).entries;
+  }
+
+  function restoreEntriesFromStateWithSource(state = {}, normalizeEntries = (entries) => entries) {
     const rawEntries = Array.isArray(state?.customEmailPoolEntries) ? state.customEmailPoolEntries : [];
     const structuredEntries = normalizeEntries(rawEntries);
-    if (structuredEntries.length > 0) return structuredEntries;
+    if (structuredEntries.length > 0) {
+      return { entries: structuredEntries, source: 'structured' };
+    }
     const legacyEntries = normalizeEntries(state?.customEmailPool);
-    return legacyEntries.length > 0 ? legacyEntries : readEntriesBackup(normalizeEntries);
+    if (legacyEntries.length > 0) {
+      return { entries: legacyEntries, source: 'legacy' };
+    }
+    return { entries: readEntriesBackup(normalizeEntries), source: 'backup' };
   }
 
   function syncEntriesBackup(entries = [], options = {}) {
@@ -43,6 +52,7 @@
     clearEntriesBackup,
     readEntriesBackup,
     restoreEntriesFromState,
+    restoreEntriesFromStateWithSource,
     syncEntriesBackup,
     writeEntriesBackup,
   };

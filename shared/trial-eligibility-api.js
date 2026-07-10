@@ -9,6 +9,64 @@
     return String(value || '').trim();
   }
 
+  function decodeBufferLikeValue(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return '';
+    }
+    const data = Array.isArray(value.data) ? value.data : [];
+    if (value.type !== 'Buffer' || !data.length) {
+      return '';
+    }
+    return data
+      .slice(0, 500)
+      .map((item) => {
+        const code = Math.max(0, Math.min(255, Math.floor(Number(item) || 0)));
+        return String.fromCharCode(code);
+      })
+      .join('')
+      .trim();
+  }
+
+  function normalizeDiagnosticValue(value = '') {
+    if (value === undefined || value === null) {
+      return '';
+    }
+    if (typeof value === 'string') {
+      return normalizeString(value);
+    }
+    const decodedBuffer = decodeBufferLikeValue(value);
+    if (decodedBuffer) {
+      return decodedBuffer;
+    }
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value).slice(0, 500);
+      } catch {
+        return normalizeString(value);
+      }
+    }
+    return normalizeString(value);
+  }
+
+  function looksLikeHtmlResponse(value = '') {
+    const text = normalizeDiagnosticValue(value);
+    if (!text) {
+      return false;
+    }
+    return /^\s*(?:<!doctype\s+html\b|<html[\s>]|<head[\s>]|<body[\s>])/i.test(text)
+      || /"type"\s*:\s*"Buffer"[\s\S]{0,80}"data"\s*:\s*\[\s*60\s*,\s*104\s*,\s*116\s*,\s*109\s*,\s*108/i.test(text);
+  }
+
+  function hasHtmlDiagnosticPayload(source = {}) {
+    return looksLikeHtmlResponse(source)
+      || looksLikeHtmlResponse(source.message)
+      || looksLikeHtmlResponse(source.error)
+      || looksLikeHtmlResponse(source.reason)
+      || looksLikeHtmlResponse(source.detail)
+      || looksLikeHtmlResponse(source.body)
+      || looksLikeHtmlResponse(source.data);
+  }
+
   function normalizeEmail(value = '') {
     return normalizeString(value).toLowerCase();
   }
@@ -120,6 +178,17 @@
       idealChannelEligibilityStatus: ideal.status,
       idealChannelEligibilityReason: ideal.reason,
     };
+
+    if (hasHtmlDiagnosticPayload(source)) {
+      return {
+        ...base,
+        trialEligibilityStatus: 'failed',
+        trialEligibilityReason: '资格检查接口返回了 HTML 页面，不是有效 JSON；可能 API 地址填错、后端路由异常或网关拦截。',
+        trialEligibilityReasonCode: reasonCode && !/^\[object\b/i.test(reasonCode) ? reasonCode : 'html-response',
+        trialEligibilityTransientFailure: true,
+        trialEligibilityRetryable: true,
+      };
+    }
 
     if (!tokenOk.present) {
       return {

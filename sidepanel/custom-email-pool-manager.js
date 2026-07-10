@@ -169,8 +169,15 @@
       return normalizeTrialEligibilityStatus(entry.trialEligibilityStatus) === 'ineligible';
     }
 
+    function isRegistrationBlockedEntry(entry = {}) {
+      return entry.registrationBlocked === true;
+    }
+
     function isAvailableEntry(entry = {}) {
-      return Boolean(entry.enabled) && !entry.used && !isTrialIneligibleEntry(entry);
+      return Boolean(entry.enabled)
+        && !entry.used
+        && !isTrialIneligibleEntry(entry)
+        && !isRegistrationBlockedEntry(entry);
     }
 
     function normalizeEntry(rawEntry = {}) {
@@ -185,6 +192,8 @@
       const accessToken = String(rawEntry?.accessToken || rawEntry?.access_token || rawEntry?.upiRedeemAccessToken || '').trim();
       const accessTokenMasked = String(rawEntry?.accessTokenMasked || '').trim()
         || maskAccessToken(accessToken);
+      const note = String(rawEntry?.note || '').trim();
+      const manualSkipped = rawEntry?.manualSkipped === true || note === '手动跳过';
 
       return {
         id: String(rawEntry?.id || createEntryId()),
@@ -192,9 +201,14 @@
         credential: parsedEntry.verificationUrl ? '' : (parsedEntry.credential || String(rawEntry?.credential || '').trim()),
         verificationUrl,
         enabled: rawEntry?.enabled !== undefined ? Boolean(rawEntry.enabled) : true,
-        used: Boolean(rawEntry?.used),
-        note: String(rawEntry?.note || '').trim(),
+        used: Boolean(rawEntry?.used) && (Boolean(accessToken) || manualSkipped),
+        manualSkipped,
+        note,
         lastUsedAt: Number.isFinite(Number(rawEntry?.lastUsedAt)) ? Number(rawEntry.lastUsedAt) : 0,
+        registrationBlocked: rawEntry?.registrationBlocked === true,
+        registrationBlockedReason: String(rawEntry?.registrationBlockedReason || '').trim(),
+        registrationBlockedReasonCode: String(rawEntry?.registrationBlockedReasonCode || '').trim(),
+        registrationBlockedAt: String(rawEntry?.registrationBlockedAt || '').trim(),
         accessToken,
         accessTokenMasked,
         accessTokenUpdatedAt: String(rawEntry?.accessTokenUpdatedAt || rawEntry?.tokenUpdatedAt || rawEntry?.checkedAt || '').trim(),
@@ -239,6 +253,9 @@
         || storedCredential.upiRedeemAccessToken
         || ''
       ).trim();
+      if (!accessToken && entry.manualSkipped !== true) {
+        return entry;
+      }
       return {
         ...entry,
         used: true,
@@ -386,9 +403,10 @@
       const entriesWithCurrent = withCurrentFlag(renderedEntries);
       const usedCount = entriesWithCurrent.filter((entry) => entry.used).length;
       const ineligibleCount = entriesWithCurrent.filter(isTrialIneligibleEntry).length;
+      const blockedCount = entriesWithCurrent.filter(isRegistrationBlockedEntry).length;
       const enabledCount = entriesWithCurrent.filter((entry) => entry.enabled).length;
       const availableCount = entriesWithCurrent.filter(isAvailableEntry).length;
-      dom.customEmailPoolSummary.textContent = `已加载 ${entriesWithCurrent.length} 个邮箱，其中 ${availableCount} 个可用，${enabledCount} 个启用，${usedCount} 个已用，${ineligibleCount} 个无试用资格。`;
+      dom.customEmailPoolSummary.textContent = `已加载 ${entriesWithCurrent.length} 个邮箱，其中 ${availableCount} 个可用，${enabledCount} 个启用，${usedCount} 个已用，${ineligibleCount} 个无试用资格，${blockedCount} 个已注册排除。`;
       if (dom.btnCustomEmailPoolClearUsed) dom.btnCustomEmailPoolClearUsed.disabled = loading || usedCount === 0;
       if (dom.btnCustomEmailPoolDeleteAll) dom.btnCustomEmailPoolDeleteAll.disabled = loading || entriesWithCurrent.length === 0;
 
@@ -434,7 +452,10 @@
             </div>
             <div class="luckmail-item-meta">
               ${entry.current ? '<span class="luckmail-tag current">当前</span>' : ''}
-              ${entry.used ? '<span class="luckmail-tag used">已用</span>' : '<span class="luckmail-tag active">未用</span>'}
+              ${entry.used ? '<span class="luckmail-tag used">已用</span>' : ''}
+              ${!entry.used && entry.registrationBlocked ? '<span class="luckmail-tag disabled">已注册</span>' : ''}
+              ${!entry.used && !entry.registrationBlocked ? '<span class="luckmail-tag active">未用</span>' : ''}
+              ${entry.manualSkipped ? '<span class="luckmail-tag">手动跳过</span>' : ''}
               ${entry.enabled ? '<span class="luckmail-tag active">启用</span>' : '<span class="luckmail-tag disabled">停用</span>'}
               ${entry.verificationUrl ? '<span class="luckmail-tag active">取码URL</span>' : ''}
               ${entry.trialEligibilityCheckedAt ? `<span class="luckmail-tag">资格 ${helpers.escapeHtml(entry.trialEligibilityCheckedAt)}</span>` : ''}
@@ -530,6 +551,10 @@
                   ...candidate,
                   used: !entry.used,
                   lastUsedAt: !entry.used ? Date.now() : candidate.lastUsedAt,
+                  manualSkipped: !entry.used,
+                  note: !entry.used
+                    ? (!getEntryAccessToken(candidate) && !candidate.note ? '手动跳过' : candidate.note)
+                    : (candidate.note === '手动跳过' ? '' : candidate.note),
                 }
               : candidate
           )));
@@ -578,7 +603,7 @@
       renderCustomEmailPoolEntries(nextEntries);
 
       try {
-        await actions.persistEntries?.();
+        await actions.persistEntries?.({ allowEmptyCustomEmailPool: nextEntries.length === 0 });
         state.setEntries?.(nextEntries, { clearBackup: nextEntries.length === 0 });
       } catch (error) {
         state.setEntries?.(previousEntries);
@@ -779,7 +804,13 @@
         const targetIds = new Set([...selectedEntryIds]);
         await patchEntries((entriesList) => entriesList.map((entry) => (
           targetIds.has(String(entry.id))
-            ? { ...entry, used: true, lastUsedAt: entry.lastUsedAt || Date.now() }
+            ? {
+                ...entry,
+                used: true,
+                manualSkipped: true,
+                note: !getEntryAccessToken(entry) && !entry.note ? '手动跳过' : entry.note,
+                lastUsedAt: entry.lastUsedAt || Date.now(),
+              }
             : entry
         )));
       });
@@ -788,7 +819,7 @@
         const targetIds = new Set([...selectedEntryIds]);
         await patchEntries((entriesList) => entriesList.map((entry) => (
           targetIds.has(String(entry.id))
-            ? { ...entry, used: false }
+            ? { ...entry, used: false, manualSkipped: false, note: entry.note === '手动跳过' ? '' : entry.note }
             : entry
         )));
       });

@@ -123,6 +123,24 @@ test('fetch-error is retryable network fluctuation and not account ineligible', 
   assert.equal(decision.trialEligibilityTransientFailure, true);
 });
 
+test('HTML buffer response is retryable failure and not account ineligible', () => {
+  const decision = normalizeTrialEligibilityApiItem({
+    token_ok: true,
+    eligible: false,
+    reason: {
+      type: 'Buffer',
+      data: [60, 104, 116, 109, 108, 62, 10, 32, 60, 104, 101, 97, 100, 62],
+    },
+  });
+
+  assert.equal(decision.trialEligibilityStatus, 'failed');
+  assert.equal(isTrialEligibilityAccountIneligibleDecision(decision), false);
+  assert.equal(decision.trialEligibilityRetryable, true);
+  assert.equal(decision.trialEligibilityTransientFailure, true);
+  assert.equal(decision.trialEligibilityReasonCode, 'html-response');
+  assert.match(decision.trialEligibilityReason, /HTML 页面/);
+});
+
 test('response email mismatch is detected before marking target ineligible', () => {
   const decision = normalizeTrialEligibilityApiItem({
     token_ok: true,

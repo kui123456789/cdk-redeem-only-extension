@@ -30,6 +30,7 @@
 
       try {
         await helpers.flushPendingSettingsBeforeExport?.();
+        await helpers.persistCustomEmailPoolBeforeExport?.();
         const response = await runtime.sendMessage?.({
           type: 'EXPORT_SETTINGS',
           source: 'sidepanel',

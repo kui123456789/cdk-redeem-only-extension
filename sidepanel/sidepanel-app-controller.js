@@ -650,6 +650,9 @@ with (appState.createScope()) {
       btnSaveSettings,
       collectSettingsPayload,
       applySettingsState,
+      getCustomEmailPoolBackupEntries: () => customEmailPoolStorage.readEntriesBackup?.(normalizeCustomEmailPoolEntryObjects) || [],
+      getNormalizedCustomEmailPoolEntriesState,
+      getActiveCustomEmailPoolEmails,
       preserveHotmailAccountsForSettingsSaveResponse,
       syncLatestState,
       updatePanelModeUI,
@@ -2634,6 +2637,7 @@ with (appState.createScope()) {
         downloadTextFile,
         closeConfigMenu,
         flushPendingSettingsBeforeExport,
+        persistCustomEmailPoolBeforeExport: () => persistCustomEmailPoolSettings(),
         settlePendingSettingsBeforeImport,
         openConfirmModal,
         showToast,
@@ -3209,7 +3213,23 @@ with (appState.createScope()) {
   async function restoreState() {
     try {
       const state = await chrome.runtime.sendMessage({ type: 'GET_STATE', source: 'sidepanel' });
+      const restoredPool = customEmailPoolStorage.restoreEntriesFromStateWithSource?.(
+        state || {},
+        normalizeCustomEmailPoolEntryObjects
+      ) || null;
       applySettingsState(state || {});
+      if (restoredPool?.source === 'backup' && restoredPool.entries.length > 0) {
+        const selectedEmail = String(state?.selectedCustomEmailPoolEmail || '').trim().toLowerCase()
+          || getNextAvailableCustomEmailPoolEmail(restoredPool.entries);
+        setCustomEmailPoolEntriesState(restoredPool.entries);
+        syncLatestState({
+          customEmailPoolEntries: restoredPool.entries,
+          customEmailPool: getActiveCustomEmailPoolEmails(restoredPool.entries),
+          selectedCustomEmailPoolEmail: selectedEmail,
+        });
+        await persistCustomEmailPoolSettings({ selectedCustomEmailPoolEmail: selectedEmail });
+        console.info(`已将侧边栏备份中的 ${restoredPool.entries.length} 个自定义邮箱同步回后台配置。`);
+      }
       if (state?.oauthUrl) {
         displayOauthUrl.textContent = state.oauthUrl;
         displayOauthUrl.classList.add('has-value');
@@ -3493,11 +3513,11 @@ with (appState.createScope()) {
           const scoreCredential = (item = {}) => { const trialStatus = String(item.trialEligibilityStatus || item.trialEligibility || item.eligibilityStatus || '').trim().toLowerCase().replace(/[\s-]+/g, '_'); const token = String(item.accessToken || item.token || item.access_token || item.upiRedeemAccessToken || '').trim(); const checkedAt = Date.parse(String(item.trialEligibilityCheckedAt || item.checkedAt || item.updatedAt || item.accessTokenUpdatedAt || item.recordedAt || '').trim()) || 0; return (trialStatus === 'eligible' ? 1000000 : 0) + (String(item.status || item.planType || '').trim().toLowerCase() === 'free' ? 100000 : 0) + (token ? 10000 : 0) + Math.min(9999, Math.max(0, Math.floor(checkedAt / 1000000000))); };
           return matches.reduce((best, item) => (scoreCredential(item) > scoreCredential(best) ? item : best), {});
         },
-        getCurrentEmail: () => String(((latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step') ? latestState?.email : inputEmail?.value) || latestState?.email || inputEmail?.value || '').trim().toLowerCase(), isAutoRunning: () => Boolean(latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step'),
+        getCurrentEmail: () => String(latestState?.selectedCustomEmailPoolEmail || (((latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step') ? latestState?.email : inputEmail?.value) || latestState?.email || inputEmail?.value || '')).trim().toLowerCase(), isAutoRunning: () => Boolean(latestState?.autoRunning || latestState?.autoRunPhase === 'running' || latestState?.autoRunPhase === 'waiting_step'),
         isVisible: () => Boolean(rowCustomEmailPool) && rowCustomEmailPool.style.display !== 'none',
       },
       actions: {
-        persistEntries: async () => { syncRunCountFromConfiguredEmailPool(); updateMailProviderUI(); await persistCustomEmailPoolSettings(); },
+        persistEntries: async (options = {}) => { syncRunCountFromConfiguredEmailPool(); updateMailProviderUI(); await persistCustomEmailPoolSettings(options); },
         reloadEntries: async () => {
           const state = await chrome.runtime.sendMessage({ type: 'GET_STATE', source: 'sidepanel' });
           if (state?.error) throw new Error(state.error);
@@ -4431,6 +4451,19 @@ with (appState.createScope()) {
       .filter(isCustomEmailPoolEntryAvailable)
       .map((entry) => entry.email);
   }
+
+  function getNextAvailableCustomEmailPoolEmail(entries = [], currentEmail = '') {
+    const normalizedEntries = normalizeCustomEmailPoolEntryObjects(entries);
+    const normalizedCurrentEmail = String(currentEmail || '').trim().toLowerCase();
+    const startIndex = normalizedEntries.findIndex((entry) => entry.email === normalizedCurrentEmail);
+    const orderedEntries = startIndex >= 0
+      ? normalizedEntries.slice(startIndex + 1).concat(normalizedEntries.slice(0, startIndex))
+      : normalizedEntries;
+    const nextEntry = orderedEntries.find((entry) => {
+      return entry.email !== normalizedCurrentEmail && isCustomEmailPoolEntryAvailable(entry);
+    });
+    return String(nextEntry?.email || '').trim().toLowerCase();
+  }
   
   const customEmailPoolStorage = window.SidepanelCustomEmailPoolStorage || {};
 
@@ -4452,7 +4485,24 @@ with (appState.createScope()) {
     });
     const mergeResult = syncer?.mergeEntriesWithMembershipResults?.(getNormalizedCustomEmailPoolEntriesState(), results);
     if (!mergeResult?.changed) return false;
-    setCustomEmailPoolEntriesState(mergeResult.entries);
+    const nextEntries = normalizeCustomEmailPoolEntryObjects(mergeResult.entries);
+    const selectedEmail = String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase();
+    const selectedEntry = selectedEmail
+      ? nextEntries.find((entry) => entry.email === selectedEmail)
+      : null;
+    const shouldAdvanceSelectedEmail = Boolean(selectedEntry) && !isCustomEmailPoolEntryAvailable(selectedEntry);
+    const nextSelectedEmail = shouldAdvanceSelectedEmail
+      ? getNextAvailableCustomEmailPoolEmail(nextEntries, selectedEmail)
+      : selectedEmail;
+    setCustomEmailPoolEntriesState(nextEntries);
+    if (shouldAdvanceSelectedEmail) {
+      syncLatestState({ selectedCustomEmailPoolEmail: nextSelectedEmail });
+    }
+    persistCustomEmailPoolSettings?.(
+      shouldAdvanceSelectedEmail ? { selectedCustomEmailPoolEmail: nextSelectedEmail } : {}
+    ).catch((error) => {
+      console.warn('Failed to persist custom email pool membership sync:', error);
+    });
     return true;
   }
   
@@ -7619,7 +7669,24 @@ runtimeMessageController.start();
   async function startAutoRun() {
     try {
       await persistCurrentSettingsForAction();
-      if (usesCustomEmailPoolGenerator() && getCustomEmailPoolSize() <= 0) { showToast('自定义邮箱池没有可用邮箱，请先导入或启用至少 1 个邮箱。', 'warn', 2600); return; }
+      if (usesCustomEmailPoolGenerator()) {
+        const availableCount = getCustomEmailPoolSize();
+        const savedState = await chrome.runtime.sendMessage({ type: 'GET_STATE', source: 'sidepanel' });
+        const savedEntries = normalizeCustomEmailPoolEntryObjects(savedState?.customEmailPoolEntries).length > 0
+          ? normalizeCustomEmailPoolEntryObjects(savedState?.customEmailPoolEntries)
+          : normalizeCustomEmailPoolEntryObjects(savedState?.customEmailPool);
+        const savedAvailableCount = getActiveCustomEmailPoolEmails(savedEntries).length;
+        if (availableCount <= 0 || savedAvailableCount <= 0) {
+          showToast(
+            availableCount > 0
+              ? '邮箱池未成功同步到后台，请等待侧边栏恢复完成后再启动。'
+              : '自定义邮箱池没有可用邮箱，请先导入或启用至少 1 个邮箱。',
+            'warn',
+            3000
+          );
+          return;
+        }
+      }
       const mode = shouldOfferAutoModeChoice(latestState) ? await openAutoStartChoiceDialog(getFirstUnfinishedStep(latestState) || 1, { runningStep: getRunningSteps(latestState)[0] || null }) : 'restart';
       if (!mode) return;
       const payload = {

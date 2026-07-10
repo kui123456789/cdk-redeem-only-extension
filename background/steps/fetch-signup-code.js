@@ -162,7 +162,7 @@
     function buildRegisteredLoginVerificationError(authState = {}) {
       const url = String(authState?.url || '').trim();
       const suffix = url ? ` URL: ${url}` : '';
-      return new Error(`SIGNUP_USER_ALREADY_EXISTS::步骤 4：注册流程进入登录 TOTP 二次验证页，说明当前邮箱已注册并启用 2FA，当前邮箱将标记为已用并切换下一个。${suffix}`);
+      return new Error(`SIGNUP_USER_ALREADY_EXISTS::步骤 4：注册流程进入登录 TOTP 二次验证页，说明当前邮箱已注册并启用 2FA，当前邮箱将标记为已注册并排除，随后切换下一个。${suffix}`);
     }
 
     function normalizePasswordAccountIdentifierType(value = '') {

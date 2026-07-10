@@ -11,6 +11,7 @@
 
   function createRegistrationAccountState(deps = {}) {
     return {
+      markCurrentRegistrationAccountRegistrationBlocked: wrapDependency(deps.markCurrentRegistrationAccountRegistrationBlocked),
       markCurrentRegistrationAccountUsed: wrapDependency(deps.markCurrentRegistrationAccountUsed),
       markCurrentRegistrationAccountTrialIneligible: wrapDependency(deps.markCurrentRegistrationAccountTrialIneligible),
       recordStep7AccountCheckpoint: wrapDependency(deps.recordStep7AccountCheckpoint),

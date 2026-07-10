@@ -88,6 +88,9 @@
         }
 
         const accessToken = entry.accessToken || getCredentialAccessToken(credential);
+        if (!accessToken && entry.manualSkipped !== true) {
+          return entry;
+        }
         const trialEligibilityCheckedAt = entry.trialEligibilityCheckedAt
           || String(credential.trialEligibilityCheckedAt || credential.checkedAt || credential.accessTokenUpdatedAt || '').trim();
         const nextEntry = {

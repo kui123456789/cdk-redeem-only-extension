@@ -3444,8 +3444,8 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 
     if (snapshot.state === 'registered_login_verification') {
       const authState = snapshot.loginAuthState || {};
-      throw createSignupUserAlreadyExistsError(
-        `步骤 4：注册流程进入登录 TOTP 二次验证页（${authState.url || location.href}），说明当前邮箱已注册并启用 2FA，当前邮箱将标记为已用并切换下一个。`
+        throw createSignupUserAlreadyExistsError(
+        `步骤 4：注册流程进入登录 TOTP 二次验证页（${authState.url || location.href}），说明当前邮箱已注册并启用 2FA，当前邮箱将标记为已注册并排除，随后切换下一个。`
       );
     }
 

@@ -1073,6 +1073,7 @@ function validateAutoRunStartState(state = {}, options = {}) {
     panelMode: options?.panelMode ?? state?.panelMode,
     signupMethod: options?.signupMethod ?? state?.signupMethod,
     state,
+    totalRuns: options?.totalRuns,
   });
 }
 
@@ -1293,6 +1294,10 @@ async function markCurrentCustomEmailPoolEntryTrialIneligible(state = {}, option
   return customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryTrialIneligible(state, options);
 }
 
+async function markCurrentCustomEmailPoolEntryRegistrationBlocked(state = {}, options = {}) {
+  return customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryRegistrationBlocked(state, options);
+}
+
 const customEmailPoolStateRegistry = self.MultiPageCustomEmailPoolState?.createCustomEmailPoolState?.({
   addLog,
   broadcastDataUpdate,
@@ -1307,6 +1312,30 @@ const customEmailPoolStateRegistry = self.MultiPageCustomEmailPoolState?.createC
   setPersistentSettings,
   setState,
 }) || {};
+
+async function restoreCustomEmailPoolForAutoRunIfNeeded(state = {}) {
+  const currentState = state && typeof state === 'object' ? state : {};
+  if (!isCustomEmailPoolGenerator(currentState)) {
+    return currentState;
+  }
+
+  const persistedSettings = await getPersistedSettings();
+  const recoveryPatch = customEmailPoolStateRegistry.buildCustomEmailPoolRecoveryPatch?.(
+    currentState,
+    persistedSettings
+  );
+  if (!recoveryPatch) {
+    return currentState;
+  }
+
+  await setState(recoveryPatch);
+  broadcastDataUpdate(recoveryPatch);
+  await addLog(
+    `自动运行：运行态自定义邮箱池缺失，已从持久化配置恢复 ${recoveryPatch.customEmailPoolEntries.length} 条邮箱，其中 ${recoveryPatch.customEmailPool.length} 条可用。`,
+    'warn'
+  );
+  return { ...currentState, ...recoveryPatch };
+}
 
 async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   const providedState = state && typeof state === 'object' ? state : {};
@@ -1409,6 +1438,39 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   return { updated };
 }
 
+async function markCurrentRegistrationAccountRegistrationBlocked(state = {}, options = {}) {
+  const providedState = state && typeof state === 'object' ? state : {};
+  const currentState = await getState();
+  const latestState = {
+    ...providedState,
+    ...(currentState && typeof currentState === 'object' ? currentState : {}),
+  };
+  const email = String(
+    options.email
+    || latestState.email
+    || latestState.registrationEmailState?.current
+    || latestState.selectedCustomEmailPoolEmail
+    || ''
+  ).trim().toLowerCase();
+  const reason = String(options.reason || '当前邮箱已注册，不能继续用于注册流程。').trim();
+  const reasonCode = String(options.reasonCode || 'user_already_exists').trim();
+
+  const result = await customEmailPoolStateRegistry.markCurrentCustomEmailPoolEntryRegistrationBlocked(latestState, {
+    email,
+    reason,
+    reasonCode,
+    logPrefix: String(options.logPrefix || '当前账号：自定义邮箱池').trim(),
+    level: options.level || 'warn',
+  });
+
+  return {
+    updated: Boolean(result?.updated),
+    email,
+    reason,
+    reasonCode,
+  };
+}
+
 async function markCurrentRegistrationAccountTrialIneligible(state = {}, options = {}) {
   const providedState = state && typeof state === 'object' ? state : {};
   const currentState = await getState();
@@ -1421,6 +1483,7 @@ async function markCurrentRegistrationAccountTrialIneligible(state = {}, options
     || latestState.email
     || latestState.registrationEmailState?.current
     || latestState.step8VerificationTargetEmail
+    || latestState.selectedCustomEmailPoolEmail
     || ''
   ).trim().toLowerCase();
   const reason = String(options.reason || '账号无试用资格').trim();
@@ -1430,6 +1493,8 @@ async function markCurrentRegistrationAccountTrialIneligible(state = {}, options
     email,
     reason,
     checkedAt,
+    accessToken: String(options.accessToken || latestState.accessToken || latestState.upiRedeemAccessToken || '').trim(),
+    accessTokenUpdatedAt: String(options.accessTokenUpdatedAt || checkedAt || '').trim(),
     logPrefix: `${String(options.logPrefix || '第 7 步').trim()}：自定义邮箱池`,
     level: options.level || 'warn',
   });
@@ -1450,12 +1515,14 @@ async function markCurrentRegistrationAccountTrialIneligible(state = {}, options
 }
 
 const registrationAccountStateRegistry = self.MultiPageRegistrationAccountState?.createRegistrationAccountState?.({
+  markCurrentRegistrationAccountRegistrationBlocked,
   markCurrentRegistrationAccountUsed,
   markCurrentRegistrationAccountTrialIneligible,
   recordStep7AccountCheckpoint: typeof recordStep7AccountCheckpoint === 'function'
     ? recordStep7AccountCheckpoint
     : undefined,
 }) || {
+  markCurrentRegistrationAccountRegistrationBlocked,
   markCurrentRegistrationAccountUsed,
   markCurrentRegistrationAccountTrialIneligible,
   recordStep7AccountCheckpoint: typeof recordStep7AccountCheckpoint === 'function'
@@ -11447,6 +11514,7 @@ const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoR
   isSignupUserAlreadyExistsFailure,
   isStopError,
   launchAutoRunTimerPlan,
+  markCurrentRegistrationAccountRegistrationBlocked: registrationAccountStateRegistry.markCurrentRegistrationAccountRegistrationBlocked,
   normalizeAutoRunFallbackThreadIntervalMinutes,
   persistAutoRunTimerPlan,
   resetState,
@@ -11531,141 +11599,8 @@ function shouldStopEmailAutoFetchRetries(generator, error) {
 }
 
 async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
-  const currentState = await getState();
-  if (isHotmailProvider(currentState)) {
-    const account = await ensureHotmailAccountForFlow({
-      allowAllocate: true,
-      markUsed: true,
-      preferredAccountId: null,
-    });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：已分配 Hotmail 账号 ${account.email}（第 ${attemptRuns} 次尝试）===`, 'ok');
-    return account.registrationAliasEmail || (await getState()).email || account.email;
-  }
-
-  if (isLuckmailProvider(currentState)) {
-    const purchase = await ensureLuckmailPurchaseForFlow({ allowReuse: true });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：LuckMail 邮箱已就绪：${purchase.email_address}（第 ${attemptRuns} 次尝试）===`, 'ok');
-    return purchase.email_address;
-  }
-
-  if (isGeneratedAliasProvider(currentState)) {
-    if (currentState.mailProvider === GMAIL_PROVIDER) {
-      if (!currentState.emailPrefix) {
-        throw new Error('Gmail 原邮箱未设置，请先在侧边栏填写。');
-      }
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：Gmail +tag 模式已启用，将在步骤 3 自动生成邮箱（第 ${attemptRuns} 次尝试）===`, 'info');
-      return null;
-    }
-    if (!currentState.emailPrefix) {
-      throw new Error('2925 邮箱前缀未设置，请先在侧边栏填写。');
-    }
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：2925 模式已启用，将在步骤 3 自动生成邮箱（第 ${attemptRuns} 次尝试）===`, 'info');
-    return null;
-  }
-
-  if (currentState.email) {
-    return currentState.email;
-  }
-
-  if (isCustomMailProvider(currentState)) {
-    const poolSize = getCustomMailProviderPool(currentState).length;
-    if (poolSize > 0) {
-      const queuedEmail = getCustomMailProviderPoolEmailForRun(currentState, targetRun);
-      if (!queuedEmail) {
-        throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
-      }
-      await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4 步仍需手动输入验证码）===`, 'ok');
-      return queuedEmail;
-    }
-  }
-
-  if (isCustomEmailPoolGenerator(currentState)) {
-    const queuedEmail = getCustomEmailPoolEmailForRun(currentState, targetRun);
-    if (!queuedEmail) {
-      const poolSize = getCustomEmailPool(currentState).length;
-      throw new Error(
-        poolSize > 0
-          ? `自定义邮箱池第 ${targetRun} 个邮箱不存在，请检查邮箱池数量是否与自动轮数一致。`
-          : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
-      );
-    }
-    await setEmailState(queuedEmail, {
-      source: 'generated:custom-pool',
-      selectedCustomEmailPoolEmail: queuedEmail,
-    });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试）===`, 'ok');
-    return queuedEmail;
-  }
-
-  if (shouldUseCustomRegistrationEmail(currentState)) {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先填写自定义注册邮箱，然后继续 ===`, 'warn');
-    await broadcastAutoRunStatus('waiting_email', {
-      currentRun: targetRun,
-      totalRuns,
-      attemptRun: attemptRuns,
-    });
-
-    await waitForResume();
-
-    const resumedState = await getState();
-    if (!resumedState.email) {
-      throw new Error('无法继续：当前没有注册邮箱。');
-    }
-    return resumedState.email;
-  }
-
-  const generator = normalizeEmailGenerator(currentState.emailGenerator);
-  const generatorLabel = getEmailGeneratorLabel(generator);
-  let lastError = null;
-  let attemptedFetches = 0;
-  for (let attempt = 1; attempt <= EMAIL_FETCH_MAX_ATTEMPTS; attempt++) {
-    attemptedFetches = attempt;
-    try {
-      if (attempt > 1) {
-        await addLog(`${generatorLabel}：正在进行第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次自动获取重试...`, 'warn');
-      }
-      const generatedEmail = await fetchGeneratedEmail(currentState, {
-        generateNew: generator !== 'icloud' || normalizeIcloudFetchMode(currentState.icloudFetchMode) === 'always_new',
-        generator,
-      });
-      await addLog(
-        `=== 目标 ${targetRun}/${totalRuns} 轮：${generatorLabel}已就绪：${generatedEmail}（第 ${attemptRuns} 次尝试，第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次获取）===`,
-        'ok'
-      );
-      return generatedEmail;
-    } catch (err) {
-      lastError = err;
-      await addLog(`${generatorLabel}自动获取失败（${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS}）：${err.message}`, 'warn');
-      if (generator === 'icloud' && shouldStopIcloudAutoFetchRetries(err)) {
-        await addLog('iCloud：检测到会话/网络异常，本轮将停止重复重试。请先确认 iCloud 页面已登录，再点击“我已登录”或手动粘贴邮箱继续。', 'warn');
-      }
-      if (shouldStopEmailAutoFetchRetries(generator, err)) {
-        break;
-      }
-    }
-  }
-
-  const totalAttempts = Math.max(1, attemptedFetches);
-  await addLog(`${generatorLabel}自动获取已连续失败 ${totalAttempts} 次：${lastError?.message || '未知错误'}`, 'error');
-  await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先自动获取邮箱或手动粘贴邮箱，然后继续 ===`, 'warn');
-  await broadcastAutoRunStatus('waiting_email', {
-    currentRun: targetRun,
-    totalRuns,
-    attemptRun: attemptRuns,
-  });
-
-  await waitForResume();
-
-  const resumedState = await getState();
-  if (!resumedState.email) {
-    throw new Error('无法继续：当前没有邮箱地址。');
-  }
-  return resumedState.email;
-}
-
-async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
-  const currentState = await getState();
+  let currentState = await getState();
+  currentState = await restoreCustomEmailPoolForAutoRunIfNeeded(currentState);
   if (isHotmailProvider(currentState)) {
     const account = await ensureHotmailAccountForFlow({
       allowAllocate: true,
@@ -11739,11 +11674,9 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     const queuedEmail = getCustomEmailPoolEmailForRun(currentState, targetRun);
     if (!queuedEmail) {
       const poolSize = getCustomEmailPool(currentState).length;
-      throw new Error(
-        poolSize > 0
-          ? `自定义邮箱池第 ${targetRun} 个邮箱不存在，请检查邮箱池数量是否与自动轮数一致。`
-          : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
-      );
+      throw new Error(`CUSTOM_EMAIL_POOL_EXHAUSTED::${poolSize > 0
+        ? `自定义邮箱池可用邮箱不足，无法执行第 ${targetRun}/${totalRuns} 轮。`
+        : '自定义邮箱池没有可用邮箱，自动运行已停止。'}`);
     }
     await setEmailState(queuedEmail, {
       source: 'generated:custom-pool',
@@ -11820,7 +11753,8 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
 }
 
 async function preselectCustomEmailPoolEmailForAutoRun(targetRun, totalRuns, attemptRuns) {
-  const currentState = await getState();
+  let currentState = await getState();
+  currentState = await restoreCustomEmailPoolForAutoRunIfNeeded(currentState);
   if (!isCustomEmailPoolGenerator(currentState)) {
     return '';
   }

@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const appStateModule = require('../sidepanel/app-state.js');
 const settingsControllerModule = require('../sidepanel/settings-controller.js');
@@ -10,6 +12,16 @@ function createButton() {
     textContent: '',
   };
 }
+
+test('sidepanel wires custom email pool readers into the settings controller', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../sidepanel/sidepanel-app-controller.js'), 'utf8');
+  const start = source.indexOf('function buildSettingsControllerScopeValues()');
+  const end = source.indexOf('function buildRuntimeMessageControllerScopeValues()', start);
+  const wiring = source.slice(start, end);
+
+  assert.match(wiring, /getNormalizedCustomEmailPoolEntriesState/);
+  assert.match(wiring, /getActiveCustomEmailPoolEmails/);
+});
 
 test('settings controller marks dirty state and updates save button', () => {
   const appState = appStateModule.createSidepanelAppState({
@@ -103,6 +115,50 @@ test('settings controller saves settings through runtime bridge and clears dirty
   assert.equal(btnSaveSettings.textContent, '保存');
 });
 
+test('settings controller does not overwrite custom email pool selection during automatic runs', async () => {
+  const appState = appStateModule.createSidepanelAppState({
+    latestState: { autoRunPhase: 'running' },
+    settingsDirty: true,
+    settingsSaveInFlight: false,
+    settingsAutoSaveTimer: null,
+    settingsSaveRevision: 1,
+    customPasswordSaveRevision: 0,
+  });
+  const sentMessages = [];
+  const controller = settingsControllerModule.createSettingsController({
+    appState,
+    scopeValues: {
+      btnSaveSettings: createButton(),
+      collectSettingsPayload: () => ({
+        otherSetting: 'keep',
+        customEmailPoolEntries: [{ email: 'stale@example.com' }],
+        customEmailPool: ['stale@example.com'],
+        selectedCustomEmailPoolEmail: 'stale@example.com',
+      }),
+      applySettingsState: () => {},
+      syncLatestState: () => {},
+      updatePanelModeUI: () => {},
+      updateMailProviderUI: () => {},
+      updateButtonStates: () => {},
+      updateConfigMenuControls: () => {},
+      showToast: () => {},
+      currentAutoRun: { autoRunning: true },
+      chrome: {
+        runtime: {
+          sendMessage: async (message) => {
+            sentMessages.push(message);
+            return {};
+          },
+        },
+      },
+    },
+  });
+
+  await controller.saveSettings({ silent: true });
+
+  assert.deepEqual(sentMessages[0].payload, { otherSetting: 'keep' });
+});
+
 test('settings controller preserves custom email pool when save response omits it', async () => {
   const appState = appStateModule.createSidepanelAppState({
     latestState: {},
@@ -142,4 +198,34 @@ test('settings controller preserves custom email pool when save response omits i
   assert.equal(appliedStates.length, 1);
   assert.deepEqual(appliedStates[0].customEmailPoolEntries, payload.customEmailPoolEntries);
   assert.deepEqual(appliedStates[0].customEmailPool, payload.customEmailPool);
+});
+
+test('custom email pool settings payload falls back to the local backup when runtime entries are empty', () => {
+  const appState = appStateModule.createSidepanelAppState({
+    latestState: { selectedCustomEmailPoolEmail: 'backup@example.com' },
+    settingsDirty: false,
+    settingsSaveInFlight: false,
+    settingsAutoSaveTimer: null,
+    settingsSaveRevision: 0,
+    customPasswordSaveRevision: 0,
+  });
+  const backupEntries = [{ id: 'backup', email: 'backup@example.com', enabled: true, used: false }];
+  const controller = settingsControllerModule.createSettingsController({
+    appState,
+    scopeValues: {
+      btnSaveSettings: createButton(),
+      getNormalizedCustomEmailPoolEntriesState: () => [],
+      getCustomEmailPoolBackupEntries: () => backupEntries,
+      getActiveCustomEmailPoolEmails: (entries) => entries.map((entry) => entry.email),
+      updateConfigMenuControls: () => {},
+      showToast: () => {},
+      currentAutoRun: { autoRunning: false },
+      chrome: { runtime: { sendMessage: async () => ({}) } },
+    },
+  });
+
+  const payload = controller.buildCustomEmailPoolSettingsPayload();
+
+  assert.deepEqual(payload.customEmailPoolEntries, backupEntries);
+  assert.deepEqual(payload.customEmailPool, ['backup@example.com']);
 });

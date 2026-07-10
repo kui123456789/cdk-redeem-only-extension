@@ -36,17 +36,23 @@ test('normalizes custom email pool entries and filters unavailable rows', () => 
   const normalizers = createNormalization();
   const entries = normalizers.normalizeCustomEmailPoolEntryObjects([
     'USER@EXAMPLE.COM----https://assurivo.com/console/open.php?mail=user%40example.com',
-    { email: 'used@example.com', used: true },
+    { email: 'used@example.com', used: true, accessToken: 'at-used-token' },
+    { email: 'stale-used@example.com', used: true },
     { email: 'bad', enabled: true },
     { email: 'locked@example.com', trialEligibilityStatus: 'not-eligible' },
+    { email: 'blocked@example.com', registrationBlocked: true, registrationBlockedReasonCode: 'user_already_exists' },
   ]);
 
-  assert.equal(entries.length, 3);
+  assert.equal(entries.length, 5);
   assert.equal(entries[0].email, 'user@example.com');
   assert.equal(entries[0].id, 'uuid-1');
   assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[0]), true);
   assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[1]), false);
-  assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[2]), false);
+  assert.equal(entries[2].used, false);
+  assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[2]), true);
+  assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[3]), false);
+  assert.equal(entries[4].registrationBlocked, true);
+  assert.equal(normalizers.isCustomEmailPoolEntryAvailable(entries[4]), false);
   assert.deepEqual(normalizers.getActiveCustomEmailPoolEmails?.(entries), undefined);
 });
 

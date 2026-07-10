@@ -1265,7 +1265,7 @@
               throw new Error(`UPI 优惠资格验证接口请求失败（HTTP ${statusCode}）${payloadError ? `：${payloadError}` : ''}`);
             }
             if (isHtmlResponsePayload(response, payload)) {
-              throw new Error('UPI 优惠资格验证接口返回了 HTML 页面，可能订阅 API 地址填错，或后端没有 /api/v1/check 路由。');
+              throw new Error(`UPI 优惠资格验证接口返回了 HTML 页面：${apiUrl}，可能订阅 API 地址填错，或后端没有 /api/v1/check 路由。`);
             }
             return payload && typeof payload === 'object' && !Array.isArray(payload)
               ? payload
@@ -1425,6 +1425,8 @@
             throw new Error('缺少 ChatGPT accessToken，无法检查 UPI 试用资格。');
           }
           const checkUrl = buildUPIAccessTokenCheckApiUrl(runtimeState);
+          const visibleStep = resolveVisibleStep(runtimeState);
+          await addStepLog(visibleStep, `UPI 资格检查接口：POST ${checkUrl}`, 'info');
           const forcedCdkey = normalizeString(input.cdkey || input.forceCdkey);
           const item = await checkUPIAccessTokenEligibility({
             checkUrl,

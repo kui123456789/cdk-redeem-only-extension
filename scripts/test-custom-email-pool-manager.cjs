@@ -113,7 +113,7 @@ test('custom email pool marks first available entry current while auto-running w
   globalThis.document = { createElement: () => createRenderedItemStub() };
   try {
     const { dom, manager } = createManager([
-      { id: 'used', email: 'used@example.com', enabled: true, used: true },
+      { id: 'used', email: 'used@example.com', enabled: true, used: true, manualSkipped: true },
       { id: 'next', email: 'next@example.com', enabled: true, used: false },
     ], {
       state: {
@@ -157,6 +157,52 @@ test('custom email pool renders saved Free credential as used and eligible', () 
     assert.match(html, /有试用资格/);
     assert.match(html, /luckmail-tag used\">已用/);
     assert.doesNotMatch(html, /luckmail-tag active\">未用/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test('custom email pool does not render saved Free credential as used without AT', () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement: () => createRenderedItemStub() };
+  try {
+    const { dom, manager } = createManager([
+      { id: 'entry', email: 'saved-free@example.com', enabled: true, used: false },
+    ], {
+      state: {
+        getCredentialForEmail: () => ({
+          email: 'saved-free@example.com',
+          status: 'free',
+          checkedAt: '2026-07-09T11:14:06.000Z',
+          reason: '账号有试用资格。',
+        }),
+      },
+    });
+
+    manager.renderCustomEmailPoolEntries();
+
+    const html = dom.customEmailPoolList.children[0].innerHTML;
+    assert.match(html, /luckmail-tag active\">未用/);
+    assert.doesNotMatch(html, /luckmail-tag used\">已用/);
+    assert.doesNotMatch(html, /有试用资格/);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test('custom email pool renders manual skipped used row without AT', () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement: () => createRenderedItemStub() };
+  try {
+    const { dom, manager } = createManager([
+      { id: 'entry', email: 'manual-skip@example.com', enabled: true, used: true, manualSkipped: true },
+    ]);
+
+    manager.renderCustomEmailPoolEntries();
+
+    const html = dom.customEmailPoolList.children[0].innerHTML;
+    assert.match(html, /luckmail-tag used\">已用/);
+    assert.match(html, /手动跳过/);
   } finally {
     globalThis.document = previousDocument;
   }

@@ -22,21 +22,72 @@
       return Array.isArray(value) && value.length > 0;
     }
 
+    function getCustomEmailPoolEntryKey(entry) {
+      const raw = entry && typeof entry === 'object'
+        ? (entry.email || entry.credential || '')
+        : entry;
+      return String(raw || '').split('----')[0].trim().toLowerCase();
+    }
+
+    function mergePartialCustomEmailPoolEntries(persistedEntries = [], sessionEntries = []) {
+      const sessionEntriesByEmail = new Map();
+      const persistedEmails = new Set();
+
+      for (const entry of sessionEntries) {
+        const email = getCustomEmailPoolEntryKey(entry);
+        if (email) {
+          sessionEntriesByEmail.set(email, entry);
+        }
+      }
+
+      const mergedEntries = persistedEntries.map((entry) => {
+        const email = getCustomEmailPoolEntryKey(entry);
+        if (email) {
+          persistedEmails.add(email);
+        }
+        const sessionEntry = sessionEntriesByEmail.get(email);
+        return sessionEntry && typeof entry === 'object' && typeof sessionEntry === 'object'
+          ? { ...entry, ...sessionEntry }
+          : (sessionEntry || entry);
+      });
+
+      for (const entry of sessionEntries) {
+        const email = getCustomEmailPoolEntryKey(entry);
+        if (!email || !persistedEmails.has(email)) {
+          mergedEntries.push(entry);
+        }
+      }
+
+      return mergedEntries;
+    }
+
     function protectPersistedCustomEmailPoolOnReload(state = {}, persistedSettings = {}) {
       const merged = { ...(state || {}) };
       const sessionEntries = state?.customEmailPoolEntries;
       const persistedEntries = persistedSettings?.customEmailPoolEntries;
       const sessionPool = state?.customEmailPool;
       const persistedPool = persistedSettings?.customEmailPool;
+      const persistedEntryEmails = new Set(
+        (Array.isArray(persistedEntries) ? persistedEntries : [])
+          .map(getCustomEmailPoolEntryKey)
+          .filter(Boolean)
+      );
+      const sessionEntryEmails = new Set(
+        (Array.isArray(sessionEntries) ? sessionEntries : [])
+          .map(getCustomEmailPoolEntryKey)
+          .filter(Boolean)
+      );
       const shouldRestoreStructuredEntries = Array.isArray(sessionEntries)
-        && sessionEntries.length === 0
-        && hasNonEmptyArray(persistedEntries);
+        && hasNonEmptyArray(persistedEntries)
+        && [...persistedEntryEmails].some((email) => !sessionEntryEmails.has(email));
       const shouldRestoreLegacyPool = Array.isArray(sessionPool)
-        && sessionPool.length === 0
+        && sessionPool.length < (Array.isArray(persistedPool) ? persistedPool.length : 0)
         && hasNonEmptyArray(persistedPool);
 
       if (shouldRestoreStructuredEntries) {
-        merged.customEmailPoolEntries = persistedEntries;
+        // Workflow snapshots can carry only the account currently in progress.
+        // Preserve that account's fresh fields while retaining the stored pool.
+        merged.customEmailPoolEntries = mergePartialCustomEmailPoolEntries(persistedEntries, sessionEntries);
       }
       if (shouldRestoreLegacyPool) {
         merged.customEmailPool = persistedPool;

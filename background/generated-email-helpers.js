@@ -227,11 +227,9 @@
       const requestedIndex = Math.max(0, Math.floor(Number(options.poolIndex) || 0));
       const email = String(getCustomEmailPoolEmail?.(latestState, requestedIndex + 1) || '').trim().toLowerCase();
       if (!email) {
-        throw new Error(
-          requestedIndex > 0
-            ? `自定义邮箱池第 ${requestedIndex + 1} 个邮箱不存在，请检查邮箱池配置。`
-            : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
-        );
+        throw new Error(`CUSTOM_EMAIL_POOL_EXHAUSTED::${requestedIndex > 0
+          ? `自定义邮箱池可用邮箱不足，无法读取第 ${requestedIndex + 1} 个邮箱。`
+          : '自定义邮箱池没有可用邮箱，自动运行已停止。'}`);
       }
 
       await persistResolvedEmailState(latestState, email, {

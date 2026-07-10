@@ -230,3 +230,34 @@ test('custom email pool membership sync marks matching eligible Free result used
   assert.equal(result.entries[0].accessToken, 'at-token-value-123456');
   assert.equal(result.entries[0].trialEligibilityCheckedAt, '2026-07-08T10:00:00.000Z');
 });
+
+test('custom email pool membership sync refuses used state without AT', () => {
+  const syncer = createCustomEmailPoolMembershipSync({
+    now: () => 123456,
+  });
+
+  const result = syncer.mergeEntriesWithMembershipResults([
+    {
+      id: 'entry-1',
+      email: 'sample@example.com',
+      enabled: true,
+      used: false,
+      lastUsedAt: 0,
+      accessToken: '',
+      accessTokenMasked: '',
+      trialEligibilityStatus: '',
+    },
+  ], {
+    items: [{
+      email: 'sample@example.com',
+      status: 'free',
+      trialEligibilityStatus: 'eligible',
+      trialEligibilityCheckedAt: '2026-07-08T10:00:00.000Z',
+      trialEligibilityReason: 'eligible',
+    }],
+  });
+
+  assert.equal(result.changed, false);
+  assert.equal(result.entries[0].used, false);
+  assert.equal(result.entries[0].accessToken, '');
+});
