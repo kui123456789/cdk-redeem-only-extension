@@ -70,3 +70,34 @@ test('Free export forwards URL option, names no-2FA rows, and permits URL-free r
   assert.deepEqual(capturedOptions[1], { includeVerificationUrl: true });
   assert.equal(withUrl.fileName, '');
 });
+
+test('Free export defaults to URL-bearing no-2FA rows and filename', async () => {
+  let capturedOptions;
+  const service = createService({
+    buildRows(...args) {
+      capturedOptions = args[4];
+      return resultState.buildResultExportRows(...args);
+    },
+    results: {
+      items: [{
+        email: 'with-url@example.com',
+        status: 'free',
+        no2faFreeRoute: true,
+        verificationUrl: 'https://verify.example.com/record',
+        accessToken: 'at-token',
+        recordedAt: 1700000000,
+      }],
+    },
+  });
+
+  const output = await service.exportUpiCredentialMembershipCheckResults({
+    status: 'free', emails: ['with-url@example.com'],
+  });
+
+  assert.deepEqual(capturedOptions, { includeVerificationUrl: true });
+  assert.match(output.fileName, /^upi-membership-free-email-url-at-/);
+  assert.equal(
+    output.fileContent,
+    'with-url@example.com---https://verify.example.com/record---at-token---2023-11-15 06:13:20\n'
+  );
+});
