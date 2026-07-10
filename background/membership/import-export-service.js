@@ -160,7 +160,10 @@
         throw new Error('UPI 备份账号核验/补兑正在运行，请先停止后再导出并清空当前批次。');
       }
       const allowedEmails = normalizeEmailList(input.emails || input.emailList || []);
-      const rows = buildResultExportRows(results, status, channel, allowedEmails);
+      const includeVerificationUrl = input.includeVerificationUrl !== false;
+      const rows = buildResultExportRows(results, status, channel, allowedEmails, {
+        includeVerificationUrl,
+      });
       const normalizedResults = normalizeResultsPayload(results);
       const allowedEmailSet = new Set(allowedEmails);
       const seenExportEmails = new Set();
@@ -188,7 +191,7 @@
             const no2faExportable = status === 'free'
               && item.no2faFreeRoute === true
               && item.email
-              && item.verificationUrl
+              && (!includeVerificationUrl || item.verificationUrl)
               && item.accessToken;
             const passkeyExportable = isResultItemPasskeyExportableForStatus(item, status);
             const password2faExportable = Boolean(item.email && item.password && item.totpMfaSecret);
@@ -202,11 +205,17 @@
           return true;
         })
         .map((item) => item.email);
-      const allFreeRowsAreNo2fa = status === 'free'
+      const allFreeRowsAreNo2faWithUrl = status === 'free'
         && rows.length > 0
         && rows.every((row) => {
           const parts = String(row || '').split(/---+/).map((part) => part.trim());
           return parts.length === 4 && isLikelyVerificationUrl(parts[1]);
+        });
+      const allFreeRowsAreNo2faWithoutUrl = status === 'free'
+        && rows.length > 0
+        && rows.every((row) => {
+          const parts = String(row || '').split(/---+/).map((part) => part.trim());
+          return parts.length === 3 && !isLikelyVerificationUrl(parts[1]);
         });
       const allFreeRowsArePasskey = status === 'free'
         && rows.length > 0
@@ -224,9 +233,11 @@
         paid: allPaidRowsArePasskey ? 'upi-membership-paid-password-passkey' : 'upi-membership-paid-password-2fa',
         'paid-upi': allPaidRowsArePasskey ? 'upi-membership-paid-password-passkey' : 'upi-membership-paid-password-2fa',
         'paid-ideal': allPaidRowsArePasskey ? 'ideal-membership-paid-password-passkey' : 'ideal-membership-paid-password-2fa',
-        free: allFreeRowsAreNo2fa
+        free: allFreeRowsAreNo2faWithUrl
           ? 'upi-membership-free-email-url-at'
-          : (allFreeRowsArePasskey ? 'upi-membership-free-password-passkey' : 'upi-membership-free-password-2fa'),
+          : (allFreeRowsAreNo2faWithoutUrl
+            ? 'upi-membership-free-email-at'
+            : (allFreeRowsArePasskey ? 'upi-membership-free-password-passkey' : 'upi-membership-free-password-2fa')),
         failed: 'upi-membership-check-failed',
       };
       const deleteResult = rows.length && removeAfterExport
