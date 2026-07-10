@@ -18,6 +18,7 @@
       mergeManualFreeMembershipOverridesIntoResults = (results) => results,
       buildUpiCredentialMembershipDisplayRows = () => [],
       isUpiCredentialMembershipRowInResultGroup = () => false,
+      getFreeExportIncludeVerificationUrl = () => true,
       getMembershipStatusTitle = () => '结果',
       normalizeUpiCredentialMembershipEmail = (value = '') => String(value || '').trim().toLowerCase(),
       normalizeUpiCredentialMembershipText = (value = '') => String(value || '').trim(),
@@ -131,10 +132,14 @@
           helpers.showToast?.(`${getMembershipStatusTitle(rawStatus)} 分组没有可导出的记录。`, 'warn', 1800);
           return;
         }
+        const payload = { status: payloadStatus, emails: exportEmails, removeAfterExport: false };
+        if (normalizedStatus === 'free') {
+          payload.includeVerificationUrl = getFreeExportIncludeVerificationUrl();
+        }
         const response = await runtime.sendMessage({
           type: 'EXPORT_UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS',
           source: 'sidepanel',
-          payload: { status: payloadStatus, emails: exportEmails, removeAfterExport: false },
+          payload,
         });
         if (response?.error) {
           throw new Error(response.error);

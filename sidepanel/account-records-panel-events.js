@@ -44,6 +44,7 @@
       moveUpiCredentialMembershipAccountGroup = async () => {},
       startUpiCredentialMembershipFreeRedeem = async () => {},
       startUpiCredentialMembershipAllRedeem = async () => {},
+      toggleFreeExportIncludeVerificationUrl = () => true,
       exportUpiCredentialMembershipCheckResultTextFile = async () => {},
       deleteUpiCredentialMembershipResultGroup = async () => {},
       cancelUpiCredentialMembershipRedeemJob = async () => {},
@@ -277,6 +278,13 @@
       const redeemAllNode = findClosest(event?.target, '[data-upi-membership-redeem-all]');
       if (redeemAllNode) {
         startUpiCredentialMembershipAllRedeem();
+        return;
+      }
+
+      const verificationUrlToggleNode = findClosest(event?.target, '[data-upi-membership-toggle-export-verification-url]');
+      if (verificationUrlToggleNode) {
+        toggleFreeExportIncludeVerificationUrl();
+        render();
         return;
       }
 

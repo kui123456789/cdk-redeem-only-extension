@@ -360,6 +360,7 @@
       isAutoRunRecordDisplayRunning: context.isAutoRunRecordDisplayRunning,
       summarizeMembershipViewModelRows: context.summarizeMembershipViewModelRows,
       getUpiCredentialMembershipUiGroup: context.getUpiCredentialMembershipUiGroup,
+      getFreeExportIncludeVerificationUrl: context.getFreeExportIncludeVerificationUrl,
       getChannelFailureLimitBlockedFreeRows: context.getChannelFailureLimitBlockedFreeRows,
       isRedeemChannelDailyLimitBlocked: context.isRedeemChannelDailyLimitBlocked,
       isUpiCredentialMembershipRedeemLocked: context.isUpiCredentialMembershipRedeemLocked,
