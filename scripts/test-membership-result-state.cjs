@@ -128,6 +128,27 @@ test('Free export rows omit verification URLs when disabled', () => {
   ]);
 });
 
+test('URL-less no-2FA Free rows export only when verification URLs are disabled', () => {
+  const results = {
+    items: [{
+      email: 'url-less@example.com',
+      no2faFreeRoute: true,
+      accessToken: 'at-url-less',
+      recordedAt: 1700000000,
+      status: 'free',
+    }],
+  };
+
+  assert.deepEqual(resultState.buildResultExportRows(
+    results,
+    'free',
+    '',
+    [],
+    { includeVerificationUrl: false }
+  ), ['url-less@example.com---at-url-less---2023-11-15 06:13:20']);
+  assert.deepEqual(resultState.buildResultExportRows(results, 'free'), []);
+});
+
 test('normalizeResultsPayload preserves redeemPlusDeletedEmailsByChannel', () => {
   const payload = resultState.normalizeResultsPayload({
     items: [],

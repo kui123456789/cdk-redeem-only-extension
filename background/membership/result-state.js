@@ -570,6 +570,7 @@
     const normalizedChannel = normalizeString(channel) ? normalizeRedeemChannel(channel) : '';
     const normalizedResults = normalizeResultsPayload(results);
     const allowedEmailSet = new Set(normalizeEmailList(emails));
+    const includeVerificationUrl = options.includeVerificationUrl !== false;
     const seenExportKeys = new Set();
     return normalizedResults.items
       .filter((item) => {
@@ -593,7 +594,7 @@
           const no2faExportable = normalizedStatus === 'free'
             && item.no2faFreeRoute === true
             && item.email
-            && item.verificationUrl
+            && (!includeVerificationUrl || item.verificationUrl)
             && item.accessToken;
           const passkeyExportable = isResultItemPasskeyExportableForStatus(item, normalizedStatus);
           const password2faExportable = Boolean(item.email && item.password && item.totpMfaSecret);

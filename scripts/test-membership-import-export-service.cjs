@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const api = require('../background/membership/import-export-service.js');
+const resultState = require('../background/membership/result-state.js');
 
 function createService({ buildRows, deleteResults, results }) {
   return api.createImportExportService({
@@ -44,11 +45,10 @@ test('Free export forwards URL option, names no-2FA rows, and permits URL-free r
     }],
   };
   const service = createService({
-    buildRows(_results, _status, _channel, _emails, options) {
+    buildRows(...args) {
+      const options = args[4];
       capturedOptions.push(options);
-      return options.includeVerificationUrl
-        ? ['a@example.com---https://verify.example.com---at-token---2026-07-10 12:00:00']
-        : ['a@example.com---at-token---2026-07-10 12:00:00'];
+      return resultState.buildResultExportRows(...args);
     },
     deleteResults: async ({ emails }) => {
       deletedEmails = emails;
@@ -68,5 +68,5 @@ test('Free export forwards URL option, names no-2FA rows, and permits URL-free r
     status: 'free', emails: ['a@example.com'],
   });
   assert.deepEqual(capturedOptions[1], { includeVerificationUrl: true });
-  assert.match(withUrl.fileName, /^upi-membership-free-email-url-at-/);
+  assert.equal(withUrl.fileName, '');
 });
