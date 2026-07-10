@@ -1,5 +1,28 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.11
+
+本版本完善 Free/Plus 文本导出的邮箱取件地址控制和网页链接格式，建议已安装 V1.0.10 的用户升级。
+
+### 新增
+
+- Free 组新增 `取件地址：开/关` 按钮，默认开启并记住用户选择；关闭后，完整 2FA、Passkey 和免 2FA 路线均导出不带取件地址的兼容格式。
+- Plus 的完整 2FA 与 Passkey 导出现在也会携带已保存的邮箱取件地址；没有地址的旧账号继续使用原有格式。
+
+### 修复
+
+- `mail.334401.xyz/json/...` 自动取码地址在 Free/Plus TXT 导出时会转换成可直接浏览的 `mail.334401.xyz/show/...` 网页地址。
+- 重新导入 `/show/` 地址时会还原为内部 `/json/` 地址，自动取验证码仍使用 JSON 接口，不受导出展示格式影响。
+- 加强无取件地址 Free 文本的解析，避免时间字段或纯数字字段被误判为 AT、2FA 或其它列。
+- 保持 Assurivo `feed.php` 导出为 `open.php` 的原有兼容行为。
+
+### 验证
+
+- 已通过 `node --test scripts/test-*.cjs`，共 249 项测试。
+- 已通过 `node --check background/membership/result-state.js` 和 `node --check shared/membership-credential-format.js`。
+- 已验证 Free、Plus 2FA 与 Plus Passkey 均会把 `mail.334401.xyz/json/...` 导出为 `/show/...`。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏和后台 service worker 加载 V1.0.11 新代码。
+
 ## CDK Redeem Only V1.0.10
 
 本版本修复自定义邮箱池在连续注册、重载和配置导出时可能丢失的问题，并补充空邮箱池运行保护，建议已安装 V1.0.9 的用户升级。
