@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 delete globalThis.SidepanelAccountRecordsViewModel;
 delete globalThis.SidepanelAccountRecordsExport;
+delete globalThis.SidepanelAccountRecordsFreeExportPreferences;
 delete globalThis.SidepanelAccountRecordsSubscription;
 delete globalThis.SidepanelAccountRecordsMembershipGroups;
 delete globalThis.SidepanelAccountRecordsRedeemStatus;
@@ -31,6 +32,7 @@ delete globalThis.SidepanelAccountRecordsSettingsPayload;
 delete globalThis.SidepanelMembershipRedeemProgress;
 delete globalThis.SidepanelAccountRecordsManager;
 delete require.cache[require.resolve('../sidepanel/account-records-export.js')];
+delete require.cache[require.resolve('../sidepanel/account-records-free-export-preferences.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-subscription.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-membership-groups.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-redeem-status.js')];
@@ -59,6 +61,7 @@ delete require.cache[require.resolve('../sidepanel/account-records-settings-payl
 delete require.cache[require.resolve('../shared/membership-credential-format.js')];
 delete require.cache[require.resolve('../sidepanel/account-records-manager.js')];
 require('../sidepanel/account-records-export.js');
+require('../sidepanel/account-records-free-export-preferences.js');
 require('../sidepanel/account-records-subscription.js');
 require('../sidepanel/account-records-membership-groups.js');
 require('../sidepanel/account-records-redeem-status.js');
@@ -246,6 +249,25 @@ test('createAccountRecordsManager fails loudly when redeem progress module is un
     () => globalThis.SidepanelAccountRecordsManager.createAccountRecordsManager({}),
     /Membership redeem progress module is not loaded/
   );
+});
+
+test('account records manager exposes the Free export verification URL preference', () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.has(key) ? values.get(key) : null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  globalThis.SidepanelMembershipRedeemProgress = {
+    clampRedeemProgressPercent: () => 0,
+    getUpiCredentialMembershipRedeemProgressMeta: () => ({}),
+    renderUpiCredentialMembershipRedeemProgress: () => '',
+  };
+
+  const manager = globalThis.SidepanelAccountRecordsManager.createAccountRecordsManager({});
+
+  assert.equal(manager.getFreeExportIncludeVerificationUrl(), true);
+  assert.equal(manager.toggleFreeExportIncludeVerificationUrl(), false);
+  assert.equal(values.get('upiFreeExportIncludeVerificationUrl'), 'false');
 });
 
 test('summarizeAccountRunHistory preserves counts when view model global is unavailable', () => {

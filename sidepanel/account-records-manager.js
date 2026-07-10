@@ -29,6 +29,14 @@
     if (typeof accountRecordsExport.createAccountRecordsExportHelpers !== 'function') {
       throw new Error('Account records export module is not loaded.');
     }
+    const accountRecordsFreeExportPreferences = globalScope.SidepanelAccountRecordsFreeExportPreferences || {};
+    if (typeof accountRecordsFreeExportPreferences.createFreeExportPreferences !== 'function') {
+      throw new Error('Account records Free export preferences module is not loaded.');
+    }
+    const {
+      getIncludeVerificationUrl: getFreeExportIncludeVerificationUrl,
+      toggleIncludeVerificationUrl: toggleFreeExportIncludeVerificationUrl,
+    } = accountRecordsFreeExportPreferences.createFreeExportPreferences();
     const {
       buildRecordId,
       getRecordDisplayStatus,
@@ -1291,6 +1299,7 @@
       deleteSelectedRecords,
       exportUpiCredentialBackupTextFile,
       exportUpiRedeemSuccessEmailTextFile,
+      getFreeExportIncludeVerificationUrl,
       openPanel,
       reloadUpiCredentialMembershipAfterRuntimeImport,
       render,
@@ -1299,6 +1308,7 @@
       setSelectionMode,
       showUpiCredentialBackupText,
       summarizeAccountRunHistory,
+      toggleFreeExportIncludeVerificationUrl,
       toggleSelectionMode,
     };
   }
