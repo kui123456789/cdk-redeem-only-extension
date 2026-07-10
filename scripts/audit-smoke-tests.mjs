@@ -454,6 +454,7 @@ function checkStaticContracts() {
   const accountRecordsTrialEligibility = readText('sidepanel/account-records-trial-eligibility.js');
   const accountRecordsRunHistory = readText('sidepanel/account-records-run-history.js');
   const accountRecordsSettingsPayload = readText('sidepanel/account-records-settings-payload.js');
+  const accountRecordsFreeExportPreferences = readText('sidepanel/account-records-free-export-preferences.js');
   const accountRecords = readText('sidepanel/account-records-manager.js');
   const membershipRowPolicy = readText('sidepanel/membership-row-policy.js');
   const membershipRenderer = readText('sidepanel/membership-renderer.js');
@@ -616,6 +617,9 @@ function checkStaticContracts() {
   assertIncludes(membershipCredentialFormat, 'MultiPageMembershipCredentialFormat', 'membership credential format global');
   assertIncludes(membershipCredentialFormat, 'formatFreeCredentialLine', 'membership Free export formatter');
   assertBefore(sidepanelHtml, 'src="../shared/membership-credential-format.js"', 'src="account-records-manager.js"', 'membership credential format must load before account records manager');
+  assertIncludes(sidepanelHtml, 'src="account-records-free-export-preferences.js"', 'Free export preference script load');
+  assertBefore(sidepanelHtml, 'src="account-records-free-export-preferences.js"', 'src="account-records-manager.js"', 'Free export preferences must load before manager');
+  assertIncludes(accountRecordsFreeExportPreferences, 'createFreeExportPreferences', 'Free export preference factory');
   assertIncludes(sidepanelHtml, 'src="cdk-pool-manager.js"', 'CDK pool manager script load');
   assertIncludes(sidepanelHtml, 'src="membership-row-policy.js"', 'membership row policy script load');
   assertIncludes(sidepanelHtml, 'src="membership-renderer.js"', 'membership renderer script load');
@@ -679,6 +683,7 @@ function checkStaticContracts() {
   assertIncludes(accountRecordsMembershipPoolOps, 'createAccountRecordsMembershipPoolOps', 'account records membership pool ops factory');
   assertIncludes(accountRecordsMembershipResultOps, 'SidepanelAccountRecordsMembershipResultOps', 'account records membership result ops global');
   assertIncludes(accountRecordsMembershipResultOps, 'createAccountRecordsMembershipResultOps', 'account records membership result ops factory');
+  assertIncludes(accountRecordsMembershipResultOps, 'includeVerificationUrl', 'Free export address payload');
   assertIncludes(accountRecordsPanelEvents, 'SidepanelAccountRecordsPanelEvents', 'account records panel events global');
   assertIncludes(accountRecordsPanelEvents, 'createAccountRecordsPanelEvents', 'account records panel events factory');
   assertIncludes(accountRecordsMembershipActions, 'SidepanelAccountRecordsMembershipActions', 'account records membership actions global');
