@@ -945,8 +945,8 @@
     return (deletedByChannel[targetChannel] || []).includes(email);
   }
 
-  function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = []) {
-    return getMembershipResultStateHelper('buildResultExportRows')(results, status, channel, emails);
+  function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = [], options = {}) {
+    return getMembershipResultStateHelper('buildResultExportRows')(results, status, channel, emails, options);
   }
 
   function classifySubscriptionResult(subscriptionItem = {}) {

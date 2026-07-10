@@ -125,3 +125,32 @@ test('formats current Free export row shapes', () => {
     checkedAt: '2026-07-06 15:00:00',
   }), 'a@icloud.com---pw---SECRET---at-token---2026-07-06 15:00:00');
 });
+
+test('formats every Free route without verification URL when disabled', () => {
+  assert.equal(format.formatFreeCredentialLine({
+    email: 'no2fa@example.com',
+    no2faFreeRoute: true,
+    verificationUrl: 'https://assurivo.com/console/open.php?id=1',
+    accessToken: 'at-no2fa',
+    checkedAt: '2026-07-10 12:00:00',
+  }, { includeVerificationUrl: false }), 'no2fa@example.com---at-no2fa---2026-07-10 12:00:00');
+  assert.equal(format.formatFreeCredentialLine({
+    email: 'twofa@example.com',
+    password: 'pw',
+    totpMfaSecret: 'SECRET',
+    verificationUrl: 'https://assurivo.com/console/open.php?id=2',
+    accessToken: 'at-2fa',
+    checkedAt: '2026-07-10 12:00:00',
+  }, { includeVerificationUrl: false }), 'twofa@example.com---pw---SECRET---at-2fa---2026-07-10 12:00:00');
+});
+
+test('parses URL-free no-2FA Free row without mistaking three-field 2FA', () => {
+  const row = format.parseCredentialLine('no2fa@example.com---at-token---2026-07-10 12:00:00');
+  assert.equal(row.no2faFreeRoute, true);
+  assert.equal(row.accessToken, 'at-token');
+  assert.equal(row.checkedAt, '2026-07-10 12:00:00');
+  const legacy = format.parseCredentialLine('twofa@example.com---pw---SECRET');
+  assert.equal(legacy.no2faFreeRoute, undefined);
+  assert.equal(legacy.password, 'pw');
+  assert.equal(legacy.totpMfaSecret, 'SECRET');
+});

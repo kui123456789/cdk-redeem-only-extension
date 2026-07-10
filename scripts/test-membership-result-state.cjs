@@ -87,9 +87,17 @@ test('duplicate emails keep the newest result when newer item appears first', ()
   assert.equal(items[0].checkedAt, '2026-07-07T02:00:00.000Z');
 });
 
-test('Free export rows preserve password, 2FA or Passkey marker, URL, AT, and timestamp', () => {
+test('Free export rows omit verification URLs when disabled', () => {
   const rows = resultState.buildResultExportRows({
     items: [
+      {
+        email: 'no2fa@example.com',
+        no2faFreeRoute: true,
+        verificationUrl: 'https://assurivo.com/console/open.php?id=0',
+        accessToken: 'at-no2fa',
+        recordedAt: 1700000000,
+        status: 'free',
+      },
       {
         email: 'twofa@example.com',
         password: 'pw-2fa',
@@ -111,11 +119,12 @@ test('Free export rows preserve password, 2FA or Passkey marker, URL, AT, and ti
         status: 'free',
       },
     ],
-  }, 'free');
+  }, 'free', '', [], { includeVerificationUrl: false });
 
   assert.deepEqual(rows, [
-    'twofa@example.com---pw-2fa---ABCDEFGH---https://assurivo.com/console/open.php?id=1---at-2fa---2023-11-15 06:13:20',
-    'passkey@example.com---pw-passkey---PASSKEY:cred-123;signCount=7---https://assurivo.com/console/open.php?id=2---at-passkey---2023-11-15 07:13:20',
+    'no2fa@example.com---at-no2fa---2023-11-15 06:13:20',
+    'twofa@example.com---pw-2fa---ABCDEFGH---at-2fa---2023-11-15 06:13:20',
+    'passkey@example.com---pw-passkey---PASSKEY:cred-123;signCount=7---at-passkey---2023-11-15 07:13:20',
   ]);
 });
 

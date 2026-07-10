@@ -549,18 +549,23 @@
     return (deletedByChannel[targetChannel] || []).includes(email);
   }
 
-  function buildResultExportRowsFreeFallback(item = {}) {
+  function buildResultExportRowsFreeFallback(item = {}, options = {}) {
     const timestamp = formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item));
     const verificationUrl = item.verificationUrl ? normalizeNo2faFreeVerificationUrlForExport(item.verificationUrl) : '';
-    if (item.no2faFreeRoute === true && item.verificationUrl && item.accessToken) return `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`;
+    const includeVerificationUrl = options.includeVerificationUrl !== false;
+    if (item.no2faFreeRoute === true && item.accessToken) {
+      return includeVerificationUrl && item.verificationUrl
+        ? `${item.email}---${verificationUrl}---${item.accessToken || ''}---${timestamp}`
+        : `${item.email}---${item.accessToken || ''}---${timestamp}`;
+    }
     if (item.passkeyEnabled === true && item.password && item.accessToken && !item.totpMfaSecret) {
       const passkeyMarker = buildPasskeyExportMarker(item);
-      return verificationUrl ? `${item.email}---${item.password}---${passkeyMarker}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${passkeyMarker}---${item.accessToken || ''}---${timestamp}`;
+      return includeVerificationUrl && verificationUrl ? `${item.email}---${item.password}---${passkeyMarker}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${passkeyMarker}---${item.accessToken || ''}---${timestamp}`;
     }
-    return verificationUrl ? `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
+    return includeVerificationUrl && verificationUrl ? `${item.email}---${item.password}---${item.totpMfaSecret}---${verificationUrl}---${item.accessToken || ''}---${timestamp}` : `${item.email}---${item.password}---${item.totpMfaSecret}---${item.accessToken || ''}---${timestamp}`;
   }
 
-  function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = []) {
+  function buildResultExportRows(results = {}, status = 'paid', channel = '', emails = [], options = {}) {
     const normalizedStatus = normalizeString(status);
     const normalizedChannel = normalizeString(channel) ? normalizeRedeemChannel(channel) : '';
     const normalizedResults = normalizeResultsPayload(results);
@@ -608,9 +613,9 @@
         if (normalizedStatus === 'free') {
           const formatFreeCredentialLine = getMembershipCredentialFormat().formatFreeCredentialLine;
           if (typeof formatFreeCredentialLine === 'function') {
-            return formatFreeCredentialLine({ ...item, checkedAt: formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item)) });
+            return formatFreeCredentialLine({ ...item, checkedAt: formatNo2faFreeExportTime(getNo2faFreeExportTimestamp(item)) }, options);
           }
-          return buildResultExportRowsFreeFallback(item);
+          return buildResultExportRowsFreeFallback(item, options);
         }
         const timestamp = item.redeemSuccessAt || item.upiRedeemSubscriptionCheckedAt || item.checkedAt || '';
         if (item.passkeyEnabled === true && item.password && !item.totpMfaSecret) {

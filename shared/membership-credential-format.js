@@ -135,8 +135,7 @@
       accessTokenUpdatedAt: timestamp,
       checkedAt: normalizeText(fields.checkedAt || timestamp),
       recordedAt: normalizeRecordedAt(fields.recordedAt || timestamp, options),
-      no2faFreeRoute,
-      ...(no2faFreeRoute ? { twoFactorEnabled: false } : {}),
+      ...(no2faFreeRoute ? { no2faFreeRoute: true, twoFactorEnabled: false } : {}),
       ...(!no2faFreeRoute && hasTwoFactorEnabled ? { twoFactorEnabled: fields.twoFactorEnabled === true } : {}),
       passkeyEnabled,
       passkeyCredentialId: passkeyEnabled ? normalizeText(fields.passkeyCredentialId) : '',
@@ -157,6 +156,17 @@
         accessToken: normalizedParts[2],
         accessTokenUpdatedAt: normalizedParts[3],
         checkedAt: normalizedParts[3],
+        no2faFreeRoute: true,
+        twoFactorEnabled: false,
+      }, options);
+    }
+
+    if (normalizedParts.length === 3 && isLikelyTimestamp(normalizedParts[2])) {
+      return buildCredentialRow({
+        email: normalizedParts[0],
+        accessToken: normalizedParts[1],
+        accessTokenUpdatedAt: normalizedParts[2],
+        checkedAt: normalizedParts[2],
         no2faFreeRoute: true,
         twoFactorEnabled: false,
       }, options);
@@ -230,13 +240,16 @@
     return parseCredentialParts(String(line || '').trim().split(/---+/).map((part) => part.trim()), options);
   }
 
-  function formatFreeCredentialLine(item = {}) {
+  function formatFreeCredentialLine(item = {}, options = {}) {
     const email = normalizeEmail(item.email);
     const verificationUrl = normalizeVerificationUrlForExport(item.verificationUrl || item.emailVerificationUrl || item.url);
     const accessToken = normalizeText(item.accessToken || item.token || item.access_token || item.upiRedeemAccessToken);
     const timestamp = normalizeText(item.checkedAt || item.accessTokenUpdatedAt || item.tokenUpdatedAt);
+    const includeVerificationUrl = options.includeVerificationUrl !== false;
     if (item.no2faFreeRoute === true) {
-      return [email, verificationUrl, accessToken, timestamp].join('---');
+      return includeVerificationUrl
+        ? [email, verificationUrl, accessToken, timestamp].join('---')
+        : [email, accessToken, timestamp].join('---');
     }
     const password = normalizeText(item.password || item.gptPassword || item.chatGptPassword);
     const totpMfaSecret = normalizeTotpSecret(item.totpMfaSecret || item.totpSecret || item.twoFactorSecret);
@@ -245,7 +258,7 @@
     const secretOrMarker = hasPasskeyMaterial && !totpMfaSecret
       ? buildPasskeyMarker(item)
       : totpMfaSecret;
-    if (verificationUrl) {
+    if (includeVerificationUrl && verificationUrl) {
       return [email, password, secretOrMarker, verificationUrl, accessToken, timestamp].join('---');
     }
     return [email, password, secretOrMarker, accessToken, timestamp].join('---');
