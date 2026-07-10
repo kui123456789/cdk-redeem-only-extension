@@ -23,3 +23,20 @@ test('Free export preference falls back on for invalid or unavailable storage', 
   const unavailable = api.createFreeExportPreferences({ storage: { getItem: () => { throw new Error('blocked'); } } });
   assert.equal(unavailable.getIncludeVerificationUrl(), true);
 });
+
+test('Free export preference defaults on when global localStorage access throws', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get() {
+      throw new Error('blocked');
+    },
+  });
+  try {
+    const prefs = api.createFreeExportPreferences();
+    assert.equal(prefs.getIncludeVerificationUrl(), true);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+    else delete globalThis.localStorage;
+  }
+});

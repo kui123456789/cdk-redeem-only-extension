@@ -2,7 +2,12 @@
   const STORAGE_KEY = 'upiFreeExportIncludeVerificationUrl';
 
   function createFreeExportPreferences(options = {}) {
-    const storage = options.storage || globalScope.localStorage;
+    let storage = options.storage;
+    if (!storage) {
+      try {
+        storage = globalScope.localStorage;
+      } catch {}
+    }
 
     function getIncludeVerificationUrl() {
       try {

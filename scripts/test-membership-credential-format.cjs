@@ -154,3 +154,17 @@ test('parses URL-free no-2FA Free row without mistaking three-field 2FA', () => 
   assert.equal(legacy.password, 'pw');
   assert.equal(legacy.totpMfaSecret, 'SECRET');
 });
+
+test('distinguishes URL-free no-2FA timestamps from numeric legacy TOTP secrets', () => {
+  const no2fa = format.parseCredentialLine('no2fa@example.com---AT---2026-07-10 12:00:00');
+  assert.equal(no2fa.no2faFreeRoute, true);
+  assert.equal(no2fa.accessToken, 'AT');
+  assert.equal(no2fa.checkedAt, '2026-07-10 12:00:00');
+  const isoNo2fa = format.parseCredentialLine('iso@example.com---AT---2026-07-10T12:00:00.000Z');
+  assert.equal(isoNo2fa.no2faFreeRoute, true);
+  assert.equal(isoNo2fa.checkedAt, '2026-07-10T12:00:00.000Z');
+  const row = format.parseCredentialLine('twofa@example.com---pw---222222');
+  assert.equal(row.no2faFreeRoute, undefined);
+  assert.equal(row.password, 'pw');
+  assert.equal(row.totpMfaSecret, '222222');
+});

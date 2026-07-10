@@ -25,6 +25,12 @@
     return Number.isFinite(Date.parse(text));
   }
 
+  function isNo2faFreeRouteTimestamp(value = '') {
+    const text = normalizeText(value);
+    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text)
+      || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(text);
+  }
+
   function normalizeVerificationUrlForExport(value = '') {
     const text = normalizeText(value);
     if (!text) return '';
@@ -161,7 +167,7 @@
       }, options);
     }
 
-    if (normalizedParts.length === 3 && isLikelyTimestamp(normalizedParts[2])) {
+    if (normalizedParts.length === 3 && isNo2faFreeRouteTimestamp(normalizedParts[2])) {
       return buildCredentialRow({
         email: normalizedParts[0],
         accessToken: normalizedParts[1],
