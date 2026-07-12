@@ -1273,6 +1273,60 @@
           }
 
           await chrome.tabs.update(signupTabId, { active: true });
+          if (step === 4) {
+            const prepareRequest = {
+              type: 'PREPARE_SIGNUP_VERIFICATION', step: 4, source: 'background',
+              payload: {
+                password: options.password || '', prepareSource: 'step4_pre_submit',
+                prepareLogLabel: '步骤 4 填码前检查', timeoutMs: 15000,
+              },
+            };
+            const prepareVerificationPage = async () => {
+              const sender = typeof sendToContentScriptResilient === 'function'
+                ? sendToContentScriptResilient : sendToContentScript;
+              const result = await sender('signup-page', prepareRequest, {
+                timeoutMs: 20000, responseTimeoutMs: 18000, retryDelayMs: 500,
+                logMessage: '步骤 4：取码完成后认证页正在恢复，等待验证码输入框重新就绪...',
+                logStep: completionStep, logStepKey: 'fetch-signup-code',
+              });
+              if (result?.error) throw new Error(result.error);
+              return result || {};
+            };
+            const reloadStaleVerificationPage = async () => {
+              if (!chrome?.tabs?.get || !chrome?.tabs?.reload) return false;
+              const tab = await chrome.tabs.get(signupTabId).catch(() => null);
+              let reloadable = false;
+              try {
+                const parsed = new URL(String(tab?.url || ''));
+                reloadable = ['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(parsed.hostname) && /\/email-verification(?:[/?#]|$)/i.test(parsed.pathname);
+              } catch {}
+              if (!reloadable) return false;
+              await addLog('步骤 4：取码完成后验证码输入框已从页面消失，正在刷新认证页并恢复当前验证会话。', 'warn');
+              await chrome.tabs.reload(signupTabId, { bypassCache: true });
+              const reloadStartedAt = Date.now();
+              while (Date.now() - reloadStartedAt < 15000) {
+                throwIfStopped();
+                const refreshedTab = await chrome.tabs.get(signupTabId).catch(() => null);
+                if (String(refreshedTab?.status || '').toLowerCase() === 'complete') return true;
+                await sleepWithStop(250);
+              }
+              return true;
+            };
+            let prepareResult;
+            try {
+              prepareResult = await prepareVerificationPage();
+            } catch (error) {
+              const inputMissing = /未找到验证码输入框/i.test(String(error?.message || error || ''));
+              if (!inputMissing || !(await reloadStaleVerificationPage())) throw error;
+              prepareResult = await prepareVerificationPage();
+            }
+            if (prepareResult?.alreadyVerified) {
+              return {
+                success: true, assumed: true, alreadyAdvanced: true,
+                skipProfileStep: Boolean(prepareResult.skipProfileStep), url: prepareResult.url || '',
+              };
+            }
+          }
           const baseResponseTimeoutMs = await getResponseTimeoutMsForStep(
             step,
             step === 8

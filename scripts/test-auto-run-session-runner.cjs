@@ -304,3 +304,99 @@ test('auto-run stops immediately when the custom email pool is exhausted', async
   assert.equal(phases.includes('stopped'), true);
   assert.equal(logs.some((message) => message.includes('没有可用邮箱')), true);
 });
+
+test('auto-run parks cleanly when a workflow node schedules a timer resume', async () => {
+  const phases = [];
+  let attempts = 0;
+  let runtimeState = {
+    autoRunActive: false,
+    autoRunCurrentRun: 0,
+    autoRunTotalRuns: 0,
+    autoRunAttemptRun: 0,
+    autoRunSessionId: 0,
+  };
+  let appState = { autoRunFallbackThreadIntervalMinutes: 0 };
+  const summaryBuilder = createAutoRunSummaryBuilder({ addLog: async () => {} });
+  const runner = createAutoRunSessionRunner({
+    ...summaryBuilder,
+    addLog: async () => {},
+    appendAccountRunRecord: async () => ({}),
+    AUTO_RUN_MAX_RETRIES_PER_ROUND: 3,
+    AUTO_RUN_RETRY_DELAY_MS: 1,
+    AUTO_RUN_TIMER_KIND_BEFORE_RETRY: 'before_retry',
+    AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS: 'between_rounds',
+    broadcastAutoRunStatus: async (phase) => phases.push(phase),
+    broadcastStopToContentScripts: async () => {},
+    cancelPendingCommands: () => {},
+    clearStopRequest: () => {},
+    createAutoRunRoundLogSnapshotMarker: () => ({}),
+    createAutoRunSessionId: () => 789,
+    ensureHotmailMailboxReadyForAutoRunRound: null,
+    evaluateAttemptFailure: () => {
+      throw new Error('should not evaluate parked timer errors');
+    },
+    getAutoRunRoundSnapshotReason: () => '',
+    getAutoRunRoundSnapshotStatus: () => 'failed',
+    getAutoRunStatusPayload: (phase, payload) => ({
+      autoRunPhase: phase,
+      autoRunCurrentRun: payload.currentRun,
+      autoRunTotalRuns: payload.totalRuns,
+      autoRunAttemptRun: payload.attemptRun,
+      autoRunSessionId: payload.sessionId,
+    }),
+    getErrorMessage: (error) => error?.message || String(error || ''),
+    getFirstUnfinishedNodeId: () => null,
+    getMaxAttemptsForRound: () => 4,
+    getPendingAutoRunTimerPlan: () => null,
+    getRunningNodeIds: () => [],
+    getState: async () => appState,
+    getStopRequested: () => false,
+    hasSavedNodeProgress: () => false,
+    isStopError: () => false,
+    launchAutoRunTimerPlan: async () => false,
+    logAutoRunFinalSummary: async () => {
+      throw new Error('parked runs should not produce a final summary');
+    },
+    normalizeAutoRunFallbackThreadIntervalMinutes: () => 0,
+    persistAutoRunTimerPlan: async () => {},
+    replayPreviousSuccessfulAutoRunRoundLogSnapshot: async () => {},
+    resetState: async () => {
+      appState = {};
+    },
+    resolveAutoRunAccountRecordStatus: (status) => status,
+    runAutoSequenceFromNode: async () => {
+      attempts += 1;
+      const error = new Error('AUTO_RUN_PARKED_BY_TIMER::waiting');
+      error.autoRunParkedByTimer = true;
+      throw error;
+    },
+    runtime: {
+      get: () => runtimeState,
+      set: (patch) => {
+        runtimeState = { ...runtimeState, ...patch };
+      },
+    },
+    saveAutoRunRoundLogSnapshot: async () => null,
+    selectFailureAction: () => {
+      throw new Error('should not select failure action for parked timer errors');
+    },
+    setState: async (patch) => {
+      appState = { ...appState, ...patch };
+    },
+    sleepWithStop: async () => {},
+    throwIfAutoRunSessionStopped: () => {},
+    waitForRunningNodesToFinish: async () => appState,
+    chrome: {
+      runtime: {
+        sendMessage: async () => {},
+      },
+    },
+  });
+
+  await runner.autoRunLoop(2);
+
+  assert.equal(attempts, 1);
+  assert.equal(runtimeState.autoRunActive, false);
+  assert.equal(phases.includes('complete'), false);
+  assert.equal(phases.includes('stopped'), false);
+});

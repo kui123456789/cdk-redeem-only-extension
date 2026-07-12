@@ -554,6 +554,10 @@
               await handleStopForCurrentAttempt(error);
               break;
             }
+            if (error?.autoRunParkedByTimer) {
+              parkedByTimer = true;
+              break;
+            }
 
             const failureResult = evaluateAttemptFailure({
               error,

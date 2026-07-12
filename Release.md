@@ -1,5 +1,23 @@
 # Release Notes
 
+## CDK Redeem Only V1.0.12
+
+本版本修复 Free 导出取件链接缺失，以及注册验证码阶段等待后不重开、取码后找不到验证码输入框的问题，建议已安装 V1.0.11 的用户升级。
+
+### 修复
+
+- Free 导出开启取件地址时，如果会员记录本身缺少 `verificationUrl`，会从自定义邮箱池和历史状态回填对应取件链接，避免同一批 Free 记录部分行缺列。
+- Assurivo 暂未返回本轮有效验证码时，60 秒等待改为持久化定时计划；Chrome MV3 后台休眠后仍能恢复，并沿用当前邮箱从 `open-chatgpt` 重开。
+- 注册页取码完成后会再次确认验证码输入框；如果仍在邮箱验证页但控件已消失，会刷新当前认证页一次，恢复验证会话后再填写验证码。
+- 验证码输入框仍无法恢复时，会进入持久化倒计时重开流程，避免后台流程无日志地停住。
+
+### 验证
+
+- 已通过 `node --test scripts/test-*.cjs`，共 254 项测试。
+- 已通过 `node --check background.js` 和 `node --check background/verification/resend-controller.js`。
+- 已通过 `git diff --check`；仅保留仓库原有的 CRLF 提示。
+- 更新后需要在浏览器扩展管理页重新加载扩展，确保侧边栏、内容脚本和后台 service worker 加载 V1.0.12 新代码。
+
 ## CDK Redeem Only V1.0.11
 
 本版本完善 Free/Plus 文本导出的邮箱取件地址控制和网页链接格式，建议已安装 V1.0.10 的用户升级。

@@ -31,6 +31,88 @@
       saveResults,
     } = deps;
 
+    function splitEmailPoolEntries(value = []) {
+      return Array.isArray(value)
+        ? value
+        : String(value || '').split(/[\r\n,，;；]+/);
+    }
+
+    function getEmailPoolEntryVerificationUrl(rawEntry = {}) {
+      const entry = rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry)
+        ? rawEntry
+        : { email: rawEntry, credential: rawEntry };
+      const directUrl = normalizeString(
+        entry.verificationUrl
+        || entry.emailVerificationUrl
+        || entry.url
+        || entry.fetchUrl
+        || entry.codeUrl
+        || entry.queryUrl
+      );
+      if (isLikelyVerificationUrl(directUrl)) return directUrl;
+      return [entry.credential, entry.email]
+        .flatMap((value) => normalizeString(value).split(/-{3,}/))
+        .map(normalizeString)
+        .find(isLikelyVerificationUrl) || '';
+    }
+
+    function getEmailPoolEntryEmail(rawEntry = {}, verificationUrl = '') {
+      const entry = rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry)
+        ? rawEntry
+        : { email: rawEntry, credential: rawEntry };
+      const directEmail = normalizeEmail(entry.email || entry.mail || entry.address || '');
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(directEmail)) return directEmail;
+      const credentialEmail = normalizeEmail(normalizeString(entry.credential).split(/-{3,}/)[0]);
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentialEmail)) return credentialEmail;
+      try {
+        const url = new URL(verificationUrl);
+        const urlEmail = normalizeEmail(url.searchParams.get('mail') || url.searchParams.get('email') || '');
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(urlEmail) ? urlEmail : '';
+      } catch {
+        return '';
+      }
+    }
+
+    function buildVerificationUrlByEmail(state = {}) {
+      const verificationUrlByEmail = new Map();
+      const entries = [
+        ...splitEmailPoolEntries(state.customEmailPoolEntries),
+        ...splitEmailPoolEntries(state.customEmailPool),
+        ...splitEmailPoolEntries(state.customMailProviderPool),
+        ...splitEmailPoolEntries(state.accountRunHistory),
+      ];
+      entries.forEach((entry) => {
+        const verificationUrl = getEmailPoolEntryVerificationUrl(entry);
+        if (!verificationUrl) return;
+        const email = getEmailPoolEntryEmail(entry, verificationUrl);
+        if (email && !verificationUrlByEmail.has(email)) {
+          verificationUrlByEmail.set(email, verificationUrl);
+        }
+      });
+      return verificationUrlByEmail;
+    }
+
+    async function backfillFreeVerificationUrls(results = {}) {
+      const items = Array.isArray(results.items) ? results.items : [];
+      if (!items.some((item) => item && !normalizeString(item.verificationUrl || item.emailVerificationUrl || item.url))) {
+        return results;
+      }
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => ({}))
+        : {};
+      const verificationUrlByEmail = buildVerificationUrlByEmail(latestState);
+      if (!verificationUrlByEmail.size) return results;
+      let changed = false;
+      const nextItems = items.map((item) => {
+        if (!item || normalizeString(item.verificationUrl || item.emailVerificationUrl || item.url)) return item;
+        const verificationUrl = verificationUrlByEmail.get(normalizeEmail(item.email));
+        if (!verificationUrl) return item;
+        changed = true;
+        return { ...item, verificationUrl };
+      });
+      return changed ? { ...results, items: nextItems } : results;
+    }
+
     async function importUpiCredentialMembershipFreeResults(input = {}) {
       if (isBatchRunning()) {
         throw new Error('UPI 备份账号会员核验正在运行，请等待完成或先停止。');
@@ -154,13 +236,16 @@
       const status = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-all'
         ? 'paid'
         : rawStatus;
-      const results = await getStoredResults();
+      let results = await getStoredResults();
       const removeAfterExport = input.removeAfterExport === true || input.clearAfterExport === true;
       if (removeAfterExport && (results.running || results.redeeming)) {
         throw new Error('UPI 备份账号核验/补兑正在运行，请先停止后再导出并清空当前批次。');
       }
       const allowedEmails = normalizeEmailList(input.emails || input.emailList || []);
       const includeVerificationUrl = input.includeVerificationUrl !== false;
+      if (status === 'free' && includeVerificationUrl) {
+        results = await backfillFreeVerificationUrls(results);
+      }
       const rows = buildResultExportRows(results, status, channel, allowedEmails, {
         includeVerificationUrl,
       });

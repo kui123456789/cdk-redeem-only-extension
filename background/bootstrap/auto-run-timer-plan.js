@@ -117,7 +117,7 @@
         autoRunRetryNonFreeTrial,
         autoRunRetryLegacyWalletCallback,
         autoRunRetryShortLinkError,
-        mode: 'restart',
+        mode,
         currentRun: normalizedCurrentRun,
         attemptRun: normalizedAttemptRun,
         autoRunSessionId,

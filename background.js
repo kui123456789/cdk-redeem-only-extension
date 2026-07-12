@@ -8676,6 +8676,66 @@ async function waitBeforeAssurivoNoValidCodeRestart(error, options = {}) {
   await sleepWithStop(cooldownMs);
 }
 
+function createAutoRunParkedByTimerError(message = '') {
+  const error = new Error(`AUTO_RUN_PARKED_BY_TIMER::${message || '自动运行已进入倒计时等待。'}`);
+  error.autoRunParkedByTimer = true;
+  return error;
+}
+
+function isSignupVerificationInputMissingFailure(error) {
+  const message = getErrorMessage(error);
+  return /未找到验证码输入框/i.test(message)
+    && /\/email-verification(?:[/?#]|$)/i.test(message);
+}
+
+async function parkFetchSignupCodeRestart(error, options = {}) {
+  const cooldownMs = Math.max(
+    0,
+    Math.floor(Number(options.cooldownMs) || ASSURIVO_NO_VALID_CODE_RESTART_COOLDOWN_MS)
+  );
+  const seconds = Math.max(1, Math.round(cooldownMs / 1000));
+  const targetRun = Math.max(1, Math.floor(Number(options.targetRun) || autoRunCurrentRun || 1));
+  const totalRuns = Math.max(targetRun, Math.floor(Number(options.totalRuns) || autoRunTotalRuns || targetRun));
+  const attemptRun = Math.max(1, Math.floor(Number(options.attemptRun) || autoRunAttemptRun || 1));
+  const state = await getState();
+  const reasonLabel = String(options.reasonLabel || '步骤 4 暂未恢复可提交状态').trim();
+  const countdownTitle = String(options.countdownTitle || '等待步骤 4 恢复').trim();
+  await addLog(
+    `节点 fetch-signup-code：${reasonLabel}，等待 ${seconds} 秒后再沿用当前邮箱重开，避免过快重复注册。原因：${getErrorMessage(error)}`,
+    'warn',
+    { nodeId: 'fetch-signup-code' }
+  );
+  await persistAutoRunTimerPlan({
+    kind: AUTO_RUN_TIMER_KIND_BEFORE_RETRY,
+    fireAt: Date.now() + cooldownMs,
+    currentRun: targetRun,
+    totalRuns,
+    attemptRun,
+    autoRunSessionId: normalizeAutoRunSessionId(state.autoRunSessionId) || getCurrentAutoRunSessionId(),
+    autoRunSkipFailures: true,
+    autoRunRetryNonFreeTrial: Boolean(state.autoRunRetryNonFreeTrial),
+    autoRunRetryLegacyWalletCallback: Boolean(state.autoRunRetryLegacyWalletCallback),
+    autoRunRetryShortLinkError: state.autoRunRetryShortLinkError !== undefined
+      ? Boolean(state.autoRunRetryShortLinkError)
+      : true,
+    mode: 'continue',
+    roundSummaries: state.autoRunRoundSummaries,
+    countdownTitle,
+    countdownNote: `第 ${targetRun}/${totalRuns} 轮将沿用当前邮箱重开`,
+  }, {
+    autoRunRoundSummaries: state.autoRunRoundSummaries,
+  });
+  throw createAutoRunParkedByTimerError(`${reasonLabel}，已安排倒计时后沿用当前邮箱重开。`);
+}
+
+async function parkAssurivoNoValidCodeRestart(error, options = {}) {
+  return parkFetchSignupCodeRestart(error, {
+    ...options,
+    reasonLabel: 'Assurivo 暂未返回本轮最新有效验证码',
+    countdownTitle: '等待 Assurivo 新验证码',
+  });
+}
+
 function isSignupUserAlreadyExistsFailure(error) {
   if (typeof loggingStatus !== 'undefined' && loggingStatus?.isSignupUserAlreadyExistsFailure) {
     return loggingStatus.isSignupUserAlreadyExistsFailure(error);
@@ -12082,9 +12142,6 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         const preservedEmail = String(preservedState.email || '').trim();
         const preservedPassword = String(preservedState.password || '').trim();
         const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
-        if (isAssurivoNoValidCodeFailure(err)) {
-          await waitBeforeAssurivoNoValidCodeRestart(err);
-        }
         await addLog(
           `节点 fetch-signup-code：执行失败，准备沿用当前邮箱回到节点 open-chatgpt 重新开始（第 ${step4RestartCount} 次重开）。${emailSuffix}原因：${getErrorMessage(err)}`,
           'warn'
@@ -12097,6 +12154,22 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         if (preservedPassword) restorePayload.password = preservedPassword;
         if (Object.keys(restorePayload).length) {
           await setState(restorePayload);
+        }
+        if (isAssurivoNoValidCodeFailure(err)) {
+          await parkAssurivoNoValidCodeRestart(err, {
+            targetRun,
+            totalRuns,
+            attemptRun: attemptRuns,
+          });
+        }
+        if (isSignupVerificationInputMissingFailure(err)) {
+          await parkFetchSignupCodeRestart(err, {
+            targetRun,
+            totalRuns,
+            attemptRun: attemptRuns,
+            reasonLabel: '认证页暂未出现验证码输入框',
+            countdownTitle: '等待验证码输入框恢复',
+          });
         }
         setRestartNode('open-chatgpt');
         restartFromStep1WithCurrentEmail = true;
