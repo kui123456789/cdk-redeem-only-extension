@@ -59,6 +59,7 @@
         if (!button) return;
         button.hidden = true;
         button.disabled = false;
+        button.title = '';
         button.onclick = null;
       });
       currentModalActions = [];
@@ -79,10 +80,11 @@
       }
 
       button.hidden = false;
-      button.disabled = false;
+      button.disabled = Boolean(action.disabled);
       button.textContent = action.label;
+      button.title = action.title || '';
       button.className = `btn ${action.variant || 'btn-outline'} btn-sm`;
-      button.onclick = () => resolveModalChoice(action.id);
+      button.onclick = button.disabled ? null : () => resolveModalChoice(action.id);
     }
 
     function configureActionModalCloseButton() {
@@ -189,6 +191,33 @@
       });
     }
 
+    function openRedeemChannelChoiceDialog(options = {}) {
+      const channelOptions = ['upi', 'ideal', 'pix'].map((channel) => {
+        const channelOption = options[channel] || {};
+        const candidateCount = Math.max(0, Math.floor(Number(channelOption.candidateCount) || 0));
+        const cdkeyCount = Math.max(0, Math.floor(Number(channelOption.cdkeyCount) || 0));
+        const redeemCount = Math.max(
+          0,
+          Math.floor(Number.isFinite(Number(channelOption.redeemCount))
+            ? Number(channelOption.redeemCount)
+            : Math.min(candidateCount, cdkeyCount))
+        );
+        const label = channel.toUpperCase();
+        return {
+          id: channel,
+          label: `${label} (${redeemCount})`,
+          title: `${label} 候选 ${candidateCount} 个，可用 CDK ${cdkeyCount} 个，本次可兑换 ${redeemCount} 个`,
+          variant: 'btn-outline',
+          disabled: redeemCount <= 0,
+        };
+      });
+      return openActionModal({
+        title: '选择兑换卡密池',
+        message: '请选择本次“全部兑换”要使用的卡密池。只会执行所选渠道，不会自动切换到其他渠道。',
+        actions: channelOptions,
+      });
+    }
+
     async function openConfirmModal({ title: modalTitle, message: modalMessage, confirmLabel = '确认', confirmVariant = 'btn-primary', alert: alertConfig = null }) {
       const choice = await openActionModal({
         title: modalTitle,
@@ -243,6 +272,7 @@
       resolveModalChoice,
       openActionModal,
       openAutoStartChoiceDialog,
+      openRedeemChannelChoiceDialog,
       openConfirmModal,
       openConfirmModalWithOption,
     };

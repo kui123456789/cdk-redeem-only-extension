@@ -1675,6 +1675,7 @@ with (appState.createScope()) {
     helpers: {
       downloadTextFile,
       escapeHtml,
+      openRedeemChannelChoiceDialog,
       openConfirmModal,
       refreshUpiRedeemCdkeyStatuses: (...args) => refreshUpiRedeemCdkeyStatuses(...args),
       showToast,
@@ -2289,6 +2290,10 @@ with (appState.createScope()) {
   
   function openActionModal({ title, message, messageHtml, actions, option, alert, buildResult }) {
     return actionModalService?.openActionModal?.({ title, message, messageHtml, actions, option, alert, buildResult }) || Promise.resolve(null);
+  }
+
+  function openRedeemChannelChoiceDialog(options = {}) {
+    return actionModalService?.openRedeemChannelChoiceDialog?.(options) || Promise.resolve(null);
   }
   
   function openAutoStartChoiceDialog(startStep, options = {}) {

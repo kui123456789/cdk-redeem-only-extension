@@ -5,8 +5,11 @@
       state = {},
       helpers = {},
       runtime = {},
-      normalizeRedeemChannel = (value = '') => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
-      getRedeemChannelLabel = (channel = 'upi') => (normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI'),
+      normalizeRedeemChannel = (value = '') => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
+      getRedeemChannelLabel = (channel = 'upi') => normalizeRedeemChannel(channel).toUpperCase(),
       normalizeUpiCredentialMembershipEmail = (value = '') => String(value || '').trim().toLowerCase(),
       getUpiCredentialMembershipCheckResults = () => ({}),
       refreshUpiCredentialMembershipCheckResults = async () => null,
@@ -38,19 +41,6 @@
       isAutoRunRecordDisplayRunning = () => false,
       render = () => {},
     } = context;
-
-    async function waitForUpiCredentialMembershipRedeemIdle(timeoutMs = 5000) {
-      const deadline = Date.now() + Math.max(1000, Math.floor(Number(timeoutMs) || 5000));
-      while (Date.now() < deadline) {
-        const latestResults = await refreshUpiCredentialMembershipCheckResults().catch(() => null);
-        const results = latestResults || getUpiCredentialMembershipCheckResults();
-        if (results.redeeming !== true && !getUpiCredentialMembershipRedeemBusy()) {
-          return true;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      return false;
-    }
 
     async function refreshUpiCredentialMembershipRedeemStateAfterChannel(channel = 'upi') {
       await refreshUpiCredentialMembershipCheckResults().catch(() => null);
@@ -286,7 +276,9 @@
       return outcome;
     }
 
-    async function startUpiCredentialMembershipAllRedeem() {
+    async function startUpiCredentialMembershipAllRedeem(channel = 'upi') {
+      const redeemChannel = normalizeRedeemChannel(channel);
+      const redeemChannelLabel = getRedeemChannelLabel(redeemChannel);
       await refreshUpiCredentialMembershipCheckResults().catch(() => null);
       const results = getUpiCredentialMembershipCheckResults();
       if (
@@ -300,89 +292,52 @@
         return;
       }
 
-      const initialUpiCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('upi');
-      const initialIdealCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('ideal');
-      if (!initialUpiCredentials.length && !initialIdealCredentials.length) {
-        helpers.showToast?.('没有启用的 Free 账号可兑换。', 'warn', 2000);
+      const credentials = getEnabledFreeUpiCredentialMembershipRowsForChannel(redeemChannel);
+      if (!credentials.length) {
+        helpers.showToast?.(
+          buildNoRedeemableForChannelMessage(redeemChannel) || `没有可使用 ${redeemChannelLabel} 兑换的 Free 账号。`,
+          'warn',
+          2400
+        );
         return;
       }
 
-      const initialState = typeof state.getLatestState === 'function' ? (state.getLatestState() || {}) : {};
-      const initialUpiCdkeyCount = getAvailableUpiRedeemCdkeyCount(initialState, 'upi');
-      const initialIdealCdkeyCount = getAvailableUpiRedeemCdkeyCount(initialState, 'ideal');
-      if (initialUpiCdkeyCount + initialIdealCdkeyCount <= 0) {
-        helpers.showToast?.('UPI 和 IDEAL 都没有可用 CDK，请先导入或启用卡密。', 'warn', 2400);
+      const latestState = typeof state.getLatestState === 'function' ? (state.getLatestState() || {}) : {};
+      const availableCdkeyCount = getAvailableUpiRedeemCdkeyCount(latestState, redeemChannel);
+      if (availableCdkeyCount <= 0) {
+        helpers.showToast?.(`${redeemChannelLabel} 没有可用 CDK，请先导入或启用卡密。`, 'warn', 2400);
         return;
       }
 
-      const summaryParts = [];
+      let outcome = null;
       try {
         setUpiCredentialMembershipAllRedeemBusy(true);
         setExportButtonsBusy(false);
         render();
 
-        if (initialUpiCdkeyCount > 0 && initialUpiCredentials.length) {
-          const upiOutcome = await startUpiCredentialMembershipFreeRedeem(initialUpiCredentials, {
-            source: 'free-all-upi',
-            channel: 'upi',
-            fromAll: true,
-            suppressToast: true,
-          });
-          if (upiOutcome.stopped) {
-            helpers.showToast?.(`全部兑换已停止：UPI 已停止，IDEAL 未执行。${upiOutcome.reason ? ` ${upiOutcome.reason}` : ''}`, 'warn', 5000);
-            return;
-          }
-          if (upiOutcome.error) {
-            helpers.showToast?.(`全部兑换已停止：UPI 兑换失败，IDEAL 未执行：${upiOutcome.reason || upiOutcome.error.message}`, 'error');
-            return;
-          }
-          summaryParts.push('UPI 已执行');
-          await refreshUpiCredentialMembershipRedeemStateAfterChannel('upi');
-          const idle = await waitForUpiCredentialMembershipRedeemIdle(6000);
-          if (!idle) {
-            helpers.showToast?.('全部兑换已暂停：UPI 状态仍显示兑换中，IDEAL 未执行；请刷新状态后再继续。', 'warn', 5000);
-            return;
-          }
-        } else {
-          summaryParts.push(initialUpiCredentials.length
-            ? 'UPI 已跳过（无可用 CDK）'
-            : `UPI 已跳过（${buildNoRedeemableForChannelMessage('upi') || '无可兑换账号'}）`);
+        outcome = await startUpiCredentialMembershipFreeRedeem(credentials, {
+          source: `free-all-${redeemChannel}`,
+          channel: redeemChannel,
+          fromAll: true,
+          suppressToast: true,
+        });
+        if (outcome.stopped) {
+          helpers.showToast?.(`全部兑换已停止：${redeemChannelLabel} 已停止。${outcome.reason ? ` ${outcome.reason}` : ''}`, 'warn', 5000);
+          return outcome;
         }
-
-        const remainingCredentials = getEnabledFreeUpiCredentialMembershipRowsForChannel('ideal');
-        const latestIdealCdkeyCount = getAvailableUpiRedeemCdkeyCount(
-          typeof state.getLatestState === 'function' ? (state.getLatestState() || {}) : {},
-          'ideal'
-        );
-        if (!remainingCredentials.length) {
-          summaryParts.push('IDEAL 已跳过（无剩余 Free）');
-        } else if (latestIdealCdkeyCount <= 0) {
-          summaryParts.push('IDEAL 已跳过（无可用 CDK）');
-        } else {
-          const idealOutcome = await startUpiCredentialMembershipFreeRedeem(remainingCredentials, {
-            source: 'free-all-ideal',
-            channel: 'ideal',
-            fromAll: true,
-            suppressToast: true,
-          });
-          if (idealOutcome.stopped) {
-            helpers.showToast?.(`全部兑换已停止：${summaryParts.join('；')}；IDEAL 已停止。${idealOutcome.reason ? ` ${idealOutcome.reason}` : ''}`, 'warn', 5000);
-            return;
-          }
-          if (idealOutcome.error) {
-            helpers.showToast?.(`全部兑换已停止：${summaryParts.join('；')}；IDEAL 兑换失败：${idealOutcome.reason || idealOutcome.error.message}`, 'error');
-            return;
-          }
-          summaryParts.push('IDEAL 已执行');
-          await refreshUpiCredentialMembershipRedeemStateAfterChannel('ideal');
+        if (outcome.error) {
+          helpers.showToast?.(`全部兑换已停止：${redeemChannelLabel} 兑换失败：${outcome.reason || outcome.error.message}`, 'error');
+          return outcome;
         }
+        await refreshUpiCredentialMembershipRedeemStateAfterChannel(redeemChannel);
 
         const finalResults = getUpiCredentialMembershipCheckResults();
         helpers.showToast?.(
-          `全部兑换完成：${summaryParts.join('；')}；${buildUpiCredentialMembershipRedeemAllSummary(finalResults)}。`,
+          `全部兑换完成：已使用 ${redeemChannelLabel} 卡密池，提交 ${Math.min(credentials.length, availableCdkeyCount)} 个账号；${buildUpiCredentialMembershipRedeemAllSummary(finalResults)}。`,
           'success',
           5000
         );
+        return outcome;
       } finally {
         setUpiCredentialMembershipAllRedeemBusy(false);
         await refreshUpiCredentialMembershipCheckResults().catch(() => null);

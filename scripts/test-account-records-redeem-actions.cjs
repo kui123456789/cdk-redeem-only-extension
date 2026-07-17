@@ -42,3 +42,52 @@ test('one-click Free redeem refreshes latest results before selecting candidates
   assert.equal(messages[0].type, 'REDEEM_UPI_CREDENTIAL_MEMBERSHIP_FREE');
   assert.deepEqual(messages[0].payload.credentials.map((item) => item.email), ['fresh@example.com']);
 });
+
+test('selected PIX all-redeem path refreshes state and runs only PIX', async () => {
+  let refreshed = false;
+  const requestedChannels = [];
+  const messages = [];
+  const actions = redeemActionsApi.createAccountRecordsRedeemActions({
+    state: {
+      getLatestState: () => ({ pixChannelRedeemCdkeyPoolText: 'PIX_A' }),
+      syncLatestState: () => {},
+    },
+    helpers: { showToast: () => {} },
+    runtime: {
+      sendMessage: async (message) => {
+        messages.push(message);
+        return {
+          results: {
+            paidCount: 0,
+            freeCount: 1,
+            failedCount: 0,
+            items: [],
+          },
+        };
+      },
+    },
+    normalizeRedeemChannel: (value) => ['upi', 'ideal', 'pix'].includes(value) ? value : 'upi',
+    getRedeemChannelLabel: (value) => String(value || '').toUpperCase(),
+    refreshUpiCredentialMembershipCheckResults: async () => {
+      refreshed = true;
+      return {};
+    },
+    getUpiCredentialMembershipCheckResults: () => ({ items: [] }),
+    getEnabledFreeUpiCredentialMembershipRowsForChannel: (channel) => {
+      requestedChannels.push(channel);
+      return refreshed && channel === 'pix'
+        ? [{ email: 'pix@example.com', accessToken: 'at-pix', password: 'pw', totpMfaSecret: 'secret' }]
+        : [];
+    },
+    getAvailableUpiRedeemCdkeyCount: (_state, channel) => channel === 'pix' ? 1 : 0,
+    getUpiCredentialMembershipPoolSource: () => 'txt-free',
+  });
+
+  await actions.startUpiCredentialMembershipAllRedeem('pix');
+
+  assert.deepEqual(requestedChannels, ['pix']);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].payload.channel, 'pix');
+  assert.equal(messages[0].payload.source, 'free-all-pix');
+  assert.deepEqual(messages[0].payload.credentials.map((item) => item.email), ['pix@example.com']);
+});

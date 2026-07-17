@@ -1271,6 +1271,7 @@
       moveUpiCredentialMembershipAccountGroup: (...args) => moveUpiCredentialMembershipAccountGroup(...args),
       startUpiCredentialMembershipFreeRedeem: (...args) => startUpiCredentialMembershipFreeRedeem(...args),
       startUpiCredentialMembershipAllRedeem: (...args) => startUpiCredentialMembershipAllRedeem(...args),
+      openRedeemChannelChoiceDialog: (...args) => helpers.openRedeemChannelChoiceDialog?.(...args),
       toggleFreeExportIncludeVerificationUrl,
       exportUpiCredentialMembershipCheckResultTextFile: (...args) => exportUpiCredentialMembershipCheckResultTextFile(...args),
       deleteUpiCredentialMembershipResultGroup: (...args) => deleteUpiCredentialMembershipResultGroup(...args),

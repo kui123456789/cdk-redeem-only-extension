@@ -44,6 +44,7 @@
       moveUpiCredentialMembershipAccountGroup = async () => {},
       startUpiCredentialMembershipFreeRedeem = async () => {},
       startUpiCredentialMembershipAllRedeem = async () => {},
+      openRedeemChannelChoiceDialog = async () => null,
       toggleFreeExportIncludeVerificationUrl = () => true,
       exportUpiCredentialMembershipCheckResultTextFile = async () => {},
       deleteUpiCredentialMembershipResultGroup = async () => {},
@@ -211,7 +212,7 @@
       render();
     }
 
-    function handleUpiCredentialMembershipCheckResultsClick(event) {
+    async function handleUpiCredentialMembershipCheckResultsClick(event) {
       const groupNode = findClosest(event?.target, '[data-upi-membership-group]');
       if (groupNode) {
         const nextGroup = getDatasetValue(groupNode, 'data-upi-membership-group') === 'paid' ? 'paid' : 'free';
@@ -277,7 +278,18 @@
 
       const redeemAllNode = findClosest(event?.target, '[data-upi-membership-redeem-all]');
       if (redeemAllNode) {
-        startUpiCredentialMembershipAllRedeem();
+        const channelOptions = {};
+        ['upi', 'ideal', 'pix'].forEach((channel) => {
+          channelOptions[channel] = {
+            candidateCount: Number(getDatasetValue(redeemAllNode, `data-upi-membership-redeem-${channel}-candidates`)) || 0,
+            cdkeyCount: Number(getDatasetValue(redeemAllNode, `data-upi-membership-redeem-${channel}-cdkeys`)) || 0,
+            redeemCount: Number(getDatasetValue(redeemAllNode, `data-upi-membership-redeem-${channel}-count`)) || 0,
+          };
+        });
+        const selectedChannel = await openRedeemChannelChoiceDialog(channelOptions);
+        if (selectedChannel) {
+          await startUpiCredentialMembershipAllRedeem(selectedChannel);
+        }
         return;
       }
 
@@ -424,7 +436,9 @@
         stopUpiCredentialMembershipCheck();
       });
       dom.upiCredentialMembershipCheckResults?.addEventListener('click', (event) => {
-        handleUpiCredentialMembershipCheckResultsClick(event);
+        handleUpiCredentialMembershipCheckResultsClick(event).catch((error) => {
+          helpers.showToast?.(`账号操作失败：${error.message}`, 'error');
+        });
       });
       dom.upiCredentialMembershipCheckResults?.addEventListener('change', (event) => {
         handleUpiCredentialMembershipCheckResultsChange(event);
