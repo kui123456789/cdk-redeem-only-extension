@@ -20,19 +20,22 @@
       return {
         upi: normalizeUpiCredentialMembershipEmailList(source.upi),
         ideal: normalizeUpiCredentialMembershipEmailList(source.ideal),
+        pix: normalizeUpiCredentialMembershipEmailList(source.pix),
       };
     }
 
     function mergeRedeemPlusDeletedEmailsByChannel(...values) {
-      const merged = { upi: [], ideal: [] };
+      const merged = { upi: [], ideal: [], pix: [] };
       values.forEach((value) => {
         const normalized = normalizeRedeemPlusDeletedEmailsByChannel(value);
         merged.upi.push(...normalized.upi);
         merged.ideal.push(...normalized.ideal);
+        merged.pix.push(...normalized.pix);
       });
       return {
         upi: normalizeUpiCredentialMembershipEmailList(merged.upi),
         ideal: normalizeUpiCredentialMembershipEmailList(merged.ideal),
+        pix: normalizeUpiCredentialMembershipEmailList(merged.pix),
       };
     }
 
@@ -41,6 +44,7 @@
       return {
         upi: new Set(normalized.upi),
         ideal: new Set(normalized.ideal),
+        pix: new Set(normalized.pix),
       };
     }
 

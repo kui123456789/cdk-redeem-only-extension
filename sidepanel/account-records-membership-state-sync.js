@@ -21,7 +21,10 @@
       };
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => (normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
     const normalizePlanType = typeof context.normalizeSubscriptionPlanType === 'function'
       ? context.normalizeSubscriptionPlanType
       : (value = '') => normalizeText(value).toLowerCase();
@@ -37,26 +40,29 @@
     const buildDeletedEmailSetsFromValues = typeof context.buildRedeemPlusDeletedEmailSetsFromValues === 'function'
       ? context.buildRedeemPlusDeletedEmailSetsFromValues
       : (...values) => {
-        const merged = { upi: [], ideal: [] };
+        const merged = { upi: [], ideal: [], pix: [] };
         values.forEach((value) => {
           const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
           merged.upi.push(...normalizeEmailList(source.upi));
           merged.ideal.push(...normalizeEmailList(source.ideal));
+          merged.pix.push(...normalizeEmailList(source.pix));
         });
-        return { upi: new Set(merged.upi), ideal: new Set(merged.ideal) };
+        return { upi: new Set(merged.upi), ideal: new Set(merged.ideal), pix: new Set(merged.pix) };
       };
     const mergeDeletedEmailsByChannel = typeof context.mergeRedeemPlusDeletedEmailsByChannel === 'function'
       ? context.mergeRedeemPlusDeletedEmailsByChannel
       : (...values) => {
-        const merged = { upi: [], ideal: [] };
+        const merged = { upi: [], ideal: [], pix: [] };
         values.forEach((value) => {
           const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
           merged.upi.push(...normalizeEmailList(source.upi));
           merged.ideal.push(...normalizeEmailList(source.ideal));
+          merged.pix.push(...normalizeEmailList(source.pix));
         });
         return {
           upi: normalizeEmailList(merged.upi),
           ideal: normalizeEmailList(merged.ideal),
+          pix: normalizeEmailList(merged.pix),
         };
       };
     const getUpiRedeemCdkeyUsage = typeof context.getUpiRedeemCdkeyUsage === 'function'
@@ -77,6 +83,7 @@
       return {
         upi: Array.from(locallyDeletedRedeemPlusEmailsByChannel.upi || []),
         ideal: Array.from(locallyDeletedRedeemPlusEmailsByChannel.ideal || []),
+        pix: Array.from(locallyDeletedRedeemPlusEmailsByChannel.pix || []),
       };
     }
 
@@ -186,7 +193,7 @@
       const plusDeletedEmailSets = buildRedeemPlusDeletedEmailSets(
         currentState?.upiCredentialMembershipCheckResults?.redeemPlusDeletedEmailsByChannel
       );
-      ['upi', 'ideal'].forEach((channel) => {
+      ['upi', 'ideal', 'pix'].forEach((channel) => {
         const usage = getUpiRedeemCdkeyUsage(currentState, channel);
         Object.entries(usage).forEach(([rawCdkey, entry]) => {
           const cdkey = String(rawCdkey || '').trim();
@@ -307,6 +314,7 @@
         redeemPlusDeletedCountByChannel: {
           upi: mergedPlusDeletedEmailsByChannel.upi.length,
           ideal: mergedPlusDeletedEmailsByChannel.ideal.length,
+          pix: mergedPlusDeletedEmailsByChannel.pix.length,
         },
       };
       const deletedEmailSet = new Set([
@@ -416,6 +424,7 @@
         redeemPlusDeletedCountByChannel: {
           upi: redeemPlusDeletedEmailsByChannel.upi.length,
           ideal: redeemPlusDeletedEmailsByChannel.ideal.length,
+          pix: redeemPlusDeletedEmailsByChannel.pix.length,
         },
       };
     }

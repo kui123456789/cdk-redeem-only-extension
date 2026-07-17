@@ -34,7 +34,10 @@
       : () => 0;
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
     const getRedeemChannelLabel = typeof context.getRedeemChannelLabel === 'function'
       ? context.getRedeemChannelLabel
       : (value = '') => normalizeText(value).toUpperCase();
@@ -114,6 +117,7 @@
       const no2faDetailPrefix = row.no2faFreeRoute === true ? '免 2FA Free；' : '';
       const upiFailureCount = getRedeemChannelFailureCount(row, 'upi');
       const idealFailureCount = getRedeemChannelFailureCount(row, 'ideal');
+      const pixFailureCount = getRedeemChannelFailureCount(row, 'pix');
       if (isUpiCredentialMembershipRedeemLocked(row)) {
         return { className: 'failed', label: '已封存', detail: getUpiCredentialMembershipRedeemLockReason(row) };
       }
@@ -154,7 +158,7 @@
         const channel = normalizeRedeemChannel(row.redeemChannel || row.channel);
         const channelLabel = getRedeemChannelLabel(channel);
         const channelFailureCount = getRedeemChannelFailureCount(row, channel);
-        const progressText = `UPI ${upiFailureCount}/${redeemFailureLimit} · IDEAL ${idealFailureCount}/${redeemFailureLimit}`;
+        const progressText = `UPI ${upiFailureCount}/${redeemFailureLimit} · IDEAL ${idealFailureCount}/${redeemFailureLimit} · PIX ${pixFailureCount}/${redeemFailureLimit}`;
         return {
           className: channelFailureCount >= redeemFailureLimit && channel === 'ideal' ? 'failed' : 'pending',
           label: `${channelLabel} ${channelFailureCount}/${redeemFailureLimit}`,
@@ -190,16 +194,18 @@
     function buildEligibleFreeStatusMeta(row, no2faDetailPrefix, trialReason) {
       const upiChannelBlockedDetail = getTrialEligibilityChannelBlockedDetail(row, 'upi');
       const idealChannelBlockedDetail = getTrialEligibilityChannelBlockedDetail(row, 'ideal');
-      if (upiChannelBlockedDetail && idealChannelBlockedDetail) {
+      const pixChannelBlockedDetail = getTrialEligibilityChannelBlockedDetail(row, 'pix');
+      if (upiChannelBlockedDetail && idealChannelBlockedDetail && pixChannelBlockedDetail) {
         return {
           className: 'pending',
           label: '渠道不可用',
-          detail: `${no2faDetailPrefix}${upiChannelBlockedDetail}；${idealChannelBlockedDetail}。账号有试用资格，但当前没有可用兑换渠道。`,
+          detail: `${no2faDetailPrefix}${upiChannelBlockedDetail}；${idealChannelBlockedDetail}；${pixChannelBlockedDetail}。账号有试用资格，但当前没有可用兑换渠道。`,
         };
       }
       const channelDetail = [
         upiChannelBlockedDetail ? `UPI 不可用：${upiChannelBlockedDetail}` : '',
         idealChannelBlockedDetail ? `IDEAL 不可用：${idealChannelBlockedDetail}` : '',
+        pixChannelBlockedDetail ? `PIX 不可用：${pixChannelBlockedDetail}` : '',
       ].filter(Boolean).join('；');
       return {
         className: 'active',

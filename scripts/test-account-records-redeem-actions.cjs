@@ -91,3 +91,30 @@ test('selected PIX all-redeem path refreshes state and runs only PIX', async () 
   assert.equal(messages[0].payload.source, 'free-all-pix');
   assert.deepEqual(messages[0].payload.credentials.map((item) => item.email), ['pix@example.com']);
 });
+
+test('cancel PIX redeem job preserves PIX channel and canonical pool field', async () => {
+  const messages = [];
+  const actions = redeemActionsApi.createAccountRecordsRedeemActions({
+    state: {
+      getLatestState: () => ({ pixChannelRedeemCdkeyPoolText: 'PIX_A' }),
+      syncLatestState: () => {},
+    },
+    helpers: { showToast: () => {} },
+    runtime: {
+      sendMessage: async (message) => {
+        messages.push(message);
+        return { items: [{ cdkey: 'PIX_A', cancelled: true }] };
+      },
+    },
+    normalizeRedeemChannel: (value) => ['upi', 'ideal', 'pix'].includes(value) ? value : 'upi',
+    getUpiCredentialMembershipDisplayRowByEmail: () => ({ email: 'pix@example.com', redeemChannel: 'pix' }),
+    getStoredCdkPoolText: (_state, channel) => channel === 'pix' ? 'PIX_A' : '',
+    refreshUpiCredentialMembershipCheckResults: async () => ({}),
+  });
+
+  await actions.cancelUpiCredentialMembershipRedeemJob('pix@example.com', 'PIX_A', 'pix');
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].payload.channel, 'pix');
+  assert.equal(messages[0].payload.pixChannelRedeemCdkeyPoolText, 'PIX_A');
+});

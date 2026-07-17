@@ -7,7 +7,10 @@
   function createAccountRecordsRedeemStatusHelpers(context = {}) {
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => (normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
 
     function normalizeUpiRedeemRemoteStatus(status = '') {
       const normalized = normalizeText(status).toLowerCase().replace(/[\s-]+/g, '_');
@@ -106,7 +109,7 @@
     }
 
     function getRedeemChannelLabel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+      return normalizeRedeemChannel(channel).toUpperCase();
     }
 
     return {

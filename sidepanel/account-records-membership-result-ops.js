@@ -22,7 +22,10 @@
       getMembershipStatusTitle = () => '结果',
       normalizeUpiCredentialMembershipEmail = (value = '') => String(value || '').trim().toLowerCase(),
       normalizeUpiCredentialMembershipText = (value = '') => String(value || '').trim(),
-      normalizeRedeemChannel = (value = '') => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
+      normalizeRedeemChannel = (value = '') => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
       isActiveUpiCredentialMembershipRedeemRowOrUsage = () => false,
       getUpiCredentialMembershipDisplayRowByEmail = () => null,
       addLocallyDeletedRedeemPlusEmails = () => {},
@@ -105,16 +108,18 @@
 
     async function exportUpiCredentialMembershipCheckResultTextFile(status = 'paid') {
       const rawStatus = String(status || '').trim().toLowerCase() || 'paid';
-      const payloadStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-all'
+      const payloadStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-pix' || rawStatus === 'paid-all'
         ? rawStatus
         : status;
-      const normalizedStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-all'
+      const normalizedStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-pix' || rawStatus === 'paid-all'
         ? 'paid'
         : rawStatus;
       const targetChannel = rawStatus === 'paid-upi'
         ? 'upi'
         : rawStatus === 'paid-ideal'
           ? 'ideal'
+          : rawStatus === 'paid-pix'
+            ? 'pix'
           : '';
       if (typeof helpers.downloadTextFile !== 'function') {
         helpers.showToast?.('当前环境不支持导出 TXT。', 'error');
@@ -171,11 +176,13 @@
 
     async function deleteUpiCredentialMembershipResultGroup(status = 'paid') {
       const rawStatus = String(status || '').trim().toLowerCase() || 'paid';
-      const normalizedStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' ? 'paid' : rawStatus;
+      const normalizedStatus = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-pix' ? 'paid' : rawStatus;
       const targetChannel = rawStatus === 'paid-upi'
         ? 'upi'
         : rawStatus === 'paid-ideal'
           ? 'ideal'
+          : rawStatus === 'paid-pix'
+            ? 'pix'
           : '';
       const results = getUpiCredentialMembershipCheckResults();
       const targetItems = buildUpiCredentialMembershipDisplayRows(results)

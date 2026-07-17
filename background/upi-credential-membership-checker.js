@@ -944,7 +944,9 @@
     const deletedByChannel = normalizeRedeemPlusDeletedEmailsByChannel(results?.redeemPlusDeletedEmailsByChannel);
     const rawChannel = normalizeString(channel || item?.redeemChannel || item?.channel || item?.paymentChannel);
     if (!rawChannel) {
-      return (deletedByChannel.upi || []).includes(email) || (deletedByChannel.ideal || []).includes(email);
+      return (deletedByChannel.upi || []).includes(email)
+        || (deletedByChannel.ideal || []).includes(email)
+        || (deletedByChannel.pix || []).includes(email);
     }
     const targetChannel = normalizeRedeemChannel(rawChannel);
     return (deletedByChannel[targetChannel] || []).includes(email);

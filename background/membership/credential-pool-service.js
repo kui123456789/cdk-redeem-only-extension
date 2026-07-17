@@ -132,7 +132,7 @@
 
     function getActiveRedeemCdkeyUsageEmailSetFromState(state = {}, emailSet = null) {
       const activeEmails = new Set();
-      ['upi', 'ideal'].forEach((channel) => {
+      ['upi', 'ideal', 'pix'].forEach((channel) => {
         getActiveUpiRedeemCdkeyUsageEmailSet(
           normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(state, channel)),
           emailSet
@@ -218,13 +218,13 @@
 
     async function deleteUpiCredentialMembershipCheckResults(input = {}) {
       const rawStatus = normalizeString(input.status || 'paid').toLowerCase() || 'paid';
-      const status = ['paid-upi', 'paid-ideal', 'paid-all'].includes(rawStatus) ? 'paid' : rawStatus;
+      const status = ['paid-upi', 'paid-ideal', 'paid-pix', 'paid-all'].includes(rawStatus) ? 'paid' : rawStatus;
       const requestedChannel = normalizeString(input.channel).toLowerCase();
-      const targetChannel = ['upi', 'ideal'].includes(requestedChannel)
+      const targetChannel = ['upi', 'ideal', 'pix'].includes(requestedChannel)
         ? normalizeRedeemChannel(requestedChannel)
-        : (rawStatus === 'paid-upi' ? 'upi' : (rawStatus === 'paid-ideal' ? 'ideal' : ''));
+        : (rawStatus === 'paid-upi' ? 'upi' : (rawStatus === 'paid-ideal' ? 'ideal' : (rawStatus === 'paid-pix' ? 'pix' : '')));
       const plusDeleteChannels = status === 'paid'
-        ? (targetChannel ? [targetChannel] : ['upi', 'ideal'])
+        ? (targetChannel ? [targetChannel] : ['upi', 'ideal', 'pix'])
         : [];
       const emails = (Array.isArray(input.emails) ? input.emails : [])
         .map(normalizeEmail)
@@ -286,7 +286,7 @@
       let updates = {};
 
       if (deletedEmailSet.size) {
-        const usageCleanupChannels = status === 'paid' ? plusDeleteChannels : ['upi', 'ideal'];
+        const usageCleanupChannels = status === 'paid' ? plusDeleteChannels : ['upi', 'ideal', 'pix'];
         usageCleanupChannels.forEach((channel) => {
           const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(latestState, channel));
           const usageCleanup = clearUpiRedeemCdkeyUsageAccountBindings(usage, deletedEmailSet, {

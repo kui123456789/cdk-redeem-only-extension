@@ -232,8 +232,10 @@
         ? 'upi'
         : rawStatus === 'paid-ideal'
           ? 'ideal'
+          : rawStatus === 'paid-pix'
+            ? 'pix'
           : normalizeString(input.channel || input.redeemChannel || '');
-      const status = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-all'
+      const status = rawStatus === 'paid-upi' || rawStatus === 'paid-ideal' || rawStatus === 'paid-pix' || rawStatus === 'paid-all'
         ? 'paid'
         : rawStatus;
       let results = await getStoredResults();
@@ -318,6 +320,7 @@
         paid: allPaidRowsArePasskey ? 'upi-membership-paid-password-passkey' : 'upi-membership-paid-password-2fa',
         'paid-upi': allPaidRowsArePasskey ? 'upi-membership-paid-password-passkey' : 'upi-membership-paid-password-2fa',
         'paid-ideal': allPaidRowsArePasskey ? 'ideal-membership-paid-password-passkey' : 'ideal-membership-paid-password-2fa',
+        'paid-pix': allPaidRowsArePasskey ? 'pix-membership-paid-password-passkey' : 'pix-membership-paid-password-2fa',
         free: allFreeRowsAreNo2faWithUrl
           ? 'upi-membership-free-email-url-at'
           : (allFreeRowsAreNo2faWithoutUrl
@@ -326,7 +329,7 @@
         failed: 'upi-membership-check-failed',
       };
       const deleteResult = rows.length && removeAfterExport
-        ? await deleteUpiCredentialMembershipCheckResults({ status, emails: exportedEmails })
+        ? await deleteUpiCredentialMembershipCheckResults({ status, channel, emails: exportedEmails })
         : null;
       return {
         status,

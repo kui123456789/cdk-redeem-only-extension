@@ -24,7 +24,10 @@ function createService({ buildRows, deleteResults, results, state = {} }) {
     isResultItemPasskeyExportableForStatus: () => false,
     normalizeEmail: (value) => String(value || '').trim().toLowerCase(),
     normalizeEmailList: (values) => values.map((value) => String(value || '').trim().toLowerCase()),
-    normalizeRedeemChannel: (value) => String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi',
+    normalizeRedeemChannel: (value) => {
+      const normalized = String(value || '').trim().toLowerCase();
+      return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+    },
     normalizeResultItem: (item) => item,
     normalizeResultsPayload: (value) => value,
     normalizeString: (value) => String(value || '').trim().toLowerCase(),
@@ -131,4 +134,51 @@ test('Free export backfills a missing pickup URL from the email pool when the to
   const fields = exported.fileContent.trim().split('---');
   assert.equal(fields.length, 6);
   assert.equal(fields[3], verificationUrl);
+});
+
+test('PIX Plus export filters paid-pix rows, names the file, and preserves channel on removal', async () => {
+  let deleteInput = null;
+  const service = createService({
+    buildRows: resultState.buildResultExportRows,
+    deleteResults: async (input) => {
+      deleteInput = input;
+      return { deletedCount: 1 };
+    },
+    results: {
+      items: [
+        {
+          email: 'pix@example.com',
+          password: 'pix-password',
+          totpMfaSecret: 'ABCDEFGHIJKLMNOP',
+          status: 'paid',
+          redeemChannel: 'pix',
+        },
+        {
+          email: 'upi@example.com',
+          password: 'upi-password',
+          totpMfaSecret: 'QRSTUVWXYZ234567',
+          status: 'paid',
+          redeemChannel: 'upi',
+        },
+      ],
+    },
+  });
+
+  const output = await service.exportUpiCredentialMembershipCheckResults({
+    status: 'paid-pix',
+    removeAfterExport: true,
+  });
+
+  assert.equal(output.channel, 'pix');
+  assert.equal(output.count, 1);
+  assert.match(output.fileName, /^pix-membership-paid-password-2fa-/);
+  assert.match(output.fileContent, /pix@example\.com/);
+  assert.match(output.fileContent, /pix-password/);
+  assert.match(output.fileContent, /ABCDEFGHIJKLMNOP/);
+  assert.doesNotMatch(output.fileContent, /upi@example\.com/);
+  assert.deepEqual(deleteInput, {
+    status: 'paid',
+    channel: 'pix',
+    emails: ['pix@example.com'],
+  });
 });

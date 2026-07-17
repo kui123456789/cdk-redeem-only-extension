@@ -86,7 +86,7 @@
       try {
         setUpiCredentialMembershipRedeemStatusRefreshBusy(true);
         render();
-        for (const channel of ['upi', 'ideal']) {
+        for (const channel of ['upi', 'ideal', 'pix']) {
           const cdkeys = Array.isArray(targets[channel]) ? targets[channel] : [];
           if (!cdkeys.length) {
             continue;
@@ -105,6 +105,7 @@
               upiRedeemCdkPoolText: getStoredCdkPoolText(latest, 'upi'),
               upiRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'upi'),
               idealRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'ideal'),
+              pixChannelRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'pix'),
             },
           });
           if (response?.error) {
@@ -401,6 +402,7 @@
             upiRedeemCdkPoolText: getStoredCdkPoolText(latest, 'upi'),
             upiRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'upi'),
             idealRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'ideal'),
+            pixChannelRedeemCdkeyPoolText: getStoredCdkPoolText(latest, 'pix'),
           },
         });
         if (response?.error) {

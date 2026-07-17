@@ -4,6 +4,7 @@
     free: 'free',
     'upi-plus': 'paid-upi',
     'ideal-plus': 'paid-ideal',
+    'pix-plus': 'paid-pix',
   };
 
   function createAccountRecordsMembershipGroupHelpers(context = {}) {
@@ -19,7 +20,10 @@
       : (value = '') => String(value || '').trim();
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => (normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
 
     function getMembershipViewModelGroup(row = {}) {
       if (typeof membershipViewModel.getGroup === 'function') {
@@ -71,6 +75,7 @@
         free: 0,
         'upi-plus': 0,
         'ideal-plus': 0,
+        'pix-plus': 0,
       });
     }
 

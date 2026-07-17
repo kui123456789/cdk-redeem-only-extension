@@ -371,6 +371,7 @@
     const locallyDeletedRedeemPlusEmailsByChannel = {
       upi: new Set(),
       ideal: new Set(),
+      pix: new Set(),
     };
     const selectedRecordIds = new Set();
     const membershipStateSync = accountRecordsMembershipStateSync.createAccountRecordsMembershipStateSync({
@@ -456,7 +457,10 @@
         return helper(value);
       }
       return membershipRowPolicy.normalizeRedeemChannel?.(value)
-        || (normalizeUpiCredentialMembershipText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+        || (() => {
+          const normalized = normalizeUpiCredentialMembershipText(value).toLowerCase();
+          return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+        })();
     }
 
     function getLocallyDeletedRedeemPlusEmailsByChannel() {
@@ -514,6 +518,7 @@
     function getMembershipStatusTitle(status = '') {
       if (status === 'paid-upi') return 'UPI Plus';
       if (status === 'paid-ideal') return 'IDEAL Plus';
+      if (status === 'paid-pix') return 'PIX Plus';
       if (status === 'paid-all') return '全部 Plus';
       if (status === 'paid') return '有会员';
       if (status === 'free') return '无会员';
@@ -677,6 +682,9 @@
         }
         if (targetChannel === 'upi') {
           return uiGroup === 'paid-upi';
+        }
+        if (targetChannel === 'pix') {
+          return uiGroup === 'paid-pix';
         }
         return uiGroup !== 'free';
       }
