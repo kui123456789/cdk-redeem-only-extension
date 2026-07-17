@@ -57,11 +57,15 @@
       if (typeof helper === 'function') {
         return helper(value);
       }
-      return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+      const normalized = normalizeString(value).toLowerCase();
+      return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
     }
 
     function getRedeemChannelLabel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'IDEAL';
+      if (normalizedChannel === 'pix') return 'PIX';
+      return 'UPI';
     }
 
     function getRedeemChannelFailureField(channel = 'upi') {
@@ -69,9 +73,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemFailureCount'
-        : 'upiRedeemFailureCount';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
+      if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
+      return 'upiRedeemFailureCount';
     }
 
     function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
@@ -95,9 +100,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitBlockedAt'
-        : 'upiRedeemDailyLimitBlockedAt';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedAt';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedAt';
+      return 'upiRedeemDailyLimitBlockedAt';
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
@@ -105,9 +111,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitBlockedUntil'
-        : 'upiRedeemDailyLimitBlockedUntil';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedUntil';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedUntil';
+      return 'upiRedeemDailyLimitBlockedUntil';
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
@@ -115,9 +122,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitReason'
-        : 'upiRedeemDailyLimitReason';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitReason';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitReason';
+      return 'upiRedeemDailyLimitReason';
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {
@@ -269,9 +277,11 @@
       if (typeof helper === 'function') {
         return helper(state, channel);
       }
-      if (normalizeRedeemChannel(channel) === 'ideal') {
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
         return normalizeString(state?.idealRedeemCdkeyPoolText);
       }
+      if (normalizedChannel === 'pix') return normalizeString(state?.pixChannelRedeemCdkeyPoolText);
       return getUpiRedeemStateValue(state, 'upiRedeemCdkeyPoolText');
     }
 
@@ -280,9 +290,11 @@
       if (typeof helper === 'function') {
         return helper(state, channel, { defaultValue: {} }) || {};
       }
-      if (normalizeRedeemChannel(channel) === 'ideal') {
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
         return state?.idealRedeemCdkeyUsage || {};
       }
+      if (normalizedChannel === 'pix') return state?.pixChannelRedeemCdkeyUsage || {};
       return getUpiRedeemStateValue(state, 'upiRedeemCdkeyUsage') || {};
     }
 
@@ -292,11 +304,13 @@
         return helper(channel, usage, { normalizeUsage: normalizeUpiRedeemCdkeyUsage });
       }
       const normalizedUsage = normalizeUpiRedeemCdkeyUsage(usage || {});
-      if (normalizeRedeemChannel(channel) === 'ideal') {
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
         return {
           idealRedeemCdkeyUsage: normalizedUsage,
         };
       }
+      if (normalizedChannel === 'pix') return { pixChannelRedeemCdkeyUsage: normalizedUsage };
       return {
         cdkUsage: normalizedUsage,
         upiRedeemCdkUsage: normalizedUsage,

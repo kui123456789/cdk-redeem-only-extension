@@ -30,7 +30,8 @@
   }
 
   function defaultNormalizeRedeemChannel(value = '') {
-    return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeString(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function normalizeUpiRedeemRemoteStatusForRetry(status = '') {
@@ -144,10 +145,12 @@
     const targets = {
       upi: new Set(),
       ideal: new Set(),
+      pix: new Set(),
     };
     const emailMap = {
       upi: {},
       ideal: {},
+      pix: {},
     };
     const emails = new Set();
     items.forEach((item) => {
@@ -156,7 +159,7 @@
         return;
       }
       const channel = normalizeRedeemChannel(item?.redeemChannel || item?.channel);
-      if (targetChannel && ['upi', 'ideal'].includes(targetChannel) && channel !== targetChannel) {
+      if (targetChannel && ['upi', 'ideal', 'pix'].includes(targetChannel) && channel !== targetChannel) {
         return;
       }
       const cdkey = normalizeString(item?.upiRedeemCdkey || item?.cdkey);

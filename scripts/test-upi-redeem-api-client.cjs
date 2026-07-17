@@ -98,3 +98,21 @@ test('checkEligibility posts token and promoId as JSON', async () => {
   assert.deepEqual(payload, { token_ok: true, eligible: true });
   assert.deepEqual(JSON.parse(requests[0].options.body), { token: 'token', promoId: 'promo' });
 });
+
+test('redeemCdkey sends the PIX channel to the remote API', async () => {
+  const requests = [];
+  const client = api.createUpiRedeemApiClient({
+    fetchImpl: async (_url, options) => {
+      requests.push(JSON.parse(options.body));
+      return { ok: true, status: 200, text: async () => JSON.stringify({ status: 'queued' }) };
+    },
+  });
+
+  await client.redeemCdkey({
+    apiUrl: 'https://example.test/redeem',
+    cdkey: 'PIX-A',
+    channel: 'pix',
+  });
+
+  assert.equal(requests[0].channel, 'pix');
+});

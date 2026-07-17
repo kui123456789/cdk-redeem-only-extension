@@ -78,7 +78,8 @@
       if (typeof helper === 'function') {
         return helper(value);
       }
-      return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+      const normalized = normalizeString(value).toLowerCase();
+      return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
     }
 
     function maskExternalApiKey(key = '') {
@@ -141,11 +142,13 @@
         'upiRedeemCdkeyPoolText',
         'pixRedeemCdkeyPoolText',
         'idealRedeemCdkeyPoolText',
+        'pixChannelRedeemCdkeyPoolText',
         'cdkUsage',
         'upiRedeemCdkUsage',
         'upiRedeemCdkeyUsage',
         'pixRedeemCdkeyUsage',
         'idealRedeemCdkeyUsage',
+        'pixChannelRedeemCdkeyUsage',
       ];
       dynamicKeys.forEach((key) => {
         if (hasOwnStateKey(latestState, key)) {

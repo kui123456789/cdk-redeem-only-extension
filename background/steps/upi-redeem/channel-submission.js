@@ -56,7 +56,10 @@
     const applyPaidSubscriptionCleanup = (...args) => context.applyPaidSubscriptionCleanup(...args);
 
         function getRedeemChannelLabel(channel = 'upi') {
-          return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'IDEAL';
+          if (normalizedChannel === 'pix') return 'PIX';
+          return 'UPI';
         }
 
         const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
@@ -69,9 +72,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemFailureCount'
-            : 'upiRedeemFailureCount';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
+          if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
+          return 'upiRedeemFailureCount';
         }
 
 
@@ -99,9 +103,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemDailyLimitBlockedAt'
-            : 'upiRedeemDailyLimitBlockedAt';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedAt';
+          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedAt';
+          return 'upiRedeemDailyLimitBlockedAt';
         }
 
 
@@ -110,9 +115,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemDailyLimitBlockedUntil'
-            : 'upiRedeemDailyLimitBlockedUntil';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedUntil';
+          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedUntil';
+          return 'upiRedeemDailyLimitBlockedUntil';
         }
 
 
@@ -121,9 +127,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemDailyLimitReason'
-            : 'upiRedeemDailyLimitReason';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitReason';
+          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitReason';
+          return 'upiRedeemDailyLimitReason';
         }
 
 
@@ -288,12 +295,12 @@
           if (!isTrialEligibilityChannelAllowed(item, redeemChannel)) {
             const reasonField = redeemChannel === 'ideal'
               ? 'idealChannelEligibilityReason'
-              : 'upiChannelEligibilityReason';
+              : (redeemChannel === 'pix' ? 'pixChannelEligibilityReason' : 'upiChannelEligibilityReason');
             return normalizeString(item?.[reasonField])
               || `${getRedeemChannelLabel(redeemChannel)} 渠道当前不可用`;
           }
-          if (redeemChannel === 'ideal' && getRedeemChannelFailureCount(item, redeemChannel) >= REDEEM_CHANNEL_FAILURE_LIMIT) {
-            return 'IDEAL 已达到失败上限';
+          if (redeemChannel !== 'upi' && getRedeemChannelFailureCount(item, redeemChannel) >= REDEEM_CHANNEL_FAILURE_LIMIT) {
+            return `${getRedeemChannelLabel(redeemChannel)} 已达到失败上限`;
           }
           return '';
         }
@@ -304,9 +311,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemCdkeyPoolText'
-            : 'upiRedeemCdkeyPoolText';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemCdkeyPoolText';
+          if (normalizedChannel === 'pix') return 'pixChannelRedeemCdkeyPoolText';
+          return 'upiRedeemCdkeyPoolText';
         }
 
 
@@ -315,9 +323,10 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          return normalizeRedeemChannel(channel) === 'ideal'
-            ? 'idealRedeemCdkeyUsage'
-            : 'upiRedeemCdkeyUsage';
+          const normalizedChannel = normalizeRedeemChannel(channel);
+          if (normalizedChannel === 'ideal') return 'idealRedeemCdkeyUsage';
+          if (normalizedChannel === 'pix') return 'pixChannelRedeemCdkeyUsage';
+          return 'upiRedeemCdkeyUsage';
         }
 
 
@@ -330,6 +339,7 @@
           if (normalizedChannel === 'ideal') {
             return normalizeString(state?.idealRedeemCdkeyPoolText);
           }
+          if (normalizedChannel === 'pix') return normalizeString(state?.pixChannelRedeemCdkeyPoolText);
           return getUpiRedeemStateValue(state, 'upiRedeemCdkeyPoolText');
         }
 
@@ -343,6 +353,7 @@
           if (normalizedChannel === 'ideal') {
             return state?.idealRedeemCdkeyUsage || {};
           }
+          if (normalizedChannel === 'pix') return state?.pixChannelRedeemCdkeyUsage || {};
           return getUpiRedeemStateValue(state, 'upiRedeemCdkeyUsage') || {};
         }
 
@@ -847,7 +858,7 @@
           const normalizedChannel = normalizeRedeemChannel(channel);
           const field = normalizedChannel === 'ideal'
             ? 'idealChannelEligibilityStatus'
-            : 'upiChannelEligibilityStatus';
+            : (normalizedChannel === 'pix' ? 'pixChannelEligibilityStatus' : 'upiChannelEligibilityStatus');
           const status = normalizeString(item?.[field]).toLowerCase();
           return !status || status === 'unknown' || status === 'eligible';
         }

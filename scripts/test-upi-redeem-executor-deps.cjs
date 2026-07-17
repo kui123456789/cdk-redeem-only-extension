@@ -49,5 +49,6 @@ test('UPI redeem submodules receive CDK pool parser dependency', () => {
   for (const context of capturedContexts) {
     assert.equal(typeof context.parseCdkeyPoolText, 'function');
     assert.deepEqual(Array.from(context.parseCdkeyPoolText(' A \r\nB\nA\n\n C \nB')), ['A', 'B', 'C']);
+    assert.equal(context.normalizeRedeemChannel('pix'), 'pix');
   }
 });

@@ -49,7 +49,8 @@
       if (typeof helper === 'function') {
         return helper(value);
       }
-      return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+      const normalized = normalizeString(value).toLowerCase();
+      return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
     }
 
     function getRedeemChannelUsage(state = {}, channel = 'upi') {
@@ -58,9 +59,15 @@
         return helper(state, channel);
       }
       const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
-      if (normalizeRedeemChannel(channel) === 'ideal') {
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
         return Object.prototype.hasOwnProperty.call(source, 'idealRedeemCdkeyUsage')
           ? source.idealRedeemCdkeyUsage
+          : undefined;
+      }
+      if (normalizedChannel === 'pix') {
+        return Object.prototype.hasOwnProperty.call(source, 'pixChannelRedeemCdkeyUsage')
+          ? source.pixChannelRedeemCdkeyUsage
           : undefined;
       }
       if (Object.prototype.hasOwnProperty.call(source, 'cdkUsage')) return source.cdkUsage;
@@ -75,11 +82,13 @@
         return helper(channel, usage);
       }
       const source = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
-      if (normalizeRedeemChannel(channel) === 'ideal') {
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
         return {
           idealRedeemCdkeyUsage: source,
         };
       }
+      if (normalizedChannel === 'pix') return { pixChannelRedeemCdkeyUsage: source };
       return {
         cdkUsage: source,
         upiRedeemCdkUsage: source,
@@ -130,9 +139,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemFailureCount'
-        : 'upiRedeemFailureCount';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
+      if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
+      return 'upiRedeemFailureCount';
     }
 
     function getRedeemChannelFailureCount(item = {}, channel = 'upi') {
@@ -156,9 +166,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitBlockedAt'
-        : 'upiRedeemDailyLimitBlockedAt';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedAt';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedAt';
+      return 'upiRedeemDailyLimitBlockedAt';
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
@@ -166,9 +177,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitBlockedUntil'
-        : 'upiRedeemDailyLimitBlockedUntil';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedUntil';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedUntil';
+      return 'upiRedeemDailyLimitBlockedUntil';
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
@@ -176,9 +188,10 @@
       if (typeof helper === 'function') {
         return helper(channel);
       }
-      return normalizeRedeemChannel(channel) === 'ideal'
-        ? 'idealRedeemDailyLimitReason'
-        : 'upiRedeemDailyLimitReason';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitReason';
+      if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitReason';
+      return 'upiRedeemDailyLimitReason';
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {
@@ -1441,7 +1454,7 @@
       const responses = [];
       const errors = [];
       const updates = {};
-      for (const channel of ['upi', 'ideal']) {
+      for (const channel of ['upi', 'ideal', 'pix']) {
         const cdkeys = targets[channel];
         if (!cdkeys.length) {
           continue;
