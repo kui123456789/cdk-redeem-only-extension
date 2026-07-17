@@ -7,8 +7,16 @@
     const { cdkPoolStateHelpers = {}, dom = {}, helpers = {} } = deps;
     const {
       parseUpiRedeemCdkeyPoolTextValue = () => [],
-      normalizeRedeemChannel = (value) => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
-      getRedeemChannelLabel = (value) => (String(value || '').trim().toLowerCase() === 'ideal' ? 'IDEAL' : 'UPI'),
+      normalizeRedeemChannel = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
+      getRedeemChannelLabel = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'ideal') return 'IDEAL';
+        if (normalized === 'pix') return 'PIX';
+        return 'UPI';
+      },
       getStoredCdkPoolText = () => '',
       getStoredCdkUsage = () => ({}),
       getUpiRedeemRemoteStatusLabel = () => '',
@@ -23,8 +31,10 @@
       window: windowRef = typeof window !== 'undefined' ? window : null,
       upiRedeemCdkeyPoolSummary = null,
       idealRedeemCdkeyPoolSummary = null,
+      pixRedeemCdkeyPoolSummary = null,
       upiRedeemCdkeyStatusList = null,
       idealRedeemCdkeyStatusList = null,
+      pixRedeemCdkeyStatusList = null,
     } = dom;
     const {
       getLatestState = () => ({}),
@@ -56,7 +66,9 @@
     }
     function renderUpiRedeemCdkeyStatusList(stateValue = getLatestState(), channel = 'upi') {
       const redeemChannel = normalizeRedeemChannel(channel);
-      const statusList = redeemChannel === 'ideal' ? idealRedeemCdkeyStatusList : upiRedeemCdkeyStatusList;
+      const statusList = redeemChannel === 'ideal'
+        ? idealRedeemCdkeyStatusList
+        : (redeemChannel === 'pix' ? pixRedeemCdkeyStatusList : upiRedeemCdkeyStatusList);
       if (!statusList || !documentRef) {
         return;
       }
@@ -204,7 +216,9 @@
     }
     function updateUpiRedeemCdkeyPoolSummary(stateValue = getLatestState(), options = {}) {
       const redeemChannel = normalizeRedeemChannel(options.channel || options.redeemChannel);
-      const summary = redeemChannel === 'ideal' ? idealRedeemCdkeyPoolSummary : upiRedeemCdkeyPoolSummary;
+      const summary = redeemChannel === 'ideal'
+        ? idealRedeemCdkeyPoolSummary
+        : (redeemChannel === 'pix' ? pixRedeemCdkeyPoolSummary : upiRedeemCdkeyPoolSummary);
       if (!summary) {
         return;
       }

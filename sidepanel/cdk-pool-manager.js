@@ -6,7 +6,8 @@
   function normalizeRedeemChannel(value = '') {
     const helper = globalScope.MultiPageRedeemChannelState?.normalizeRedeemChannel;
     if (typeof helper === 'function') return helper(value);
-    return normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeText(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function createCdkPoolManager(context = {}) {
@@ -18,16 +19,19 @@
     let eventsBound = false;
 
     function getChannelLabel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'IDEAL';
+      if (normalizedChannel === 'pix') return 'PIX';
+      return 'UPI';
     }
 
     function showImportError(channel, error) {
-      const label = normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL CDK' : 'CDK';
+      const label = `${getChannelLabel(channel)} CDK`;
       helpers.showToast?.(`导入 ${label} 失败：${error?.message || error || '未知错误'}`, 'error');
     }
 
     function showDeleteError(channel, error) {
-      const label = normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL CDK' : 'CDK';
+      const label = `${getChannelLabel(channel)} CDK`;
       helpers.showToast?.(`删除 ${label} 失败：${error?.message || error || '未知错误'}`, 'error');
     }
 
@@ -81,8 +85,11 @@
       bindDeleteButton(dom.btnDeleteAllCdkPool, 'upi');
       bindImportButton(dom.btnImportIdealCdkPool, 'ideal');
       bindDeleteButton(dom.btnDeleteAllIdealCdkPool, 'ideal');
+      bindImportButton(dom.btnImportPixCdkPool, 'pix');
+      bindDeleteButton(dom.btnDeleteAllPixCdkPool, 'pix');
       bindImportShortcut(dom.inputUpiRedeemCdkeyPool, 'upi');
       bindImportShortcut(dom.inputIdealRedeemCdkeyPool, 'ideal');
+      bindImportShortcut(dom.inputPixRedeemCdkeyPool, 'pix');
     }
 
     return {

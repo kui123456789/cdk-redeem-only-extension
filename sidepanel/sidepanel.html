@@ -412,6 +412,23 @@
               </div>
               <div id="ideal-redeem-cdkey-status-list" class="upi-redeem-cdkey-status-list"></div>
             </div>
+            <div class="upi-redeem-cdkey-channel-panel" data-cdk-channel="pix">
+              <div class="upi-redeem-cdkey-channel-title">PIX 卡密池</div>
+              <textarea id="input-pix-redeem-cdkey-pool" class="data-textarea mono" rows="5"
+                placeholder="每行一个 PIX CDK，例如&#10;PIX-CDK-001&#10;PIX-CDK-002"></textarea>
+              <div class="upi-redeem-cdkey-pool-toolbar">
+                <button id="btn-import-pix-cdk-pool" class="btn btn-primary btn-sm btn-cdk-import" type="button">导入 PIX</button>
+                <button id="btn-delete-all-pix-cdk-pool" class="btn btn-danger btn-sm" type="button" disabled>一键删除</button>
+                <div id="pix-redeem-cdkey-pool-summary" class="icloud-summary">总数 0 / 已用 0 / 可用 0</div>
+              </div>
+              <div class="upi-redeem-cdkey-status-header">
+                <span>启用</span>
+                <span>CDK</span>
+                <span>状态</span>
+                <span>操作</span>
+              </div>
+              <div id="pix-redeem-cdkey-status-list" class="upi-redeem-cdkey-status-list"></div>
+            </div>
           </div>
           <input type="file" id="input-upi-credential-membership-txt" accept=".txt,text/plain" hidden />
           <div class="data-inline upi-credential-backup-actions">

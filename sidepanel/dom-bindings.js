@@ -198,6 +198,10 @@
     const btnImportIdealCdkPool = document.getElementById('btn-import-ideal-cdk-pool');
     const btnDeleteAllIdealCdkPool = document.getElementById('btn-delete-all-ideal-cdk-pool');
     const idealRedeemCdkeyPoolSummary = document.getElementById('ideal-redeem-cdkey-pool-summary');
+    const inputPixRedeemCdkeyPool = document.getElementById('input-pix-redeem-cdkey-pool');
+    const btnImportPixCdkPool = document.getElementById('btn-import-pix-cdk-pool');
+    const btnDeleteAllPixCdkPool = document.getElementById('btn-delete-all-pix-cdk-pool');
+    const pixRedeemCdkeyPoolSummary = document.getElementById('pix-redeem-cdkey-pool-summary');
     const btnShowUpiCredentialBackups = document.getElementById('btn-show-upi-credential-backups');
     const btnExportUpiCredentialBackups = document.getElementById('btn-export-upi-credential-backups');
     const btnCheckUpiCredentialMembershipLocal = document.getElementById('btn-check-upi-credential-membership-local');
@@ -212,6 +216,7 @@
     const upiCredentialMembershipCheckResults = document.getElementById('upi-credential-membership-check-results');
     const upiRedeemCdkeyStatusList = document.getElementById('upi-redeem-cdkey-status-list');
     const idealRedeemCdkeyStatusList = document.getElementById('ideal-redeem-cdkey-status-list');
+    const pixRedeemCdkeyStatusList = document.getElementById('pix-redeem-cdkey-status-list');
     const rowLegacyPayCountryCode = document.getElementById('row-legacyPay-country-code');
     const selectLegacyPayCountryCode = document.getElementById('select-legacyPay-country-code');
     const rowLegacyPayOtp = document.getElementById('row-legacyPay-otp');
@@ -695,6 +700,10 @@
       btnImportIdealCdkPool,
       btnDeleteAllIdealCdkPool,
       idealRedeemCdkeyPoolSummary,
+      inputPixRedeemCdkeyPool,
+      btnImportPixCdkPool,
+      btnDeleteAllPixCdkPool,
+      pixRedeemCdkeyPoolSummary,
       btnShowUpiCredentialBackups,
       btnExportUpiCredentialBackups,
       btnCheckUpiCredentialMembershipLocal,
@@ -709,6 +718,7 @@
       upiCredentialMembershipCheckResults,
       upiRedeemCdkeyStatusList,
       idealRedeemCdkeyStatusList,
+      pixRedeemCdkeyStatusList,
       rowLegacyPayCountryCode,
       selectLegacyPayCountryCode,
       rowLegacyPayOtp,

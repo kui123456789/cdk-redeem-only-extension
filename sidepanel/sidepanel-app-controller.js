@@ -233,6 +233,10 @@ const {
   btnImportIdealCdkPool,
   btnDeleteAllIdealCdkPool,
   idealRedeemCdkeyPoolSummary,
+  inputPixRedeemCdkeyPool,
+  btnImportPixCdkPool,
+  btnDeleteAllPixCdkPool,
+  pixRedeemCdkeyPoolSummary,
   btnShowUpiCredentialBackups,
   btnExportUpiCredentialBackups,
   btnCheckUpiCredentialMembershipLocal,
@@ -247,6 +251,7 @@ const {
   upiCredentialMembershipCheckResults,
   upiRedeemCdkeyStatusList,
   idealRedeemCdkeyStatusList,
+  pixRedeemCdkeyStatusList,
   rowLegacyPayCountryCode,
   selectLegacyPayCountryCode,
   rowLegacyPayOtp,
@@ -1658,6 +1663,7 @@ with (appState.createScope()) {
       inputUpiRedeemFailedAccountRetryLimit,
       inputUpiRedeemCdkeyPool,
       inputIdealRedeemCdkeyPool,
+      inputPixRedeemCdkeyPool,
       btnExportUpiRedeemSuccessRecords,
       upiCredentialBackupPreviewWrap,
       upiCredentialBackupPreview,
@@ -3200,6 +3206,9 @@ with (appState.createScope()) {
     if (!shouldPreserveFocusedUpiRedeemCdkeyPoolEdit('ideal') && inputIdealRedeemCdkeyPool) {
       inputIdealRedeemCdkeyPool.value = '';
     }
+    if (!shouldPreserveFocusedUpiRedeemCdkeyPoolEdit('pix') && inputPixRedeemCdkeyPool) {
+      inputPixRedeemCdkeyPool.value = '';
+    }
     updateAllUpiRedeemCdkeyPoolSummaries(normalizedState);
     renderStepStatuses(latestState);
     updatePanelModeUI();
@@ -3614,8 +3623,11 @@ with (appState.createScope()) {
         btnDeleteAllCdkPool,
         btnImportIdealCdkPool,
         btnDeleteAllIdealCdkPool,
+        btnImportPixCdkPool,
+        btnDeleteAllPixCdkPool,
         inputUpiRedeemCdkeyPool,
         inputIdealRedeemCdkeyPool,
+        inputPixRedeemCdkeyPool,
       },
       helpers: {
         showToast,
@@ -3780,6 +3792,10 @@ with (appState.createScope()) {
       btnImportIdealCdkPool,
       btnDeleteAllIdealCdkPool,
       idealRedeemCdkeyPoolSummary,
+      inputPixRedeemCdkeyPool,
+      btnImportPixCdkPool,
+      btnDeleteAllPixCdkPool,
+      pixRedeemCdkeyPoolSummary,
       inputUpiRedeemExternalApiKey,
       inputUpiRedeemClientId,
       inputPlusModeEnabled,
@@ -3787,6 +3803,7 @@ with (appState.createScope()) {
       btnUpiRedeemCdkeyStatusRefresh,
       upiRedeemCdkeyStatusList,
       idealRedeemCdkeyStatusList,
+      pixRedeemCdkeyStatusList,
     },
     state: {
       getLatestState: () => latestState,
@@ -4933,6 +4950,8 @@ with (appState.createScope()) {
     const cdkUsageForSave = getStoredCdkUsage(latestState, 'upi');
     const idealCdkPoolTextForSave = getStoredCdkPoolText(latestState, 'ideal');
     const idealCdkUsageForSave = getStoredCdkUsage(latestState, 'ideal');
+    const pixCdkPoolTextForSave = getStoredCdkPoolText(latestState, 'pix');
+    const pixCdkUsageForSave = getStoredCdkUsage(latestState, 'pix');
     const contributionModeEnabled = Boolean(latestState?.contributionMode);
     const icloudFetchModeRawValue = typeof selectIcloudFetchMode !== 'undefined'
       ? String(selectIcloudFetchMode?.value || '')
@@ -5158,11 +5177,13 @@ with (appState.createScope()) {
       upiRedeemCdkeyPoolText: cdkPoolTextForSave,
       pixRedeemCdkeyPoolText: cdkPoolTextForSave,
       idealRedeemCdkeyPoolText: idealCdkPoolTextForSave,
+      pixChannelRedeemCdkeyPoolText: pixCdkPoolTextForSave,
       cdkUsage: cdkUsageForSave,
       upiRedeemCdkUsage: cdkUsageForSave,
       upiRedeemCdkeyUsage: cdkUsageForSave,
       pixRedeemCdkeyUsage: cdkUsageForSave,
       idealRedeemCdkeyUsage: idealCdkUsageForSave,
+      pixChannelRedeemCdkeyUsage: pixCdkUsageForSave,
       legacyWalletEmail: String(currentLegacyWalletAccount?.email || latestState?.legacyWalletEmail || '').trim(),
       legacyWalletPassword: String(currentLegacyWalletAccount?.password || latestState?.legacyWalletPassword || ''),
       currentLegacyWalletAccountId: String(latestState?.currentLegacyWalletAccountId || '').trim(),
@@ -6474,11 +6495,12 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
     inputLegacyPayOtp,
     inputLegacyPayPin,
     inputIdealRedeemCdkeyPool,
+    inputPixRedeemCdkeyPool,
   ].forEach((input) => {
     input?.addEventListener('input', () => {
-      if (input === inputUpiRedeemCdkeyPool || input === inputIdealRedeemCdkeyPool) {
+      if (input === inputUpiRedeemCdkeyPool || input === inputIdealRedeemCdkeyPool || input === inputPixRedeemCdkeyPool) {
         updateUpiRedeemCdkeyPoolSummary(latestState, {
-          channel: input === inputIdealRedeemCdkeyPool ? 'ideal' : 'upi',
+          channel: input === inputIdealRedeemCdkeyPool ? 'ideal' : (input === inputPixRedeemCdkeyPool ? 'pix' : 'upi'),
         });
       }
       if (
@@ -6486,6 +6508,7 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
         || input === inputUpiRedeemClientId
         || input === inputUpiRedeemCdkeyPool
         || input === inputIdealRedeemCdkeyPool
+        || input === inputPixRedeemCdkeyPool
       ) {
         scheduleUpiRedeemCdkeyStatusAutoRefresh({ immediate: true });
       }
@@ -6522,6 +6545,7 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
         || input === inputUpiRedeemClientId
         || input === inputUpiRedeemCdkeyPool
         || input === inputIdealRedeemCdkeyPool
+        || input === inputPixRedeemCdkeyPool
       ) {
         scheduleUpiRedeemCdkeyStatusAutoRefresh({ immediate: true });
       }

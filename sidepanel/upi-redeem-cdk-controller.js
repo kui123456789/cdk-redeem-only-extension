@@ -19,8 +19,16 @@
     } = deps;
     const {
       parseUpiRedeemCdkeyPoolTextValue = () => [],
-      normalizeRedeemChannel = (value) => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
-      getRedeemChannelLabel = (value) => (String(value || '').trim().toLowerCase() === 'ideal' ? 'IDEAL' : 'UPI'),
+      normalizeRedeemChannel = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
+      getRedeemChannelLabel = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'ideal') return 'IDEAL';
+        if (normalized === 'pix') return 'PIX';
+        return 'UPI';
+      },
       getStoredCdkPoolText = () => '',
       getStoredCdkUsage = () => ({}),
       buildCdkPoolStatePatch = () => ({}),
@@ -34,10 +42,14 @@
       upiRedeemCdkeyPoolSummary = null,
       inputIdealRedeemCdkeyPool = null,
       idealRedeemCdkeyPoolSummary = null,
+      inputPixRedeemCdkeyPool = null,
+      pixRedeemCdkeyPoolSummary = null,
       btnImportCdkPool = null,
       btnDeleteAllCdkPool = null,
       btnImportIdealCdkPool = null,
       btnDeleteAllIdealCdkPool = null,
+      btnImportPixCdkPool = null,
+      btnDeleteAllPixCdkPool = null,
       inputUpiRedeemExternalApiKey = null,
       inputUpiRedeemClientId = null,
       inputPlusModeEnabled = null,
@@ -45,6 +57,7 @@
       btnUpiRedeemCdkeyStatusRefresh = null,
       upiRedeemCdkeyStatusList = null,
       idealRedeemCdkeyStatusList = null,
+      pixRedeemCdkeyStatusList = null,
     } = dom;
     const getLatestState = typeof state.getLatestState === 'function' ? state.getLatestState : () => ({});
     const syncLatestState = typeof state.syncLatestState === 'function' ? state.syncLatestState : () => {};
@@ -76,21 +89,30 @@
     let upiRedeemCdkeyStatusRefreshInFlight = false;
 
     function getCdkPoolInputForChannel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? inputIdealRedeemCdkeyPool : inputUpiRedeemCdkeyPool;
+      const redeemChannel = normalizeRedeemChannel(channel);
+      if (redeemChannel === 'ideal') return inputIdealRedeemCdkeyPool;
+      if (redeemChannel === 'pix') return inputPixRedeemCdkeyPool;
+      return inputUpiRedeemCdkeyPool;
     }
 
     function getImportCdkButtonForChannel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? btnImportIdealCdkPool : btnImportCdkPool;
+      const redeemChannel = normalizeRedeemChannel(channel);
+      if (redeemChannel === 'ideal') return btnImportIdealCdkPool;
+      if (redeemChannel === 'pix') return btnImportPixCdkPool;
+      return btnImportCdkPool;
     }
 
     function getDeleteAllCdkButtonForChannel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? btnDeleteAllIdealCdkPool : btnDeleteAllCdkPool;
+      const redeemChannel = normalizeRedeemChannel(channel);
+      if (redeemChannel === 'ideal') return btnDeleteAllIdealCdkPool;
+      if (redeemChannel === 'pix') return btnDeleteAllPixCdkPool;
+      return btnDeleteAllCdkPool;
     }
 
     function shouldPreserveFocusedUpiRedeemCdkeyPoolEdit(channel = '') {
       const focusedInputs = channel
         ? [getCdkPoolInputForChannel(channel)]
-        : [inputUpiRedeemCdkeyPool, inputIdealRedeemCdkeyPool];
+        : [inputUpiRedeemCdkeyPool, inputIdealRedeemCdkeyPool, inputPixRedeemCdkeyPool];
       return Boolean(
         documentRef
         && focusedInputs.some((input) => input && documentRef.activeElement === input)
@@ -144,14 +166,17 @@
         window: windowRef,
         inputUpiRedeemCdkeyPool,
         inputIdealRedeemCdkeyPool,
+        inputPixRedeemCdkeyPool,
         btnImportCdkPool,
         btnDeleteAllCdkPool,
         upiRedeemCdkeyPoolSummary,
         btnImportIdealCdkPool,
         btnDeleteAllIdealCdkPool,
         idealRedeemCdkeyPoolSummary,
+        pixRedeemCdkeyPoolSummary,
         upiRedeemCdkeyStatusList,
         idealRedeemCdkeyStatusList,
+        pixRedeemCdkeyStatusList,
       },
       helpers: {
         getLatestState,
@@ -175,7 +200,7 @@
     } = statusView;
 
     function updateAllUpiRedeemCdkeyPoolSummaries(stateValue = getLatestState(), options = {}) {
-      ['upi', 'ideal'].forEach((channel) => {
+      ['upi', 'ideal', 'pix'].forEach((channel) => {
         updateUpiRedeemCdkeyPoolSummary(stateValue, {
           ...options,
           channel,
@@ -535,6 +560,7 @@
             upiRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'upi'),
             pixRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'upi'),
             idealRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'ideal'),
+            pixChannelRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'pix'),
           },
         });
         if (response?.error) {
@@ -586,7 +612,7 @@
     }
 
     async function refreshAllUpiRedeemCdkeyStatuses(options = {}) {
-      const channels = ['upi', 'ideal'].filter((channel) => getCurrentUpiRedeemCdkeys(channel).length);
+      const channels = ['upi', 'ideal', 'pix'].filter((channel) => getCurrentUpiRedeemCdkeys(channel).length);
       if (!channels.length) {
         return refreshUpiRedeemCdkeyStatuses({ ...options, channel: 'upi' });
       }
@@ -641,6 +667,7 @@
           upiRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'upi'),
           pixRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'upi'),
           idealRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'ideal'),
+          pixChannelRedeemCdkeyPoolText: getStoredCdkPoolText(latestState, 'pix'),
         },
       });
       if (response?.error) {
