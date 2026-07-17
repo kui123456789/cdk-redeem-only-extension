@@ -31,6 +31,7 @@ test('buildRows normalizes emails and summarize counts membership groups', () =>
     free: 1,
     'upi-plus': 1,
     'ideal-plus': 1,
+    'pix-plus': 0,
   });
 });
 

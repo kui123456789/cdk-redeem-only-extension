@@ -12,7 +12,8 @@
   }
 
   function normalizeRedeemChannel(value = '') {
-    return normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeText(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function getGroup(item = {}) {
@@ -25,7 +26,9 @@
       || item?.channel
       || item?.paymentChannel
     );
-    return channel === 'ideal' ? 'ideal-plus' : 'upi-plus';
+    if (channel === 'ideal') return 'ideal-plus';
+    if (channel === 'pix') return 'pix-plus';
+    return 'upi-plus';
   }
 
   function buildRows(options = {}) {
@@ -75,6 +78,7 @@
       free: 0,
       'upi-plus': 0,
       'ideal-plus': 0,
+      'pix-plus': 0,
     });
   }
 

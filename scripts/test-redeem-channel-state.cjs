@@ -38,3 +38,24 @@ test('daily-limit blocking supports explicit until and legacy reason fields', ()
     redeemLastFailedAt: '2026-07-05T23:00:00.000Z',
   }, 'ideal', { nowMs }), true);
 });
+
+test('normalizes PIX and exposes all channel labels', () => {
+  assert.equal(policy.normalizeRedeemChannel('pix'), 'pix');
+  assert.equal(policy.normalizeRedeemChannel('PIX'), 'pix');
+  assert.equal(policy.normalizeRedeemChannel('unknown'), 'upi');
+  assert.deepEqual(policy.REDEEM_CHANNELS, ['upi', 'ideal', 'pix']);
+  assert.equal(policy.getRedeemChannelLabel('pix'), 'PIX');
+});
+
+test('PIX failure and daily-limit fields stay isolated', () => {
+  assert.equal(policy.getRedeemChannelFailureField('pix'), 'pixRedeemFailureCount');
+  assert.equal(policy.getRedeemChannelDailyLimitBlockedUntilField('pix'), 'pixRedeemDailyLimitBlockedUntil');
+  assert.equal(policy.getRedeemChannelFailureCount({ pixRedeemFailureCount: 2 }, 'pix'), 2);
+  assert.equal(policy.getRedeemChannelFailureCount({ pixRedeemFailureCount: 2 }, 'upi'), 0);
+});
+
+test('PIX becomes unavailable after its channel failure limit without changing UPI state', () => {
+  const item = { trialEligibilityStatus: 'eligible', pixRedeemFailureCount: 3 };
+  assert.equal(policy.shouldRedeemItemUseChannel(item, 'pix'), false);
+  assert.equal(policy.shouldRedeemItemUseChannel(item, 'upi'), true);
+});

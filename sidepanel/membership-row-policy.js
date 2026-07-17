@@ -21,7 +21,8 @@
   }
 
   function normalizeRedeemChannel(value = '') {
-    return normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeText(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function getMembershipGroup(row = {}) {
@@ -29,15 +30,17 @@
     if (status !== 'paid') {
       return 'free';
     }
-    return normalizeRedeemChannel(row?.redeemChannel || row?.channel || row?.paymentChannel) === 'ideal'
-      ? 'ideal-plus'
-      : 'upi-plus';
+    const channel = normalizeRedeemChannel(row?.redeemChannel || row?.channel || row?.paymentChannel);
+    if (channel === 'ideal') return 'ideal-plus';
+    if (channel === 'pix') return 'pix-plus';
+    return 'upi-plus';
   }
 
   function getRedeemChannelFailureField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemFailureCount'
-      : 'upiRedeemFailureCount';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
+    if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
+    return 'upiRedeemFailureCount';
   }
 
   function getRedeemChannelFailureCount(row = {}, channel = 'upi') {
@@ -53,21 +56,24 @@
   }
 
   function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitBlockedAt'
-      : 'upiRedeemDailyLimitBlockedAt';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedAt';
+    if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedAt';
+    return 'upiRedeemDailyLimitBlockedAt';
   }
 
   function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitBlockedUntil'
-      : 'upiRedeemDailyLimitBlockedUntil';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedUntil';
+    if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedUntil';
+    return 'upiRedeemDailyLimitBlockedUntil';
   }
 
   function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitReason'
-      : 'upiRedeemDailyLimitReason';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitReason';
+    if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitReason';
+    return 'upiRedeemDailyLimitReason';
   }
 
   function isRedeemChannelDailyLimitReason(message = '') {
@@ -111,7 +117,8 @@
   }
 
   function shouldApplyRedeemFailureLimitForChannel(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    return normalizedChannel === 'ideal' || normalizedChannel === 'pix';
   }
 
   function isRedeemLocked(row = {}) {
@@ -210,7 +217,7 @@
     const redeemChannel = normalizeRedeemChannel(channel);
     const field = redeemChannel === 'ideal'
       ? 'idealChannelEligibilityStatus'
-      : 'upiChannelEligibilityStatus';
+      : (redeemChannel === 'pix' ? 'pixChannelEligibilityStatus' : 'upiChannelEligibilityStatus');
     const status = normalizeText(row[field]).toLowerCase();
     return !status || status === 'unknown' || status === 'eligible';
   }

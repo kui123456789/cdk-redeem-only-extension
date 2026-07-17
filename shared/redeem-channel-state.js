@@ -5,37 +5,44 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createRedeemChannelState() {
   const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
   const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
+  const REDEEM_CHANNELS = Object.freeze(['upi', 'ideal', 'pix']);
+  const REDEEM_CHANNEL_METADATA = Object.freeze({
+    upi: Object.freeze({ label: 'UPI', failureField: 'upiRedeemFailureCount', dailyLimitPrefix: 'upiRedeem' }),
+    ideal: Object.freeze({ label: 'IDEAL', failureField: 'idealRedeemFailureCount', dailyLimitPrefix: 'idealRedeem' }),
+    pix: Object.freeze({ label: 'PIX', failureField: 'pixRedeemFailureCount', dailyLimitPrefix: 'pixRedeem' }),
+  });
 
   function normalizeString(value = '') {
     return String(value || '').trim();
   }
 
   function normalizeRedeemChannel(value = '') {
-    return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeString(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+  }
+
+  function getRedeemChannelMetadata(channel = 'upi') {
+    return REDEEM_CHANNEL_METADATA[normalizeRedeemChannel(channel)] || REDEEM_CHANNEL_METADATA.upi;
+  }
+
+  function getRedeemChannelLabel(channel = 'upi') {
+    return getRedeemChannelMetadata(channel).label;
   }
 
   function getRedeemChannelFailureField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemFailureCount'
-      : 'upiRedeemFailureCount';
+    return getRedeemChannelMetadata(channel).failureField;
   }
 
   function getRedeemChannelDailyLimitBlockedAtField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitBlockedAt'
-      : 'upiRedeemDailyLimitBlockedAt';
+    return `${getRedeemChannelMetadata(channel).dailyLimitPrefix}DailyLimitBlockedAt`;
   }
 
   function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitBlockedUntil'
-      : 'upiRedeemDailyLimitBlockedUntil';
+    return `${getRedeemChannelMetadata(channel).dailyLimitPrefix}DailyLimitBlockedUntil`;
   }
 
   function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemDailyLimitReason'
-      : 'upiRedeemDailyLimitReason';
+    return `${getRedeemChannelMetadata(channel).dailyLimitPrefix}DailyLimitReason`;
   }
 
   function normalizeRetryCount(value = 0) {
@@ -112,7 +119,9 @@
   return {
     REDEEM_CHANNEL_FAILURE_LIMIT,
     REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS,
+    REDEEM_CHANNELS,
     normalizeRedeemChannel,
+    getRedeemChannelLabel,
     normalizeRetryCount,
     getRedeemChannelFailureField,
     getRedeemChannelFailureCount,
