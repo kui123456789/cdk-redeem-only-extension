@@ -2226,7 +2226,8 @@ function normalizePersistentSettingValue(key, value) {
       return Number.isFinite(numeric) ? Math.max(0, Math.min(300, numeric)) : PERSISTED_SETTING_DEFAULTS[key];
     }
     case 'upiRedeemCdkeyPoolText':
-    case 'idealRedeemCdkeyPoolText': {
+    case 'idealRedeemCdkeyPoolText':
+    case 'pixChannelRedeemCdkeyPoolText': {
       const seen = new Set();
       return String(value || '')
         .replace(/\r/g, '')
@@ -2241,6 +2242,7 @@ function normalizePersistentSettingValue(key, value) {
     }
     case 'upiRedeemCdkeyUsage':
     case 'idealRedeemCdkeyUsage':
+    case 'pixChannelRedeemCdkeyUsage':
       if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
       return Object.fromEntries(Object.entries(value).map(([rawKey, usage]) => {
         const item = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};

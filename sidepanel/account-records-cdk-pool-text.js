@@ -7,17 +7,22 @@
   function createAccountRecordsCdkPoolTextHelpers(context = {}) {
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => (normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
 
     function getUpiRedeemCdkeyUsage(currentState = {}, channel = 'upi') {
       const normalizedChannel = normalizeRedeemChannel(channel);
       const rawUsage = normalizedChannel === 'ideal'
         ? (currentState?.idealRedeemCdkeyUsage || {})
-        : (currentState?.cdkUsage
-          || currentState?.upiRedeemCdkUsage
-          || currentState?.upiRedeemCdkeyUsage
-          || currentState?.pixRedeemCdkeyUsage
-          || {});
+        : (normalizedChannel === 'pix'
+          ? (currentState?.pixChannelRedeemCdkeyUsage || {})
+          : (currentState?.cdkUsage
+            || currentState?.upiRedeemCdkUsage
+            || currentState?.upiRedeemCdkeyUsage
+            || currentState?.pixRedeemCdkeyUsage
+            || {}));
       return rawUsage && typeof rawUsage === 'object' && !Array.isArray(rawUsage) ? rawUsage : {};
     }
 
@@ -26,11 +31,13 @@
       return String(
         normalizedChannel === 'ideal'
           ? (currentState?.idealRedeemCdkeyPoolText ?? '')
-          : (currentState?.cdkPoolText
-            ?? currentState?.upiRedeemCdkPoolText
-            ?? currentState?.upiRedeemCdkeyPoolText
-            ?? currentState?.pixRedeemCdkeyPoolText
-            ?? '')
+          : (normalizedChannel === 'pix'
+            ? (currentState?.pixChannelRedeemCdkeyPoolText ?? '')
+            : (currentState?.cdkPoolText
+              ?? currentState?.upiRedeemCdkPoolText
+              ?? currentState?.upiRedeemCdkeyPoolText
+              ?? currentState?.pixRedeemCdkeyPoolText
+              ?? ''))
       ).replace(/\r/g, '').trim();
     }
 

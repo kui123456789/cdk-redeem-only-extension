@@ -134,36 +134,48 @@
     }
 
     function normalizeRedeemChannel(value = '') {
-      return String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+      const normalized = String(value || '').trim().toLowerCase();
+      return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
     }
 
     function getRedeemChannelLabel(channel = 'upi') {
-      return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+      const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') return 'IDEAL';
+      if (normalizedChannel === 'pix') return 'PIX';
+      return 'UPI';
     }
 
     function getStoredCdkPoolText(state = {}, channel = 'upi') {
       const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
+        return normalizeUpiRedeemCdkeyPoolTextValue(state?.idealRedeemCdkeyPoolText ?? '');
+      }
+      if (normalizedChannel === 'pix') {
+        return normalizeUpiRedeemCdkeyPoolTextValue(state?.pixChannelRedeemCdkeyPoolText ?? '');
+      }
       return normalizeUpiRedeemCdkeyPoolTextValue(
-        normalizedChannel === 'ideal'
-          ? (state?.idealRedeemCdkeyPoolText ?? '')
-          : (state?.cdkPoolText
-            ?? state?.upiRedeemCdkPoolText
-            ?? state?.upiRedeemCdkeyPoolText
-            ?? state?.pixRedeemCdkeyPoolText
-            ?? '')
+        state?.cdkPoolText
+        ?? state?.upiRedeemCdkPoolText
+        ?? state?.upiRedeemCdkeyPoolText
+        ?? state?.pixRedeemCdkeyPoolText
+        ?? ''
       );
     }
 
     function getStoredCdkUsage(state = {}, channel = 'upi') {
       const normalizedChannel = normalizeRedeemChannel(channel);
+      if (normalizedChannel === 'ideal') {
+        return normalizeUpiRedeemCdkeyUsageValue(state?.idealRedeemCdkeyUsage || {});
+      }
+      if (normalizedChannel === 'pix') {
+        return normalizeUpiRedeemCdkeyUsageValue(state?.pixChannelRedeemCdkeyUsage || {});
+      }
       return normalizeUpiRedeemCdkeyUsageValue(
-        normalizedChannel === 'ideal'
-          ? (state?.idealRedeemCdkeyUsage || {})
-          : (state?.cdkUsage
-            || state?.upiRedeemCdkUsage
-            || state?.upiRedeemCdkeyUsage
-            || state?.pixRedeemCdkeyUsage
-            || {})
+        state?.cdkUsage
+        || state?.upiRedeemCdkUsage
+        || state?.upiRedeemCdkeyUsage
+        || state?.pixRedeemCdkeyUsage
+        || {}
       );
     }
 
@@ -175,6 +187,12 @@
         return {
           idealRedeemCdkeyPoolText: normalizedPoolText,
           idealRedeemCdkeyUsage: normalizedUsage,
+        };
+      }
+      if (normalizedChannel === 'pix') {
+        return {
+          pixChannelRedeemCdkeyPoolText: normalizedPoolText,
+          pixChannelRedeemCdkeyUsage: normalizedUsage,
         };
       }
       return {

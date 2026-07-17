@@ -45,6 +45,26 @@ test('normalizes usage keys before filtering available CDKs', () => {
   }), ['B']);
 });
 
+test('PIX uses independent canonical pool and usage keys', () => {
+  const pixUsage = { PIX_A: { remoteStatus: 'failed' } };
+  assert.equal(usage.getRedeemChannelPoolKey('pix'), 'pixChannelRedeemCdkeyPoolText');
+  assert.equal(usage.getRedeemChannelUsageKey('pix'), 'pixChannelRedeemCdkeyUsage');
+  assert.equal(usage.getRedeemChannelPoolText({ pixChannelRedeemCdkeyPoolText: 'PIX_A' }, 'pix'), 'PIX_A');
+  assert.deepEqual(
+    usage.getRedeemChannelUsage({ pixChannelRedeemCdkeyUsage: pixUsage }, 'pix'),
+    pixUsage
+  );
+  assert.deepEqual(
+    usage.buildRedeemChannelUsageUpdates('pix', pixUsage),
+    { pixChannelRedeemCdkeyUsage: pixUsage }
+  );
+});
+
+test('legacy pixRedeem pool aliases remain UPI aliases', () => {
+  assert.equal(usage.getRedeemChannelPoolText({ pixRedeemCdkeyPoolText: 'OLD_UPI' }, 'upi'), 'OLD_UPI');
+  assert.equal(usage.getRedeemChannelPoolText({ pixRedeemCdkeyPoolText: 'OLD_UPI' }, 'pix'), '');
+});
+
 test('matches runtime selectability for active, consumed, invalid, duplicate, and subscription states', () => {
   assert.deepEqual(usage.getAvailableCdkeys([
     'USED_AT_NUMBER',

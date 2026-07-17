@@ -71,6 +71,8 @@
       upiRedeemCdkeyUsage: {},
       idealRedeemCdkeyPoolText: '',
       idealRedeemCdkeyUsage: {},
+      pixChannelRedeemCdkeyPoolText: '',
+      pixChannelRedeemCdkeyUsage: {},
       autoRunSkipFailures: true,
       autoRunRetryNonFreeTrial: false,
       autoRunFallbackThreadIntervalMinutes: 0,

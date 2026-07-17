@@ -25,6 +25,17 @@ test('builds UPI and IDEAL state patches with expected aliases', () => {
   assert.equal(idealPatch.idealRedeemCdkeyPoolText, 'IDEAL-1');
 });
 
+test('PIX pool patch uses canonical PIX fields without UPI aliases', () => {
+  const helpers = moduleApi.createCdkPoolStateHelpers();
+  const patch = helpers.buildCdkPoolStatePatch('PIX-1', { 'PIX-1': { enabled: true } }, 'pix');
+  assert.equal(patch.pixChannelRedeemCdkeyPoolText, 'PIX-1');
+  assert.ok(patch.pixChannelRedeemCdkeyUsage['PIX-1']);
+  assert.equal(patch.upiRedeemCdkeyPoolText, undefined);
+  assert.equal(patch.pixRedeemCdkeyPoolText, undefined);
+  assert.equal(helpers.getStoredCdkPoolText(patch, 'pix'), 'PIX-1');
+  assert.ok(helpers.getStoredCdkUsage(patch, 'pix')['PIX-1']);
+});
+
 test('selectability blocks active success duplicate and subscription CDKs', () => {
   const helpers = moduleApi.createCdkPoolStateHelpers();
   assert.equal(helpers.isUpiRedeemCdkeySelectableForRedeem({ enabled: true }), true);

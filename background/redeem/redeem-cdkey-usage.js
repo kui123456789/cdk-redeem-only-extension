@@ -25,7 +25,8 @@
     if (typeof helper === 'function') {
       return helper(channel);
     }
-    return normalizeString(channel).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeString(channel).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function getUpiRedeemStateValue(state = {}, key = '') {
@@ -41,20 +42,26 @@
   }
 
   function getRedeemChannelPoolKey(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemCdkeyPoolText'
-      : 'upiRedeemCdkeyPoolText';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemCdkeyPoolText';
+    if (normalizedChannel === 'pix') return 'pixChannelRedeemCdkeyPoolText';
+    return 'upiRedeemCdkeyPoolText';
   }
 
   function getRedeemChannelUsageKey(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal'
-      ? 'idealRedeemCdkeyUsage'
-      : 'upiRedeemCdkeyUsage';
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') return 'idealRedeemCdkeyUsage';
+    if (normalizedChannel === 'pix') return 'pixChannelRedeemCdkeyUsage';
+    return 'upiRedeemCdkeyUsage';
   }
 
   function getRedeemChannelPoolText(state = {}, channel = 'upi') {
-    if (normalizeRedeemChannel(channel) === 'ideal') {
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') {
       return normalizeString(state?.idealRedeemCdkeyPoolText);
+    }
+    if (normalizedChannel === 'pix') {
+      return normalizeString(state?.pixChannelRedeemCdkeyPoolText);
     }
     return getUpiRedeemStateValue(state, 'upiRedeemCdkeyPoolText');
   }
@@ -62,9 +69,15 @@
   function getRedeemChannelUsage(state = {}, channel = 'upi', options = {}) {
     const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
     const hasDefaultValue = Object.prototype.hasOwnProperty.call(options || {}, 'defaultValue');
-    if (normalizeRedeemChannel(channel) === 'ideal') {
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') {
       return Object.prototype.hasOwnProperty.call(source, 'idealRedeemCdkeyUsage')
         ? source.idealRedeemCdkeyUsage
+        : (hasDefaultValue ? options.defaultValue : undefined);
+    }
+    if (normalizedChannel === 'pix') {
+      return Object.prototype.hasOwnProperty.call(source, 'pixChannelRedeemCdkeyUsage')
+        ? source.pixChannelRedeemCdkeyUsage
         : (hasDefaultValue ? options.defaultValue : undefined);
     }
     const value = getUpiRedeemStateValue(source, 'upiRedeemCdkeyUsage');
@@ -257,9 +270,15 @@
 
   function buildRedeemChannelUsageUpdates(channel = 'upi', usage = {}, options = {}) {
     const normalizedUsage = normalizeUsageWith(options, usage);
-    if (normalizeRedeemChannel(channel) === 'ideal') {
+    const normalizedChannel = normalizeRedeemChannel(channel);
+    if (normalizedChannel === 'ideal') {
       return {
         idealRedeemCdkeyUsage: normalizedUsage,
+      };
+    }
+    if (normalizedChannel === 'pix') {
+      return {
+        pixChannelRedeemCdkeyUsage: normalizedUsage,
       };
     }
     return {
