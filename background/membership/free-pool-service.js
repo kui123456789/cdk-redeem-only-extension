@@ -42,7 +42,7 @@
       normalizeEmail = defaultNormalizeEmail,
       normalizePlanType = (value = '') => defaultNormalizeString(value).toLowerCase().replace(/[\s-]+/g, '_'),
       normalizeRedeemChannel = defaultNormalizeString,
-      normalizeRedeemPlusDeletedEmailsByChannel = () => ({ upi: [], ideal: [] }),
+      normalizeRedeemPlusDeletedEmailsByChannel = () => ({ upi: [], ideal: [], pix: [] }),
       normalizeResultItem = (item = {}) => item,
       normalizeRetryCount = defaultNormalizeRetryCount,
       normalizeString = defaultNormalizeString,
@@ -115,6 +115,8 @@
       const upiChannelEligibilityReason = normalizeString(input.upiChannelEligibilityReason || credential.upiChannelEligibilityReason || existingItem.upiChannelEligibilityReason);
       const idealChannelEligibilityStatus = normalizeString(input.idealChannelEligibilityStatus || credential.idealChannelEligibilityStatus || existingItem.idealChannelEligibilityStatus);
       const idealChannelEligibilityReason = normalizeString(input.idealChannelEligibilityReason || credential.idealChannelEligibilityReason || existingItem.idealChannelEligibilityReason);
+      const pixChannelEligibilityStatus = normalizeString(input.pixChannelEligibilityStatus || credential.pixChannelEligibilityStatus || existingItem.pixChannelEligibilityStatus);
+      const pixChannelEligibilityReason = normalizeString(input.pixChannelEligibilityReason || credential.pixChannelEligibilityReason || existingItem.pixChannelEligibilityReason);
       const accessToken = normalizeString(input.accessToken || input.token || input.access_token || credential.accessToken || existingItem.accessToken);
       const accessTokenUpdatedAt = accessToken
         ? normalizeString(input.accessTokenUpdatedAt || credential.accessTokenUpdatedAt || checkedAt)
@@ -261,6 +263,8 @@
         upiChannelEligibilityReason,
         idealChannelEligibilityStatus,
         idealChannelEligibilityReason,
+        pixChannelEligibilityStatus,
+        pixChannelEligibilityReason,
         redeemStatus: nextRedeemStatus,
         redeemReason: nextRedeemReason,
         redeemFailureCount: nextRedeemFailureCount,
@@ -273,6 +277,9 @@
         idealRedeemFailureCount: hasRedeemField('idealRedeemFailureCount')
           ? normalizeRetryCount(getRedeemField('idealRedeemFailureCount'))
           : (shouldResetRedeemState ? 0 : existingItem.idealRedeemFailureCount),
+        pixRedeemFailureCount: hasRedeemField('pixRedeemFailureCount')
+          ? normalizeRetryCount(getRedeemField('pixRedeemFailureCount'))
+          : (shouldResetRedeemState ? 0 : existingItem.pixRedeemFailureCount),
         redeemLocked: hasRedeemField('redeemLocked') ? getRedeemField('redeemLocked') === true : (shouldResetRedeemState ? false : existingItem.redeemLocked),
         redeemLockedReason: hasRedeemField('redeemLockedReason') ? normalizeString(getRedeemField('redeemLockedReason')) : (shouldResetRedeemState ? '' : existingItem.redeemLockedReason),
         redeemLockedAt: hasRedeemField('redeemLockedAt') ? normalizeString(getRedeemField('redeemLockedAt')) : (shouldResetRedeemState ? '' : existingItem.redeemLockedAt),

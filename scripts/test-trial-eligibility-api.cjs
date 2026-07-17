@@ -49,6 +49,20 @@ test('eligible coupon enters Free even when both channels are denied', () => {
   assert.equal(decision.idealChannelEligibilityStatus, 'ineligible');
 });
 
+test('trial eligibility preserves PIX channel status and reason', () => {
+  const decision = normalizeTrialEligibilityApiItem({
+    token_ok: true,
+    eligible: true,
+    reason: 'eligible',
+    pix_eligible: false,
+    pix_eligible_reason: 'pix-disabled',
+  });
+
+  assert.equal(decision.pixChannelEligibilityStatus, 'ineligible');
+  assert.equal(decision.pixChannelEligibilityReason, 'pix-disabled');
+  assert.equal(isTrialEligibilityChannelAllowed(decision, 'pix'), false);
+});
+
 test('not eligible coupon is account ineligible and should not enter Free', () => {
   const decision = normalizeTrialEligibilityApiItem({
     token_ok: true,

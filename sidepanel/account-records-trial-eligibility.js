@@ -11,7 +11,10 @@
       : (value = '') => String(value || '').trim();
     const normalizeRedeemChannel = typeof context.normalizeRedeemChannel === 'function'
       ? context.normalizeRedeemChannel
-      : (value = '') => (normalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi');
+      : (value = '') => {
+        const normalized = normalizeText(value).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      };
     const getRedeemChannelLabel = typeof context.getRedeemChannelLabel === 'function'
       ? context.getRedeemChannelLabel
       : (channel = '') => (normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI');
@@ -46,7 +49,7 @@
       }
       const reasonField = redeemChannel === 'ideal'
         ? 'idealChannelEligibilityReason'
-        : 'upiChannelEligibilityReason';
+        : (redeemChannel === 'pix' ? 'pixChannelEligibilityReason' : 'upiChannelEligibilityReason');
       return normalizeText(row[reasonField]) || `${getRedeemChannelLabel(redeemChannel)} 渠道当前不可用`;
     }
 

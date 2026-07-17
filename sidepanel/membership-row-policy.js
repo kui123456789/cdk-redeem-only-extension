@@ -409,6 +409,7 @@
     const redeemableRows = allFreeRows.filter((row) => isRedeemableFreeRow(row, options));
     const redeemableUpiRows = allFreeRows.filter((row) => isRedeemableFreeRowForChannel(row, 'upi', options));
     const redeemableIdealRows = allFreeRows.filter((row) => isRedeemableFreeRowForChannel(row, 'ideal', options));
+    const redeemablePixRows = allFreeRows.filter((row) => isRedeemableFreeRowForChannel(row, 'pix', options));
     return {
       total: allRows.length,
       freeSectionCount: freeSectionRows.length,
@@ -418,9 +419,13 @@
       redeemableFreeCount: redeemableRows.length,
       redeemableUpiFreeCount: redeemableUpiRows.length,
       redeemableIdealFreeCount: redeemableIdealRows.length,
+      redeemablePixFreeCount: redeemablePixRows.length,
       upiFailureBlockedFreeCount: getChannelFailureLimitBlockedRows(allFreeRows, 'upi', options).length,
       idealFailureBlockedFreeCount: getChannelFailureLimitBlockedRows(allFreeRows, 'ideal', options).length,
+      pixFailureBlockedFreeCount: getChannelFailureLimitBlockedRows(allFreeRows, 'pix', options).length,
       upiDailyLimitBlockedFreeCount: allFreeRows.filter((row) => isRedeemChannelDailyLimitBlocked(row, 'upi', options)).length,
+      idealDailyLimitBlockedFreeCount: allFreeRows.filter((row) => isRedeemChannelDailyLimitBlocked(row, 'ideal', options)).length,
+      pixDailyLimitBlockedFreeCount: allFreeRows.filter((row) => isRedeemChannelDailyLimitBlocked(row, 'pix', options)).length,
       lockedRedeemCount: allFreeRows.filter(isRedeemLocked).length,
     };
   }

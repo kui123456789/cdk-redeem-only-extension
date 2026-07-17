@@ -186,17 +186,40 @@ test('normalizeResultsPayload preserves redeemPlusDeletedEmailsByChannel', () =>
     redeemPlusDeletedEmailsByChannel: {
       upi: ['ONE@example.com', 'one@example.com', 'two@example.com'],
       ideal: ['IDEAL@example.com'],
+      pix: ['PIX@example.com'],
     },
   });
 
   assert.deepEqual(payload.redeemPlusDeletedEmailsByChannel, {
     upi: ['one@example.com', 'two@example.com'],
     ideal: ['ideal@example.com'],
+    pix: ['pix@example.com'],
   });
   assert.deepEqual(payload.redeemPlusDeletedCountByChannel, {
     upi: 2,
     ideal: 1,
+    pix: 1,
   });
+});
+
+test('normalizeResultItem preserves PIX channel-specific fields', () => {
+  const item = resultState.normalizeResultItem({
+    email: 'pix@example.com',
+    status: 'paid',
+    redeemChannel: 'pix',
+    pixRedeemFailureCount: 2,
+    pixRedeemDailyLimitBlockedUntil: '2026-07-18T00:00:00.000Z',
+    pixRedeemDailyLimitReason: 'pix limit',
+    pixChannelEligibilityStatus: 'eligible',
+    pixChannelEligibilityReason: 'pix ok',
+  });
+
+  assert.equal(item.redeemChannel, 'pix');
+  assert.equal(item.pixRedeemFailureCount, 2);
+  assert.equal(item.pixRedeemDailyLimitBlockedUntil, '2026-07-18T00:00:00.000Z');
+  assert.equal(item.pixRedeemDailyLimitReason, 'pix limit');
+  assert.equal(item.pixChannelEligibilityStatus, 'eligible');
+  assert.equal(item.pixChannelEligibilityReason, 'pix ok');
 });
 
 test('normalizeResultItem clears internal redeem failure-limit errors', () => {
@@ -256,6 +279,7 @@ test('free membership override fields reset redeem failure state', () => {
     'redeemFailureCount',
     'upiRedeemFailureCount',
     'idealRedeemFailureCount',
+    'pixRedeemFailureCount',
     'redeemLocked',
     'redeemLockedReason',
     'redeemLockedAt',

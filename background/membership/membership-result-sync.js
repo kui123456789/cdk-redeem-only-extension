@@ -175,6 +175,7 @@
       delete sanitized.upiRedeemCdkeyUsage;
       delete sanitized.pixRedeemCdkeyUsage;
       delete sanitized.idealRedeemCdkeyUsage;
+      delete sanitized.pixChannelRedeemCdkeyUsage;
       return sanitized;
     }
 
@@ -185,11 +186,12 @@
         || Object.prototype.hasOwnProperty.call(state, 'upiRedeemCdkUsage')
         || Object.prototype.hasOwnProperty.call(state, 'pixRedeemCdkeyUsage')
         || Object.prototype.hasOwnProperty.call(state, 'idealRedeemCdkeyUsage')
+        || Object.prototype.hasOwnProperty.call(state, 'pixChannelRedeemCdkeyUsage')
       ));
     }
 
     function preferLatestUpiRedeemCdkeyPoolState(state = {}, latestState = {}) {
-      ['cdkPoolText', 'upiRedeemCdkPoolText', 'upiRedeemCdkeyPoolText', 'pixRedeemCdkeyPoolText', 'idealRedeemCdkeyPoolText'].forEach((key) => {
+      ['cdkPoolText', 'upiRedeemCdkPoolText', 'upiRedeemCdkeyPoolText', 'pixRedeemCdkeyPoolText', 'idealRedeemCdkeyPoolText', 'pixChannelRedeemCdkeyPoolText'].forEach((key) => {
         if (latestState && typeof latestState === 'object' && !Array.isArray(latestState)
           && Object.prototype.hasOwnProperty.call(latestState, key)) {
           state[key] = latestState[key];
@@ -218,16 +220,19 @@
         state.cdkUsage = state.upiRedeemCdkeyUsage;
         state.upiRedeemCdkUsage = state.upiRedeemCdkeyUsage;
         state.idealRedeemCdkeyUsage = latestState?.idealRedeemCdkeyUsage || {};
+        state.pixChannelRedeemCdkeyUsage = latestState?.pixChannelRedeemCdkeyUsage || {};
       } else if (hasUpiRedeemCdkeyUsageState(settings)) {
         state.upiRedeemCdkeyUsage = getUpiRedeemStateValue(settings, 'upiRedeemCdkeyUsage') || {};
         state.cdkUsage = state.upiRedeemCdkeyUsage;
         state.upiRedeemCdkUsage = state.upiRedeemCdkeyUsage;
         state.idealRedeemCdkeyUsage = settings?.idealRedeemCdkeyUsage || {};
+        state.pixChannelRedeemCdkeyUsage = settings?.pixChannelRedeemCdkeyUsage || {};
       } else if (hasUpiRedeemCdkeyUsageState(input)) {
         state.upiRedeemCdkeyUsage = getUpiRedeemStateValue(input, 'upiRedeemCdkeyUsage') || {};
         state.cdkUsage = state.upiRedeemCdkeyUsage;
         state.upiRedeemCdkUsage = state.upiRedeemCdkeyUsage;
         state.idealRedeemCdkeyUsage = input?.idealRedeemCdkeyUsage || {};
+        state.pixChannelRedeemCdkeyUsage = input?.pixChannelRedeemCdkeyUsage || {};
       }
       return state;
     }

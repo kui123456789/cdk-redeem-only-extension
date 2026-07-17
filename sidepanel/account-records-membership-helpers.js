@@ -19,7 +19,10 @@
       getUpiCredentialMembershipGroup = () => 'free',
       isRedeemableFreeUpiCredentialMembershipRow = () => false,
       isRedeemableFreeUpiCredentialMembershipRowForChannel = () => false,
-      normalizeRedeemChannel = (value = '') => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
+      normalizeRedeemChannel = (value = '') => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
       getStoredCdkPoolText = () => '',
       parseUpiRedeemCdkeyPoolText = () => [],
       getUpiRedeemCdkeyUsage = () => ({}),
@@ -74,6 +77,8 @@
         upiChannelEligibilityReason: normalizeUpiCredentialMembershipText(row.upiChannelEligibilityReason),
         idealChannelEligibilityStatus: normalizeUpiCredentialMembershipText(row.idealChannelEligibilityStatus),
         idealChannelEligibilityReason: normalizeUpiCredentialMembershipText(row.idealChannelEligibilityReason),
+        pixChannelEligibilityStatus: normalizeUpiCredentialMembershipText(row.pixChannelEligibilityStatus),
+        pixChannelEligibilityReason: normalizeUpiCredentialMembershipText(row.pixChannelEligibilityReason),
       };
     }
 
@@ -101,6 +106,7 @@
         redeemFailureLimit: getUpiCredentialMembershipFailureLimit(row),
         upiRedeemFailureCount: getRedeemChannelFailureCount(row, 'upi'),
         idealRedeemFailureCount: getRedeemChannelFailureCount(row, 'ideal'),
+        pixRedeemFailureCount: getRedeemChannelFailureCount(row, 'pix'),
         redeemLocked: isUpiCredentialMembershipRedeemLocked(row),
         redeemLockedReason: getUpiCredentialMembershipRedeemLockReason(row),
         redeemLockedAt: normalizeUpiCredentialMembershipText(row.redeemLockedAt),
@@ -220,7 +226,7 @@
       if (!normalizedEmail) {
         return null;
       }
-      const channels = channel ? [normalizeRedeemChannel(channel)] : ['upi', 'ideal'];
+      const channels = channel ? [normalizeRedeemChannel(channel)] : ['upi', 'ideal', 'pix'];
       for (const currentChannel of channels) {
         const usage = getUpiRedeemCdkeyUsage(currentState, currentChannel);
         const match = Object.entries(usage)
@@ -367,14 +373,17 @@
       const targets = {
         upi: new Set(),
         ideal: new Set(),
+        pix: new Set(),
       };
       const emailMap = {
         upi: {},
         ideal: {},
+        pix: {},
       };
       const unresolvedChannels = {
         upi: false,
         ideal: false,
+        pix: false,
       };
       const refreshableEmails = new Set();
       const addCdkey = (channel = 'upi', cdkey = '', email = '') => {
@@ -405,7 +414,7 @@
         }
       });
 
-      ['upi', 'ideal'].forEach((channel) => {
+      ['upi', 'ideal', 'pix'].forEach((channel) => {
         const usage = getUpiRedeemCdkeyUsage(currentState, channel);
         Object.entries(usage).forEach(([cdkey, entry]) => {
           const relatedEmail = getUpiRedeemUsageRelatedEmail(entry);

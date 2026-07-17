@@ -7,6 +7,7 @@ const membershipRowPolicy = require('../sidepanel/membership-row-policy.js');
 test('groups paid rows by redeem channel', () => {
   assert.equal(membershipViewModel.getGroup({ status: 'paid', redeemChannel: 'ideal' }), 'ideal-plus');
   assert.equal(membershipViewModel.getGroup({ status: 'paid', redeemChannel: 'upi' }), 'upi-plus');
+  assert.equal(membershipViewModel.getGroup({ status: 'paid', redeemChannel: 'pix' }), 'pix-plus');
   assert.equal(membershipViewModel.getGroup({ status: 'free', redeemChannel: 'ideal' }), 'free');
 });
 
@@ -16,6 +17,7 @@ test('buildRows normalizes emails and summarize counts membership groups', () =>
       { email: ' Free@Example.COM ', status: 'free', accessToken: 'free-at' },
       { email: ' upi@example.com ', status: 'paid', redeemChannel: 'upi' },
       { email: ' IDEAL@Example.com ', status: 'paid', redeemChannel: 'ideal', access_token: 'ideal-at' },
+      { email: ' PIX@Example.com ', status: 'paid', redeemChannel: 'pix', accessToken: 'pix-at' },
       { email: '', status: 'paid', redeemChannel: 'upi' },
     ],
   });
@@ -24,14 +26,15 @@ test('buildRows normalizes emails and summarize counts membership groups', () =>
     'free@example.com',
     'upi@example.com',
     'ideal@example.com',
+    'pix@example.com',
   ]);
   assert.deepEqual(membershipViewModel.summarize(rows), {
-    total: 3,
-    withAt: 2,
+    total: 4,
+    withAt: 3,
     free: 1,
     'upi-plus': 1,
     'ideal-plus': 1,
-    'pix-plus': 0,
+    'pix-plus': 1,
   });
 });
 
@@ -62,16 +65,20 @@ test('pm-unavailable and cross-region payment rows are not redeemable', () => {
   const pmUnavailableRow = buildEligibleFreeRow({
     upiChannelEligibilityStatus: 'pm-unavailable',
     idealChannelEligibilityStatus: 'pm-unavailable',
+    pixChannelEligibilityStatus: 'pm-unavailable',
   });
   const crossRegionRow = buildEligibleFreeRow({
     upiChannelEligibilityStatus: 'cross-region-payment',
     idealChannelEligibilityStatus: 'cross-region-payment',
+    pixChannelEligibilityStatus: 'cross-region-payment',
   });
 
   assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(pmUnavailableRow, 'upi'), false);
   assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(pmUnavailableRow, 'ideal'), false);
+  assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(pmUnavailableRow, 'pix'), false);
   assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(crossRegionRow, 'upi'), false);
   assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(crossRegionRow, 'ideal'), false);
+  assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(crossRegionRow, 'pix'), false);
 });
 
 test('deleted UPI Plus tombstone does not hide IDEAL Plus', () => {
@@ -101,5 +108,6 @@ test('missing AT rows are counted as not redeemable', () => {
 
   assert.equal(summary.missingAtCount, 1);
   assert.equal(summary.redeemableFreeCount, 1);
+  assert.equal(summary.redeemablePixFreeCount, 1);
   assert.equal(membershipRowPolicy.isRedeemableFreeRowForChannel(rows[1], 'upi'), false);
 });

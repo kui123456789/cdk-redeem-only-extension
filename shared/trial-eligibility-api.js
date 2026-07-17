@@ -123,13 +123,20 @@
   }
 
   function normalizeChannelStatus(source = {}, channel = 'upi') {
-    const normalizedChannel = normalizeString(channel).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
-    const keys = normalizedChannel === 'ideal'
-      ? ['ideal_eligible', 'idealEligible']
-      : ['upi_eligible', 'upiEligible'];
-    const reasonKeys = normalizedChannel === 'ideal'
-      ? ['ideal_eligible_reason', 'idealEligibleReason']
-      : ['upi_eligible_reason', 'upiEligibleReason'];
+    const rawChannel = normalizeString(channel).toLowerCase();
+    const normalizedChannel = rawChannel === 'ideal' || rawChannel === 'pix' ? rawChannel : 'upi';
+    const keysByChannel = {
+      upi: ['upi_eligible', 'upiEligible'],
+      ideal: ['ideal_eligible', 'idealEligible'],
+      pix: ['pix_eligible', 'pixEligible'],
+    };
+    const reasonKeysByChannel = {
+      upi: ['upi_eligible_reason', 'upiEligibleReason'],
+      ideal: ['ideal_eligible_reason', 'idealEligibleReason'],
+      pix: ['pix_eligible_reason', 'pixEligibleReason'],
+    };
+    const keys = keysByChannel[normalizedChannel];
+    const reasonKeys = reasonKeysByChannel[normalizedChannel];
     const field = readOwnBoolean(source, keys);
     let reason = '';
     for (const key of reasonKeys) {
@@ -157,6 +164,7 @@
     const eligible = readOwnBoolean(source, ['eligible']);
     const upi = normalizeChannelStatus(source, 'upi');
     const ideal = normalizeChannelStatus(source, 'ideal');
+    const pix = normalizeChannelStatus(source, 'pix');
     const base = {
       trialEligibilityStatus: 'failed',
       trialEligibilityReason: '',
@@ -177,6 +185,8 @@
       upiChannelEligibilityReason: upi.reason,
       idealChannelEligibilityStatus: ideal.status,
       idealChannelEligibilityReason: ideal.reason,
+      pixChannelEligibilityStatus: pix.status,
+      pixChannelEligibilityReason: pix.reason,
     };
 
     if (hasHtmlDiagnosticPayload(source)) {
@@ -254,10 +264,11 @@
   }
 
   function isTrialEligibilityChannelAllowed(item = {}, channel = 'upi') {
-    const normalizedChannel = normalizeString(channel).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const rawChannel = normalizeString(channel).toLowerCase();
+    const normalizedChannel = rawChannel === 'ideal' || rawChannel === 'pix' ? rawChannel : 'upi';
     const field = normalizedChannel === 'ideal'
       ? 'idealChannelEligibilityStatus'
-      : 'upiChannelEligibilityStatus';
+      : (normalizedChannel === 'pix' ? 'pixChannelEligibilityStatus' : 'upiChannelEligibilityStatus');
     const status = normalizeString(item[field]).toLowerCase();
     return !status || status === 'unknown' || status === 'eligible';
   }
@@ -282,6 +293,8 @@
       upiChannelEligibilityReason: normalizeString(decision.upiChannelEligibilityReason),
       idealChannelEligibilityStatus: normalizeString(decision.idealChannelEligibilityStatus),
       idealChannelEligibilityReason: normalizeString(decision.idealChannelEligibilityReason),
+      pixChannelEligibilityStatus: normalizeString(decision.pixChannelEligibilityStatus),
+      pixChannelEligibilityReason: normalizeString(decision.pixChannelEligibilityReason),
     };
   }
 

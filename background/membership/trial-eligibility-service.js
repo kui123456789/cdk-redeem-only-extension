@@ -38,7 +38,10 @@
       mergeCredentialAuthMaterial = (primary = {}) => primary,
       mergeCredentialsIntoResultItems = (items = []) => items,
       normalizeEmail = defaultNormalizeEmail,
-      normalizeRedeemChannel = (channel = '') => (defaultNormalizeString(channel).toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
+      normalizeRedeemChannel = (channel = '') => {
+        const normalized = defaultNormalizeString(channel).toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
       normalizeResultItem = (item = {}) => item,
       normalizeRetryCount = defaultNormalizeRetryCount,
       normalizeString = defaultNormalizeString,
@@ -63,7 +66,7 @@
       const normalizedChannel = normalizeRedeemChannel(channel);
       const field = normalizedChannel === 'ideal'
         ? 'idealChannelEligibilityStatus'
-        : 'upiChannelEligibilityStatus';
+        : (normalizedChannel === 'pix' ? 'pixChannelEligibilityStatus' : 'upiChannelEligibilityStatus');
       const status = normalizeString(item?.[field]).toLowerCase();
       return !status || status === 'unknown' || status === 'eligible';
     }

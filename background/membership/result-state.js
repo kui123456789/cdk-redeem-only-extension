@@ -67,7 +67,8 @@
     if (typeof helper === 'function') {
       return helper(value);
     }
-    return normalizeString(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = normalizeString(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function normalizeRedeemPlusDeletedEmailsByChannel(value = {}) {
@@ -75,6 +76,7 @@
     return {
       upi: normalizeEmailList(source.upi),
       ideal: normalizeEmailList(source.ideal),
+      pix: normalizeEmailList(source.pix),
     };
   }
 
@@ -102,6 +104,7 @@
       redeemPlusDeletedCountByChannel: {
         upi: redeemPlusDeletedEmailsByChannel.upi.length,
         ideal: redeemPlusDeletedEmailsByChannel.ideal.length,
+        pix: redeemPlusDeletedEmailsByChannel.pix.length,
       },
     };
   }
@@ -357,6 +360,9 @@
     const idealRedeemFailureCount = shouldClearInternalRedeemFailure ? 0 : Math.max(0, Math.floor(Number(
       item.idealRedeemFailureCount ?? (redeemChannel === 'ideal' ? legacyFailureCount : 0)
     ) || 0));
+    const pixRedeemFailureCount = shouldClearInternalRedeemFailure ? 0 : Math.max(0, Math.floor(Number(
+      item.pixRedeemFailureCount ?? (redeemChannel === 'pix' ? legacyFailureCount : 0)
+    ) || 0));
     const redeemLocked = !shouldClearInternalRedeemFailure
       && (normalizeBoolean(item.redeemLocked) || idealRedeemFailureCount >= REDEEM_CHANNEL_FAILURE_LIMIT);
     const passkeyNumericMetadataPatch = buildPasskeyNumericMetadataPatch(item);
@@ -406,6 +412,8 @@
       upiChannelEligibilityReason: normalizeString(item.upiChannelEligibilityReason || item.upi_eligible_reason || item.upiEligibleReason),
       idealChannelEligibilityStatus: normalizeString(item.idealChannelEligibilityStatus || item.idealEligibilityStatus),
       idealChannelEligibilityReason: normalizeString(item.idealChannelEligibilityReason || item.ideal_eligible_reason || item.idealEligibleReason),
+      pixChannelEligibilityStatus: normalizeString(item.pixChannelEligibilityStatus || item.pixEligibilityStatus),
+      pixChannelEligibilityReason: normalizeString(item.pixChannelEligibilityReason || item.pix_eligible_reason || item.pixEligibleReason),
       accessToken,
       accessTokenMasked: accessToken ? (normalizeString(item.accessTokenMasked) || maskAccessToken(accessToken)) : '',
       accessTokenUpdatedAt,
@@ -415,6 +423,16 @@
       redeemFailureLimit: shouldClearInternalRedeemFailure ? REDEEM_CHANNEL_FAILURE_LIMIT : Math.max(0, Math.floor(Number(item.redeemFailureLimit) || 0)),
       upiRedeemFailureCount,
       idealRedeemFailureCount,
+      pixRedeemFailureCount,
+      upiRedeemDailyLimitBlockedAt: normalizeString(item.upiRedeemDailyLimitBlockedAt),
+      upiRedeemDailyLimitBlockedUntil: normalizeString(item.upiRedeemDailyLimitBlockedUntil),
+      upiRedeemDailyLimitReason: normalizeString(item.upiRedeemDailyLimitReason),
+      idealRedeemDailyLimitBlockedAt: normalizeString(item.idealRedeemDailyLimitBlockedAt),
+      idealRedeemDailyLimitBlockedUntil: normalizeString(item.idealRedeemDailyLimitBlockedUntil),
+      idealRedeemDailyLimitReason: normalizeString(item.idealRedeemDailyLimitReason),
+      pixRedeemDailyLimitBlockedAt: normalizeString(item.pixRedeemDailyLimitBlockedAt),
+      pixRedeemDailyLimitBlockedUntil: normalizeString(item.pixRedeemDailyLimitBlockedUntil),
+      pixRedeemDailyLimitReason: normalizeString(item.pixRedeemDailyLimitReason),
       redeemLocked,
       redeemLockedReason: redeemLocked
         ? (normalizeString(item.redeemLockedReason) || 'IDEAL 已失败 3 次，账号已封存，不再使用')
@@ -553,7 +571,9 @@
     const deletedByChannel = normalizeRedeemPlusDeletedEmailsByChannel(results?.redeemPlusDeletedEmailsByChannel);
     const rawChannel = normalizeString(channel || item?.redeemChannel || item?.channel || item?.paymentChannel);
     if (!rawChannel) {
-      return (deletedByChannel.upi || []).includes(email) || (deletedByChannel.ideal || []).includes(email);
+      return (deletedByChannel.upi || []).includes(email)
+        || (deletedByChannel.ideal || []).includes(email)
+        || (deletedByChannel.pix || []).includes(email);
     }
     const targetChannel = normalizeRedeemChannel(rawChannel);
     return (deletedByChannel[targetChannel] || []).includes(email);
