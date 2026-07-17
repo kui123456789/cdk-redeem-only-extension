@@ -118,3 +118,35 @@ test('cancel PIX redeem job preserves PIX channel and canonical pool field', asy
   assert.equal(messages[0].payload.channel, 'pix');
   assert.equal(messages[0].payload.pixChannelRedeemCdkeyPoolText, 'PIX_A');
 });
+
+test('single redeem selects PIX when the row is only redeemable through PIX', async () => {
+  const messages = [];
+  const row = {
+    email: 'pix-only@example.com',
+    status: 'free',
+    password: 'pw',
+    totpMfaSecret: 'secret',
+  };
+  const actions = redeemActionsApi.createAccountRecordsRedeemActions({
+    state: { syncLatestState: () => {} },
+    helpers: { showToast: () => {} },
+    runtime: {
+      sendMessage: async (message) => {
+        messages.push(message);
+        return { results: { items: [], paidCount: 1, freeCount: 0, failedCount: 0 } };
+      },
+    },
+    normalizeRedeemChannel: (value) => ['upi', 'ideal', 'pix'].includes(value) ? value : 'upi',
+    getUpiCredentialMembershipSingleRedeemRow: () => row,
+    isRedeemableFreeUpiCredentialMembershipRow: () => true,
+    isRedeemableFreeUpiCredentialMembershipRowForChannel: (_row, channel) => channel === 'pix',
+    buildUpiCredentialMembershipRedeemCredential: (value) => value,
+    getUpiCredentialMembershipPoolSource: () => 'txt-free',
+    refreshUpiCredentialMembershipCheckResults: async () => ({}),
+  });
+
+  await actions.startSingleUpiCredentialMembershipFreeRedeem(row.email);
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].payload.channel, 'pix');
+});

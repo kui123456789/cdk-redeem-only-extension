@@ -5,8 +5,17 @@
       failureLimit = 3,
       getRedeemChannelStateHelpers = () => ({}),
       membershipRowPolicy = {},
-      normalizeRedeemChannel = (value = '') => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
+      normalizeRedeemChannel = (value = '') => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
     } = context;
+
+    function getFallbackRedeemChannelField(channel = 'upi', suffix = '') {
+      if (normalizeRedeemChannel(channel) === 'ideal') return `idealRedeem${suffix}`;
+      if (normalizeRedeemChannel(channel) === 'pix') return `pixRedeem${suffix}`;
+      return `upiRedeem${suffix}`;
+    }
 
     function getRedeemChannelFailureField(channel = 'upi') {
       const helper = getRedeemChannelStateHelpers().getRedeemChannelFailureField;
@@ -14,9 +23,7 @@
         return helper(channel);
       }
       return membershipRowPolicy.getRedeemChannelFailureField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemFailureCount'
-          : 'upiRedeemFailureCount');
+        || getFallbackRedeemChannelField(channel, 'FailureCount');
     }
 
     function getRedeemChannelFailureCount(row = {}, channel = 'upi') {
@@ -36,9 +43,7 @@
         return helper(channel);
       }
       return membershipRowPolicy.getRedeemChannelDailyLimitBlockedAtField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitBlockedAt'
-          : 'upiRedeemDailyLimitBlockedAt');
+        || getFallbackRedeemChannelField(channel, 'DailyLimitBlockedAt');
     }
 
     function getRedeemChannelDailyLimitBlockedUntilField(channel = 'upi') {
@@ -47,9 +52,7 @@
         return helper(channel);
       }
       return membershipRowPolicy.getRedeemChannelDailyLimitBlockedUntilField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitBlockedUntil'
-          : 'upiRedeemDailyLimitBlockedUntil');
+        || getFallbackRedeemChannelField(channel, 'DailyLimitBlockedUntil');
     }
 
     function getRedeemChannelDailyLimitReasonField(channel = 'upi') {
@@ -58,9 +61,7 @@
         return helper(channel);
       }
       return membershipRowPolicy.getRedeemChannelDailyLimitReasonField?.(channel)
-        || (normalizeRedeemChannel(channel) === 'ideal'
-          ? 'idealRedeemDailyLimitReason'
-          : 'upiRedeemDailyLimitReason');
+        || getFallbackRedeemChannelField(channel, 'DailyLimitReason');
     }
 
     function isRedeemChannelDailyLimitReason(message = '') {

@@ -7,16 +7,8 @@
     const { cdkPoolStateHelpers = {}, dom = {}, helpers = {} } = deps;
     const {
       parseUpiRedeemCdkeyPoolTextValue = () => [],
-      normalizeRedeemChannel = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
-      },
-      getRedeemChannelLabel = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (normalized === 'ideal') return 'IDEAL';
-        if (normalized === 'pix') return 'PIX';
-        return 'UPI';
-      },
+      normalizeRedeemChannel = (value) => ['ideal', 'pix'].includes(String(value || '').trim().toLowerCase()) ? String(value || '').trim().toLowerCase() : 'upi',
+      getRedeemChannelLabel = (value) => String(value || 'upi').trim().toUpperCase(),
       getStoredCdkPoolText = () => '',
       getStoredCdkUsage = () => ({}),
       getUpiRedeemRemoteStatusLabel = () => '',
@@ -66,9 +58,7 @@
     }
     function renderUpiRedeemCdkeyStatusList(stateValue = getLatestState(), channel = 'upi') {
       const redeemChannel = normalizeRedeemChannel(channel);
-      const statusList = redeemChannel === 'ideal'
-        ? idealRedeemCdkeyStatusList
-        : (redeemChannel === 'pix' ? pixRedeemCdkeyStatusList : upiRedeemCdkeyStatusList);
+      const statusList = { upi: upiRedeemCdkeyStatusList, ideal: idealRedeemCdkeyStatusList, pix: pixRedeemCdkeyStatusList }[redeemChannel];
       if (!statusList || !documentRef) {
         return;
       }
@@ -216,9 +206,7 @@
     }
     function updateUpiRedeemCdkeyPoolSummary(stateValue = getLatestState(), options = {}) {
       const redeemChannel = normalizeRedeemChannel(options.channel || options.redeemChannel);
-      const summary = redeemChannel === 'ideal'
-        ? idealRedeemCdkeyPoolSummary
-        : (redeemChannel === 'pix' ? pixRedeemCdkeyPoolSummary : upiRedeemCdkeyPoolSummary);
+      const summary = { upi: upiRedeemCdkeyPoolSummary, ideal: idealRedeemCdkeyPoolSummary, pix: pixRedeemCdkeyPoolSummary }[redeemChannel];
       if (!summary) {
         return;
       }

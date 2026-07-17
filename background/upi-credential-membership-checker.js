@@ -407,7 +407,7 @@
   }
 
   function getRedeemChannelLabel(channel = 'upi') {
-    return normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+    return normalizeRedeemChannel(channel).toUpperCase();
   }
 
   function getMembershipServiceModule(globalName = '', requirePath = '') {

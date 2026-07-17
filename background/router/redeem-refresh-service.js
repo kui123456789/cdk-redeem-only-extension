@@ -46,9 +46,7 @@
 
     function normalizeRedeemChannel(value = '') {
       const helper = getRedeemChannelStateHelpers().normalizeRedeemChannel;
-      if (typeof helper === 'function') {
-        return helper(value);
-      }
+      if (typeof helper === 'function') return helper(value);
       const normalized = normalizeString(value).toLowerCase();
       return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
     }
@@ -65,11 +63,7 @@
           ? source.idealRedeemCdkeyUsage
           : undefined;
       }
-      if (normalizedChannel === 'pix') {
-        return Object.prototype.hasOwnProperty.call(source, 'pixChannelRedeemCdkeyUsage')
-          ? source.pixChannelRedeemCdkeyUsage
-          : undefined;
-      }
+      if (normalizedChannel === 'pix') return Object.prototype.hasOwnProperty.call(source, 'pixChannelRedeemCdkeyUsage') ? source.pixChannelRedeemCdkeyUsage : undefined;
       if (Object.prototype.hasOwnProperty.call(source, 'cdkUsage')) return source.cdkUsage;
       if (Object.prototype.hasOwnProperty.call(source, 'upiRedeemCdkUsage')) return source.upiRedeemCdkUsage;
       if (Object.prototype.hasOwnProperty.call(source, 'upiRedeemCdkeyUsage')) return source.upiRedeemCdkeyUsage;
@@ -140,8 +134,7 @@
         return helper(channel);
       }
       const normalizedChannel = normalizeRedeemChannel(channel);
-      if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
-      if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
+      if (normalizedChannel !== 'upi') return `${normalizedChannel}RedeemFailureCount`;
       return 'upiRedeemFailureCount';
     }
 

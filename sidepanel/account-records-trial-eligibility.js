@@ -17,7 +17,7 @@
       };
     const getRedeemChannelLabel = typeof context.getRedeemChannelLabel === 'function'
       ? context.getRedeemChannelLabel
-      : (channel = '') => (normalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI');
+      : (channel = '') => normalizeRedeemChannel(channel).toUpperCase();
     const getCheckResults = typeof context.getUpiCredentialMembershipCheckResults === 'function'
       ? context.getUpiCredentialMembershipCheckResults
       : () => ({});
@@ -117,7 +117,8 @@
 
     function isRedeemableFreeUpiCredentialMembershipRow(row = {}) {
       return isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'upi')
-        || isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'ideal');
+        || isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'ideal')
+        || isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'pix');
     }
 
     function isUpiCredentialMembershipChannelFailureLimitReached(row = {}, channel = 'upi') {

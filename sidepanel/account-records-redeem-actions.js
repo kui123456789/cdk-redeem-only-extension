@@ -29,7 +29,7 @@
       getUpiCredentialMembershipDisplayRowByEmail = () => null,
       getUpiCredentialMembershipRedeemCdkey = () => '',
       getStoredCdkPoolText = () => '',
-      buildUpiCredentialMembershipRedeemStatusRefreshTargets = () => ({ upi: [], ideal: [], emailMap: { upi: {}, ideal: {} }, emailCount: 0, cdkCount: 0, total: 0 }),
+      buildUpiCredentialMembershipRedeemStatusRefreshTargets = () => ({ upi: [], ideal: [], pix: [], emailMap: { upi: {}, ideal: {}, pix: {} }, emailCount: 0, cdkCount: 0, total: 0 }),
       getUpiCredentialMembershipCheckBusy = () => false,
       setUpiCredentialMembershipRedeemBusy = () => {},
       getUpiCredentialMembershipRedeemBusy = () => false,
@@ -362,7 +362,9 @@
         helpers.showToast?.(`${normalizedEmail} ${reason}。`, 'warn', 2200);
         return;
       }
-      const redeemChannel = isRedeemableFreeUpiCredentialMembershipRowForChannel(row, 'upi') ? 'upi' : 'ideal';
+      const redeemChannel = ['upi', 'ideal', 'pix']
+        .find((channel) => isRedeemableFreeUpiCredentialMembershipRowForChannel(row, channel))
+        || 'upi';
       const credential = buildUpiCredentialMembershipRedeemCredential(row);
       if (!credential.password || !credential.totpMfaSecret) {
         helpers.showToast?.(`账号 ${normalizedEmail} 缺少密码或 2FA，无法兑换。`, 'error');

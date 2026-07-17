@@ -56,10 +56,7 @@
     const applyPaidSubscriptionCleanup = (...args) => context.applyPaidSubscriptionCleanup(...args);
 
         function getRedeemChannelLabel(channel = 'upi') {
-          const normalizedChannel = normalizeRedeemChannel(channel);
-          if (normalizedChannel === 'ideal') return 'IDEAL';
-          if (normalizedChannel === 'pix') return 'PIX';
-          return 'UPI';
+          return normalizeRedeemChannel(channel).toUpperCase();
         }
 
         const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
@@ -72,10 +69,7 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          const normalizedChannel = normalizeRedeemChannel(channel);
-          if (normalizedChannel === 'ideal') return 'idealRedeemFailureCount';
-          if (normalizedChannel === 'pix') return 'pixRedeemFailureCount';
-          return 'upiRedeemFailureCount';
+          return `${normalizeRedeemChannel(channel)}RedeemFailureCount`;
         }
 
 
@@ -103,10 +97,7 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          const normalizedChannel = normalizeRedeemChannel(channel);
-          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedAt';
-          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedAt';
-          return 'upiRedeemDailyLimitBlockedAt';
+          return `${normalizeRedeemChannel(channel)}RedeemDailyLimitBlockedAt`;
         }
 
 
@@ -115,10 +106,7 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          const normalizedChannel = normalizeRedeemChannel(channel);
-          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitBlockedUntil';
-          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitBlockedUntil';
-          return 'upiRedeemDailyLimitBlockedUntil';
+          return `${normalizeRedeemChannel(channel)}RedeemDailyLimitBlockedUntil`;
         }
 
 
@@ -127,10 +115,7 @@
           if (typeof helper === 'function') {
             return helper(channel);
           }
-          const normalizedChannel = normalizeRedeemChannel(channel);
-          if (normalizedChannel === 'ideal') return 'idealRedeemDailyLimitReason';
-          if (normalizedChannel === 'pix') return 'pixRedeemDailyLimitReason';
-          return 'upiRedeemDailyLimitReason';
+          return `${normalizeRedeemChannel(channel)}RedeemDailyLimitReason`;
         }
 
 

@@ -19,16 +19,8 @@
     } = deps;
     const {
       parseUpiRedeemCdkeyPoolTextValue = () => [],
-      normalizeRedeemChannel = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
-      },
-      getRedeemChannelLabel = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (normalized === 'ideal') return 'IDEAL';
-        if (normalized === 'pix') return 'PIX';
-        return 'UPI';
-      },
+      normalizeRedeemChannel = (value) => ['ideal', 'pix'].includes(String(value || '').trim().toLowerCase()) ? String(value || '').trim().toLowerCase() : 'upi',
+      getRedeemChannelLabel = (value) => String(value || 'upi').trim().toUpperCase(),
       getStoredCdkPoolText = () => '',
       getStoredCdkUsage = () => ({}),
       buildCdkPoolStatePatch = () => ({}),
@@ -42,22 +34,18 @@
       upiRedeemCdkeyPoolSummary = null,
       inputIdealRedeemCdkeyPool = null,
       idealRedeemCdkeyPoolSummary = null,
-      inputPixRedeemCdkeyPool = null,
-      pixRedeemCdkeyPoolSummary = null,
+      inputPixRedeemCdkeyPool = null, pixRedeemCdkeyPoolSummary = null,
       btnImportCdkPool = null,
       btnDeleteAllCdkPool = null,
       btnImportIdealCdkPool = null,
       btnDeleteAllIdealCdkPool = null,
-      btnImportPixCdkPool = null,
-      btnDeleteAllPixCdkPool = null,
+      btnImportPixCdkPool = null, btnDeleteAllPixCdkPool = null,
       inputUpiRedeemExternalApiKey = null,
       inputUpiRedeemClientId = null,
       inputPlusModeEnabled = null,
       inputUpiRedeemFailedAccountRetryLimit = null,
       btnUpiRedeemCdkeyStatusRefresh = null,
-      upiRedeemCdkeyStatusList = null,
-      idealRedeemCdkeyStatusList = null,
-      pixRedeemCdkeyStatusList = null,
+      upiRedeemCdkeyStatusList = null, idealRedeemCdkeyStatusList = null, pixRedeemCdkeyStatusList = null,
     } = dom;
     const getLatestState = typeof state.getLatestState === 'function' ? state.getLatestState : () => ({});
     const syncLatestState = typeof state.syncLatestState === 'function' ? state.syncLatestState : () => {};
@@ -88,26 +76,12 @@
     let upiRedeemCdkeyStatusAutoRefreshTimer = null;
     let upiRedeemCdkeyStatusRefreshInFlight = false;
 
-    function getCdkPoolInputForChannel(channel = 'upi') {
-      const redeemChannel = normalizeRedeemChannel(channel);
-      if (redeemChannel === 'ideal') return inputIdealRedeemCdkeyPool;
-      if (redeemChannel === 'pix') return inputPixRedeemCdkeyPool;
-      return inputUpiRedeemCdkeyPool;
-    }
-
-    function getImportCdkButtonForChannel(channel = 'upi') {
-      const redeemChannel = normalizeRedeemChannel(channel);
-      if (redeemChannel === 'ideal') return btnImportIdealCdkPool;
-      if (redeemChannel === 'pix') return btnImportPixCdkPool;
-      return btnImportCdkPool;
-    }
-
-    function getDeleteAllCdkButtonForChannel(channel = 'upi') {
-      const redeemChannel = normalizeRedeemChannel(channel);
-      if (redeemChannel === 'ideal') return btnDeleteAllIdealCdkPool;
-      if (redeemChannel === 'pix') return btnDeleteAllPixCdkPool;
-      return btnDeleteAllCdkPool;
-    }
+    const cdkPoolInputs = { upi: inputUpiRedeemCdkeyPool, ideal: inputIdealRedeemCdkeyPool, pix: inputPixRedeemCdkeyPool };
+    const importCdkButtons = { upi: btnImportCdkPool, ideal: btnImportIdealCdkPool, pix: btnImportPixCdkPool };
+    const deleteAllCdkButtons = { upi: btnDeleteAllCdkPool, ideal: btnDeleteAllIdealCdkPool, pix: btnDeleteAllPixCdkPool };
+    function getCdkPoolInputForChannel(channel = 'upi') { return cdkPoolInputs[normalizeRedeemChannel(channel)]; }
+    function getImportCdkButtonForChannel(channel = 'upi') { return importCdkButtons[normalizeRedeemChannel(channel)]; }
+    function getDeleteAllCdkButtonForChannel(channel = 'upi') { return deleteAllCdkButtons[normalizeRedeemChannel(channel)]; }
 
     function shouldPreserveFocusedUpiRedeemCdkeyPoolEdit(channel = '') {
       const focusedInputs = channel

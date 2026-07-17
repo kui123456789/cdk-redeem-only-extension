@@ -230,13 +230,8 @@ const {
   btnDeleteAllCdkPool,
   upiRedeemCdkeyPoolSummary,
   inputIdealRedeemCdkeyPool,
-  btnImportIdealCdkPool,
-  btnDeleteAllIdealCdkPool,
-  idealRedeemCdkeyPoolSummary,
-  inputPixRedeemCdkeyPool,
-  btnImportPixCdkPool,
-  btnDeleteAllPixCdkPool,
-  pixRedeemCdkeyPoolSummary,
+  btnImportIdealCdkPool, btnDeleteAllIdealCdkPool, idealRedeemCdkeyPoolSummary,
+  inputPixRedeemCdkeyPool, btnImportPixCdkPool, btnDeleteAllPixCdkPool, pixRedeemCdkeyPoolSummary,
   btnShowUpiCredentialBackups,
   btnExportUpiCredentialBackups,
   btnCheckUpiCredentialMembershipLocal,
@@ -249,9 +244,7 @@ const {
   upiCredentialBackupPreviewWrap,
   upiCredentialBackupPreview,
   upiCredentialMembershipCheckResults,
-  upiRedeemCdkeyStatusList,
-  idealRedeemCdkeyStatusList,
-  pixRedeemCdkeyStatusList,
+  upiRedeemCdkeyStatusList, idealRedeemCdkeyStatusList, pixRedeemCdkeyStatusList,
   rowLegacyPayCountryCode,
   selectLegacyPayCountryCode,
   rowLegacyPayOtp,
@@ -1661,9 +1654,7 @@ with (appState.createScope()) {
       inputUpiRedeemExternalApiKey,
       inputUpiRedeemClientId,
       inputUpiRedeemFailedAccountRetryLimit,
-      inputUpiRedeemCdkeyPool,
-      inputIdealRedeemCdkeyPool,
-      inputPixRedeemCdkeyPool,
+      inputUpiRedeemCdkeyPool, inputIdealRedeemCdkeyPool, inputPixRedeemCdkeyPool,
       btnExportUpiRedeemSuccessRecords,
       upiCredentialBackupPreviewWrap,
       upiCredentialBackupPreview,
@@ -1674,9 +1665,7 @@ with (appState.createScope()) {
     },
     helpers: {
       downloadTextFile,
-      escapeHtml,
-      openRedeemChannelChoiceDialog,
-      openConfirmModal,
+      escapeHtml, openRedeemChannelChoiceDialog, openConfirmModal,
       refreshUpiRedeemCdkeyStatuses: (...args) => refreshUpiRedeemCdkeyStatuses(...args),
       showToast,
     },
@@ -2288,13 +2277,8 @@ with (appState.createScope()) {
     return actionModalService?.resolveModalChoice?.(choice);
   }
   
-  function openActionModal({ title, message, messageHtml, actions, option, alert, buildResult }) {
-    return actionModalService?.openActionModal?.({ title, message, messageHtml, actions, option, alert, buildResult }) || Promise.resolve(null);
-  }
-
-  function openRedeemChannelChoiceDialog(options = {}) {
-    return actionModalService?.openRedeemChannelChoiceDialog?.(options) || Promise.resolve(null);
-  }
+  function openActionModal({ title, message, messageHtml, actions, option, alert, buildResult }) { return actionModalService?.openActionModal?.({ title, message, messageHtml, actions, option, alert, buildResult }) || Promise.resolve(null); }
+  function openRedeemChannelChoiceDialog(options = {}) { return actionModalService?.openRedeemChannelChoiceDialog?.(options) || Promise.resolve(null); }
   
   function openAutoStartChoiceDialog(startStep, options = {}) {
     return actionModalService?.openAutoStartChoiceDialog?.(startStep, options) || Promise.resolve(null);
@@ -3211,9 +3195,7 @@ with (appState.createScope()) {
     if (!shouldPreserveFocusedUpiRedeemCdkeyPoolEdit('ideal') && inputIdealRedeemCdkeyPool) {
       inputIdealRedeemCdkeyPool.value = '';
     }
-    if (!shouldPreserveFocusedUpiRedeemCdkeyPoolEdit('pix') && inputPixRedeemCdkeyPool) {
-      inputPixRedeemCdkeyPool.value = '';
-    }
+    if (!shouldPreserveFocusedUpiRedeemCdkeyPoolEdit('pix') && inputPixRedeemCdkeyPool) inputPixRedeemCdkeyPool.value = '';
     updateAllUpiRedeemCdkeyPoolSummaries(normalizedState);
     renderStepStatuses(latestState);
     updatePanelModeUI();
@@ -3626,13 +3608,8 @@ with (appState.createScope()) {
         btnUpiRedeemCdkeyStatusRefresh,
         btnImportCdkPool,
         btnDeleteAllCdkPool,
-        btnImportIdealCdkPool,
-        btnDeleteAllIdealCdkPool,
-        btnImportPixCdkPool,
-        btnDeleteAllPixCdkPool,
-        inputUpiRedeemCdkeyPool,
-        inputIdealRedeemCdkeyPool,
-        inputPixRedeemCdkeyPool,
+        btnImportIdealCdkPool, btnDeleteAllIdealCdkPool, btnImportPixCdkPool, btnDeleteAllPixCdkPool,
+        inputUpiRedeemCdkeyPool, inputIdealRedeemCdkeyPool, inputPixRedeemCdkeyPool,
       },
       helpers: {
         showToast,
@@ -3794,21 +3771,14 @@ with (appState.createScope()) {
       btnDeleteAllCdkPool,
       upiRedeemCdkeyPoolSummary,
       inputIdealRedeemCdkeyPool,
-      btnImportIdealCdkPool,
-      btnDeleteAllIdealCdkPool,
-      idealRedeemCdkeyPoolSummary,
-      inputPixRedeemCdkeyPool,
-      btnImportPixCdkPool,
-      btnDeleteAllPixCdkPool,
-      pixRedeemCdkeyPoolSummary,
+      btnImportIdealCdkPool, btnDeleteAllIdealCdkPool, idealRedeemCdkeyPoolSummary,
+      inputPixRedeemCdkeyPool, btnImportPixCdkPool, btnDeleteAllPixCdkPool, pixRedeemCdkeyPoolSummary,
       inputUpiRedeemExternalApiKey,
       inputUpiRedeemClientId,
       inputPlusModeEnabled,
       inputUpiRedeemFailedAccountRetryLimit,
       btnUpiRedeemCdkeyStatusRefresh,
-      upiRedeemCdkeyStatusList,
-      idealRedeemCdkeyStatusList,
-      pixRedeemCdkeyStatusList,
+      upiRedeemCdkeyStatusList, idealRedeemCdkeyStatusList, pixRedeemCdkeyStatusList,
     },
     state: {
       getLatestState: () => latestState,
@@ -4955,8 +4925,7 @@ with (appState.createScope()) {
     const cdkUsageForSave = getStoredCdkUsage(latestState, 'upi');
     const idealCdkPoolTextForSave = getStoredCdkPoolText(latestState, 'ideal');
     const idealCdkUsageForSave = getStoredCdkUsage(latestState, 'ideal');
-    const pixCdkPoolTextForSave = getStoredCdkPoolText(latestState, 'pix');
-    const pixCdkUsageForSave = getStoredCdkUsage(latestState, 'pix');
+    const pixCdkPoolTextForSave = getStoredCdkPoolText(latestState, 'pix'), pixCdkUsageForSave = getStoredCdkUsage(latestState, 'pix');
     const contributionModeEnabled = Boolean(latestState?.contributionMode);
     const icloudFetchModeRawValue = typeof selectIcloudFetchMode !== 'undefined'
       ? String(selectIcloudFetchMode?.value || '')
@@ -5181,14 +5150,12 @@ with (appState.createScope()) {
       upiRedeemCdkPoolText: cdkPoolTextForSave,
       upiRedeemCdkeyPoolText: cdkPoolTextForSave,
       pixRedeemCdkeyPoolText: cdkPoolTextForSave,
-      idealRedeemCdkeyPoolText: idealCdkPoolTextForSave,
-      pixChannelRedeemCdkeyPoolText: pixCdkPoolTextForSave,
+      idealRedeemCdkeyPoolText: idealCdkPoolTextForSave, pixChannelRedeemCdkeyPoolText: pixCdkPoolTextForSave,
       cdkUsage: cdkUsageForSave,
       upiRedeemCdkUsage: cdkUsageForSave,
       upiRedeemCdkeyUsage: cdkUsageForSave,
       pixRedeemCdkeyUsage: cdkUsageForSave,
-      idealRedeemCdkeyUsage: idealCdkUsageForSave,
-      pixChannelRedeemCdkeyUsage: pixCdkUsageForSave,
+      idealRedeemCdkeyUsage: idealCdkUsageForSave, pixChannelRedeemCdkeyUsage: pixCdkUsageForSave,
       legacyWalletEmail: String(currentLegacyWalletAccount?.email || latestState?.legacyWalletEmail || '').trim(),
       legacyWalletPassword: String(currentLegacyWalletAccount?.password || latestState?.legacyWalletPassword || ''),
       currentLegacyWalletAccountId: String(latestState?.currentLegacyWalletAccountId || '').trim(),
@@ -6499,8 +6466,7 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
     selectLegacyPayCountryCode,
     inputLegacyPayOtp,
     inputLegacyPayPin,
-    inputIdealRedeemCdkeyPool,
-    inputPixRedeemCdkeyPool,
+    inputIdealRedeemCdkeyPool, inputPixRedeemCdkeyPool,
   ].forEach((input) => {
     input?.addEventListener('input', () => {
       if (input === inputUpiRedeemCdkeyPool || input === inputIdealRedeemCdkeyPool || input === inputPixRedeemCdkeyPool) {
@@ -6512,8 +6478,7 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
         input === inputUpiRedeemExternalApiKey
         || input === inputUpiRedeemClientId
         || input === inputUpiRedeemCdkeyPool
-        || input === inputIdealRedeemCdkeyPool
-        || input === inputPixRedeemCdkeyPool
+        || input === inputIdealRedeemCdkeyPool || input === inputPixRedeemCdkeyPool
       ) {
         scheduleUpiRedeemCdkeyStatusAutoRefresh({ immediate: true });
       }
@@ -6549,8 +6514,7 @@ const settingsFieldBindings = window.SidepanelSettingsFieldBindings.createSettin
         input === inputUpiRedeemExternalApiKey
         || input === inputUpiRedeemClientId
         || input === inputUpiRedeemCdkeyPool
-        || input === inputIdealRedeemCdkeyPool
-        || input === inputPixRedeemCdkeyPool
+        || input === inputIdealRedeemCdkeyPool || input === inputPixRedeemCdkeyPool
       ) {
         scheduleUpiRedeemCdkeyStatusAutoRefresh({ immediate: true });
       }

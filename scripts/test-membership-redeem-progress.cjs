@@ -79,6 +79,14 @@ test('terminal success and failure states render expected labels and status clas
     redeemProgress.renderUpiCredentialMembershipRedeemProgress({ email: 'failed@example.com' }, failure),
     />失败<\/span>/
   );
+
+  const pixSuccess = redeemProgress.getUpiCredentialMembershipRedeemProgressMeta({
+    email: 'pix@example.com',
+    status: 'paid',
+    redeemChannel: 'pix',
+    accessToken: 'at-token',
+  });
+  assert.equal(pixSuccess.title, 'PIX 兑换已完成。');
 });
 
 test('unknown and free rows keep the existing idle or missing-AT fallback behavior', () => {

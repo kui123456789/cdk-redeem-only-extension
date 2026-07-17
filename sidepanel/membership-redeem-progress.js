@@ -17,11 +17,12 @@
   }
 
   function defaultNormalizeRedeemChannel(value = '') {
-    return defaultNormalizeText(value).toLowerCase() === 'ideal' ? 'ideal' : 'upi';
+    const normalized = defaultNormalizeText(value).toLowerCase();
+    return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
   }
 
   function defaultGetRedeemChannelLabel(channel = 'upi') {
-    return defaultNormalizeRedeemChannel(channel) === 'ideal' ? 'IDEAL' : 'UPI';
+    return defaultNormalizeRedeemChannel(channel).toUpperCase();
   }
 
   function defaultNormalizeRemoteStatus(status = '') {

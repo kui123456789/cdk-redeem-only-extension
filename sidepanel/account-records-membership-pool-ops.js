@@ -31,7 +31,10 @@
       setExportButtonsBusy = () => {},
       render = () => {},
       getAvailableUpiRedeemCdkeyCount = () => 0,
-      normalizeRedeemChannel = (value = '') => (String(value || '').trim().toLowerCase() === 'ideal' ? 'ideal' : 'upi'),
+      normalizeRedeemChannel = (value = '') => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return normalized === 'ideal' || normalized === 'pix' ? normalized : 'upi';
+      },
       getUpiCredentialMembershipCheckBusy = () => false,
       setUpiCredentialMembershipCheckBusy = () => {},
       getUpiCredentialMembershipRedeemBusy = () => false,

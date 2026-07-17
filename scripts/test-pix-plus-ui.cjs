@@ -7,6 +7,9 @@ const rendererApi = require('../sidepanel/account-records-membership-results-ren
 const resultOpsApi = require('../sidepanel/account-records-membership-result-ops.js');
 const redeemStatusApi = require('../sidepanel/account-records-redeem-status.js');
 const statusMetaApi = require('../sidepanel/account-records-status-meta.js');
+const redeemPolicyApi = require('../sidepanel/account-records-redeem-policy.js');
+const membershipPoolOpsApi = require('../sidepanel/account-records-membership-pool-ops.js');
+const trialEligibilityApi = require('../sidepanel/account-records-trial-eligibility.js');
 
 test('membership group and deletion helpers preserve independent PIX Plus state', () => {
   const groups = groupsApi.createAccountRecordsMembershipGroupHelpers({
@@ -125,4 +128,48 @@ test('PIX status labels and failure progress include the PIX channel', () => {
   });
   assert.equal(meta.label, 'PIX 3/3');
   assert.match(meta.detail, /PIX 3\/3/);
+});
+
+test('fallback redeem policy exposes PIX-specific failure and daily-limit fields', () => {
+  const policy = redeemPolicyApi.createAccountRecordsRedeemPolicy();
+
+  assert.equal(policy.getRedeemChannelFailureField('pix'), 'pixRedeemFailureCount');
+  assert.equal(policy.getRedeemChannelDailyLimitBlockedAtField('pix'), 'pixRedeemDailyLimitBlockedAt');
+  assert.equal(policy.getRedeemChannelDailyLimitBlockedUntilField('pix'), 'pixRedeemDailyLimitBlockedUntil');
+  assert.equal(policy.getRedeemChannelDailyLimitReasonField('pix'), 'pixRedeemDailyLimitReason');
+});
+
+test('membership pool resume keeps PIX as the selected channel', async () => {
+  const calls = [];
+  const poolOps = membershipPoolOpsApi.createAccountRecordsMembershipPoolOps({
+    state: { getLatestState: () => ({}) },
+    getUpiCredentialMembershipCheckResults: () => ({}),
+    getAvailableUpiRedeemCdkeyCount: (_state, channel) => channel === 'pix' ? 1 : 0,
+    getEnabledFreeUpiCredentialMembershipRowsForChannel: (channel) => channel === 'pix'
+      ? [{ email: 'pix@example.com' }]
+      : [],
+    startUpiCredentialMembershipFreeRedeem: async (credentials, options) => {
+      calls.push({ credentials, options });
+    },
+  });
+
+  const result = await poolOps.resumeFreeRedeemAfterCdkImport({ channel: 'pix' });
+
+  assert.deepEqual(result, { started: true, count: 1 });
+  assert.equal(calls[0].options.channel, 'pix');
+});
+
+test('trial eligibility treats PIX-only candidates as redeemable and labels PIX blocks', () => {
+  const trialEligibility = trialEligibilityApi.createAccountRecordsTrialEligibility({
+    membershipRowPolicy: {
+      isRedeemableFreeRowForChannel: (_row, channel) => channel === 'pix',
+      isTrialEligibilityChannelAllowed: (_row, channel) => channel !== 'pix',
+    },
+  });
+
+  assert.equal(trialEligibility.isRedeemableFreeUpiCredentialMembershipRow({}), true);
+  assert.equal(
+    trialEligibility.getTrialEligibilityChannelBlockedDetail({}, 'pix'),
+    'PIX 渠道当前不可用'
+  );
 });
