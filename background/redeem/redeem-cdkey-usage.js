@@ -20,6 +20,31 @@
     return String(value || '').trim();
   }
 
+  function getRedeemAttemptHistoryHelpers() {
+    if (rootScope.MultiPageRedeemAttemptHistory) {
+      return rootScope.MultiPageRedeemAttemptHistory;
+    }
+    if (typeof require === 'function') {
+      return require('../membership/redeem-attempt-history.js');
+    }
+    return {};
+  }
+
+  function normalizeRedeemAttemptHistory(value = [], options = {}) {
+    const helper = getRedeemAttemptHistoryHelpers().normalizeRedeemAttemptHistory;
+    return typeof helper === 'function' ? helper(value, options) : [];
+  }
+
+  function appendRedeemAttempt(history = [], attempt = {}, options = {}) {
+    const helper = getRedeemAttemptHistoryHelpers().appendRedeemAttempt;
+    return typeof helper === 'function' ? helper(history, attempt, options) : [];
+  }
+
+  function markRedeemAttemptRecovered(history = [], recovery = {}, options = {}) {
+    const helper = getRedeemAttemptHistoryHelpers().markRedeemAttemptRecovered;
+    return typeof helper === 'function' ? helper(history, recovery, options) : [];
+  }
+
   function normalizeRedeemChannel(channel = 'upi') {
     const helper = rootScope.MultiPageRedeemChannelState?.normalizeRedeemChannel;
     if (typeof helper === 'function') {
@@ -99,7 +124,7 @@
       });
   }
 
-  function normalizeCdkeyUsage(rawUsage = {}) {
+  function normalizeCdkeyUsage(rawUsage = {}, options = {}) {
     const usage = rawUsage && typeof rawUsage === 'object' && !Array.isArray(rawUsage) ? rawUsage : {};
     const result = {};
     Object.entries(usage).forEach(([rawCdkey, rawEntry]) => {
@@ -116,6 +141,7 @@
         remoteStatus: normalizeString(entry.remoteStatus),
         remoteMessage: normalizeString(entry.remoteMessage),
         retrying: entry.retrying === true,
+        redeemAttemptHistory: normalizeRedeemAttemptHistory(entry.redeemAttemptHistory, options),
       };
       if (entry.subscriptionActive === true || entry.subscriptionActive === false) {
         normalizedEntry.subscriptionActive = Boolean(entry.subscriptionActive);
@@ -295,6 +321,9 @@
     getRedeemChannelPoolText,
     getRedeemChannelUsage,
     parseCdkeyPoolText,
+    appendRedeemAttempt,
+    markRedeemAttemptRecovered,
+    normalizeRedeemAttemptHistory,
     normalizeCdkeyUsage,
     isActiveRemoteStatus,
     isSelectableUsageEntry,

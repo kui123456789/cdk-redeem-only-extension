@@ -31,6 +31,7 @@ importScripts(
   'background/bootstrap/runtime-listeners.js',
   'background/bootstrap/signup-executor-registry.js',
   'shared/redeem-channel-state.js',
+  'background/membership/redeem-attempt-history.js',
   'background/redeem/redeem-cdkey-usage.js',
   'background/redeem/upi-redeem-api-client.js',
   'background/membership/redeem-status-sync.js',
@@ -62,6 +63,7 @@ importScripts(
   'background/membership/trial-eligibility-service.js',
   'background/membership/membership-result-sync.js',
   'background/membership/access-token-supplement-service.js',
+  'background/membership/access-token-refresh-service.js',
   'background/membership/free-pool-service.js',
   'background/membership/redeem-candidate-service.js',
   'background/membership/credential-pool-service.js',
@@ -2283,6 +2285,26 @@ function normalizePersistentSettingValue(key, value) {
           retrying: item.retrying === true,
           retryError: String(item.retryError || '').trim(),
         };
+        const normalizeAttemptHistory = self.MultiPageRedeemAttemptHistory?.normalizeRedeemAttemptHistory;
+        if (typeof normalizeAttemptHistory === 'function') {
+          const newestSubmittedAt = (Array.isArray(item.redeemAttemptHistory) ? item.redeemAttemptHistory : [])
+            .reduce((latest, attempt) => Math.max(latest, Number(attempt?.submittedAt) || 0), 0);
+          normalizedItem.redeemAttemptHistory = normalizeAttemptHistory(item.redeemAttemptHistory, {
+            nowMs: Math.max(Date.now(), normalizedItem.lastAttemptAt, newestSubmittedAt),
+          });
+        }
+        const recoveredFromEmail = String(item.recoveredFromEmail || '').trim().toLowerCase();
+        if (recoveredFromEmail) {
+          normalizedItem.recoveredFromEmail = recoveredFromEmail;
+        }
+        const recoveredAccessTokenFingerprint = String(item.recoveredAccessTokenFingerprint || '').trim();
+        if (recoveredAccessTokenFingerprint) {
+          normalizedItem.recoveredAccessTokenFingerprint = recoveredAccessTokenFingerprint;
+        }
+        const recoveredAt = Math.max(0, Number(item.recoveredAt) || 0);
+        if (recoveredAt) {
+          normalizedItem.recoveredAt = recoveredAt;
+        }
         if (item.subscriptionActive === true || item.subscriptionActive === false) {
           normalizedItem.subscriptionActive = Boolean(item.subscriptionActive);
         }
@@ -12744,6 +12766,7 @@ messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   moveUpiCredentialMembershipAccountGroup: (...args) => upiCredentialMembershipChecker.moveUpiCredentialMembershipAccountGroup(...args),
   pruneIneligibleFreeUpiCredentialMembership: (...args) => upiCredentialMembershipChecker.pruneIneligibleFreeUpiCredentialMembership(...args),
   redeemUpiCredentialMembershipFree: (...args) => upiCredentialMembershipChecker.redeemUpiCredentialMembershipFree(...args),
+  refreshUpiCredentialMembershipAccessTokens: (...args) => upiCredentialMembershipChecker.refreshUpiCredentialMembershipAccessTokens(...args),
   retryFailedUpiRedeemCdkey: (...args) => upiCredentialMembershipChecker.retryFailedUpiRedeemCdkey(...args),
   stopUpiCredentialMembershipCheck: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipCheck(...args),
   stopUpiCredentialMembershipRedeem: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipRedeem(...args),

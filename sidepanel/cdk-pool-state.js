@@ -92,6 +92,14 @@
       );
     }
 
+    function normalizeRedeemAttemptHistoryValue(value = []) {
+      const rootScope = typeof window !== 'undefined' ? window : globalThis;
+      const helper = rootScope.MultiPageRedeemAttemptHistory?.normalizeRedeemAttemptHistory;
+      return typeof helper === 'function'
+        ? helper(value)
+        : (Array.isArray(value) ? value : []);
+    }
+
     function normalizeUpiRedeemCdkeyUsageValue(value = {}) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return {};
@@ -129,6 +137,10 @@
           subscriptionPlanType: normalizeUpiRedeemSubscriptionPlanType(item.subscriptionPlanType || item.subscription_plan_type),
           subscriptionCheckedAt: Math.max(0, Number(item.subscriptionCheckedAt) || 0),
           subscriptionReason: String(item.subscriptionReason || '').trim(),
+          redeemAttemptHistory: normalizeRedeemAttemptHistoryValue(item.redeemAttemptHistory),
+          recoveredFromEmail: String(item.recoveredFromEmail || '').trim().toLowerCase(),
+          recoveredAccessTokenFingerprint: String(item.recoveredAccessTokenFingerprint || '').trim(),
+          recoveredAt: Math.max(0, Number(item.recoveredAt) || 0),
         }];
       }).filter(([key]) => Boolean(key)));
     }

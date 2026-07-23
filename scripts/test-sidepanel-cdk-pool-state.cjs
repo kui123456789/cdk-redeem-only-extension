@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+require('../background/membership/redeem-attempt-history.js');
 const moduleApi = require('../sidepanel/cdk-pool-state.js');
 
 test('normalizes and deduplicates CDK pool text', () => {
@@ -34,6 +35,28 @@ test('PIX pool patch uses canonical PIX fields without UPI aliases', () => {
   assert.equal(patch.pixRedeemCdkeyPoolText, undefined);
   assert.equal(helpers.getStoredCdkPoolText(patch, 'pix'), 'PIX-1');
   assert.ok(helpers.getStoredCdkUsage(patch, 'pix')['PIX-1']);
+});
+
+test('sidepanel CDK patches preserve bounded redeem attempt history', () => {
+  const helpers = moduleApi.createCdkPoolStateHelpers();
+  const nowMs = Date.now();
+  const patch = helpers.buildCdkPoolStatePatch('UPI-1', {
+    'UPI-1': {
+      enabled: true,
+      redeemAttemptHistory: [{
+        submittedEmail: 'current@example.com',
+        tokenEmail: 'previous@example.com',
+        accessToken: 'old-at',
+        submittedAt: nowMs,
+      }],
+    },
+  }, 'upi');
+
+  assert.equal(patch.upiRedeemCdkeyUsage['UPI-1'].redeemAttemptHistory.length, 1);
+  assert.equal(
+    patch.upiRedeemCdkeyUsage['UPI-1'].redeemAttemptHistory[0].tokenEmail,
+    'previous@example.com'
+  );
 });
 
 test('selectability blocks active success duplicate and subscription CDKs', () => {

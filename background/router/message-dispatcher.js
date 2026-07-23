@@ -62,6 +62,7 @@
       pollContributionStatus,
       pruneIneligibleFreeUpiCredentialMembership,
       redeemUpiCredentialMembershipFree,
+      refreshUpiCredentialMembershipAccessTokens,
       refreshCardHelperCardBalance,
       refreshChatGptSessionAndInspectPlusActivation,
       refreshOAuthTimeoutWindowAfterCheckoutSuccess,
@@ -523,6 +524,19 @@
             throw new Error('UPI Free 分组 Plus 识别能力尚未接入。');
           }
           const result = await identifyUpiCredentialMembershipFreePlus(payload);
+          return { ok: true, ...result };
+        }
+
+        case 'REFRESH_UPI_CREDENTIAL_MEMBERSHIP_ACCESS_TOKENS': {
+          clearStopRequest();
+          const state = await getState();
+          if (isAutoRunLockedState(state)) {
+            throw new Error('自动流程运行中，当前不能检查并刷新 AT。');
+          }
+          if (typeof refreshUpiCredentialMembershipAccessTokens !== 'function') {
+            throw new Error('UPI 账号 AT 检查刷新能力尚未接入。');
+          }
+          const result = await refreshUpiCredentialMembershipAccessTokens(message.payload || {});
           return { ok: true, ...result };
         }
 

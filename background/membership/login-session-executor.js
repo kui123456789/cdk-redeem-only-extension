@@ -85,8 +85,25 @@
     return kind === 'totp' || /\/(?:mfa|totp|2fa|two-factor)(?:[/?#]|$)/i.test(pathAndUrl);
   }
 
+  function isAccountDeactivatedSnapshot(snapshot = {}) {
+    const text = normalizeString(
+      snapshot.accountDeactivatedError
+      || snapshot.errorCode
+      || snapshot.error
+      || snapshot.message
+      || snapshot.reason
+    );
+    return snapshot.accountDeactivated === true
+      || snapshot.accountDeactivatedMatched === true
+      || normalizeString(snapshot.state) === 'account_deactivated_page'
+      || /account[_\s-]*deactivated|account\s+has\s+been\s+(?:deleted|deactivated)|do\s+not\s+have\s+an?\s+account\s+because\s+it\s+has\s+been\s+(?:deleted|deactivated)|账号?(?:已被)?(?:删除|停用)|账户(?:已被)?(?:删除|停用)/i.test(text);
+  }
+
   function buildLoginFailureReason(snapshot = {}, fallback = '') {
     const state = normalizeString(snapshot.state);
+    if (isAccountDeactivatedSnapshot(snapshot)) {
+      return 'ACCOUNT_DEACTIVATED::账号已删除或停用，账户不可用';
+    }
     if (state === 'verification_page' || snapshot.verificationVisible) {
       if (isEmailVerificationChallenge(snapshot)) return '登录后需要邮箱一次性验证码';
       if (isTotpVerificationChallenge(snapshot)) return '登录后仍停留在 2FA 验证码页面';
@@ -706,6 +723,9 @@
           }
         } catch (passkeyError) {
           if (isStopError(passkeyError)) throw passkeyError;
+          if (/ACCOUNT_DEACTIVATED::|account[_\s-]*deactivated|account\s+has\s+been\s+(?:deleted|deactivated)|do\s+not\s+have\s+an?\s+account\s+because/i.test(getMessage(passkeyError))) {
+            throw passkeyError;
+          }
           await addLog(
             `UPI Passkey 登录：${credential.email} -> ${getMessage(passkeyError) || passkeyError}，回落网页登录。`,
             'warn'
@@ -751,6 +771,9 @@
       const liveAuthState = await getLoginAuthState(tabId, { throwIfStopRequested });
       throwIfStopRequested();
       const loginChallenge = mergeLoginChallengeState(loginResult, liveAuthState);
+      if (isAccountDeactivatedSnapshot(loginChallenge)) {
+        throw new Error(buildLoginFailureReason(loginChallenge));
+      }
       const loginNeedsCode = hasLoginVerificationChallenge(loginChallenge);
       if (
         loginResult?.step6Outcome === 'recoverable'
@@ -893,6 +916,7 @@
     hasChatGptSessionPayload,
     hasLoginVerificationChallenge,
     isEmailVerificationChallenge,
+    isAccountDeactivatedSnapshot,
     isTotpVerificationChallenge,
   };
 });

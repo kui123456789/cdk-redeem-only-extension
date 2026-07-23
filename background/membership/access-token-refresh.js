@@ -13,9 +13,15 @@
     return error?.message || String(error || '未知错误');
   }
 
+  function isAccountDeactivatedError(error) {
+    const text = normalizeString(getErrorMessage(error));
+    return /ACCOUNT_DEACTIVATED::|account[_\s-]*deactivated|account\s+has\s+been\s+(?:deleted|deactivated)|do\s+not\s+have\s+an?\s+account\s+because\s+it\s+has\s+been\s+(?:deleted|deactivated)|账号?(?:已被)?(?:删除|停用)|账户(?:已被)?(?:删除|停用)/i.test(text);
+  }
+
   function isNonRetryableUpiRedeemRetryError(message = '') {
     const text = normalizeString(message);
-    return /缺少\s*GPT\s*密码|缺少\s*2FA|登录需要邮箱一次性验证码|登录后需要邮箱|邮箱一次性验证码|验证码页面|登录密码未通过|密码未通过|2FA\s*动态码被页面拒绝|账号登录态不一致|accessToken\s*属于|未读取到\s*accessToken|未进入\s*ChatGPT\s*已登录态|账号无资格|access[_-]?token\s*无效|access[_-]?token[\s\S]*(?:过期|失效|expired|invalid)|无效或已过期|未登录|会话已过期|重新登录|session\s*expired/i.test(text);
+    return isAccountDeactivatedError(text)
+      || /缺少\s*GPT\s*密码|缺少\s*2FA|登录需要邮箱一次性验证码|登录后需要邮箱|邮箱一次性验证码|验证码页面|登录密码未通过|密码未通过|2FA\s*动态码被页面拒绝|账号登录态不一致|accessToken\s*属于|未读取到\s*accessToken|未进入\s*ChatGPT\s*已登录态|账号无资格|access[_-]?token\s*无效|access[_-]?token[\s\S]*(?:过期|失效|expired|invalid)|无效或已过期|未登录|会话已过期|重新登录|session\s*expired/i.test(text);
   }
 
   function isAccessTokenInvalidMembershipError(error) {
@@ -49,6 +55,7 @@
 
   return {
     buildMissingAccessTokenRefreshMaterialReason,
+    isAccountDeactivatedError,
     isAccessTokenInvalidMembershipError,
     isNonRetryableUpiRedeemRetryError,
     isPreSubmitUpiRedeemBlockedReason,

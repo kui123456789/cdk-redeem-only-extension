@@ -222,6 +222,29 @@ test('normalizeResultItem preserves PIX channel-specific fields', () => {
   assert.equal(item.pixChannelEligibilityReason, 'pix ok');
 });
 
+test('normalizeResultItem preserves AT ownership recovery audit fields', () => {
+  const item = resultState.normalizeResultItem({
+    email: 'previous@example.com',
+    status: 'paid',
+    planType: 'plus',
+    redeemRecoveryStatus: 'history_at_paid',
+    redeemRecoveryEmail: 'previous@example.com',
+    redeemRecoveryCdkey: 'CDK-RECOVER',
+    redeemRecoveryChannel: 'pix',
+    redeemRecoveredFromEmail: 'current@example.com',
+    redeemRecoveryCheckedAt: '2026-07-23T00:00:00.000Z',
+    accessTokenFingerprint: 'at_12345678',
+  });
+
+  assert.equal(item.redeemRecoveryStatus, 'history_at_paid');
+  assert.equal(item.redeemRecoveryEmail, 'previous@example.com');
+  assert.equal(item.redeemRecoveryCdkey, 'CDK-RECOVER');
+  assert.equal(item.redeemRecoveryChannel, 'pix');
+  assert.equal(item.redeemRecoveredFromEmail, 'current@example.com');
+  assert.equal(item.redeemRecoveryCheckedAt, '2026-07-23T00:00:00.000Z');
+  assert.equal(item.accessTokenFingerprint, 'at_12345678');
+});
+
 test('normalizeResultItem clears internal redeem failure-limit errors', () => {
   for (const message of [
     'REDEEM_CHANNEL_FAILURE_LIMIT is not defined',

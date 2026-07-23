@@ -416,6 +416,7 @@
       pixChannelEligibilityReason: normalizeString(item.pixChannelEligibilityReason || item.pix_eligible_reason || item.pixEligibleReason),
       accessToken,
       accessTokenMasked: accessToken ? (normalizeString(item.accessTokenMasked) || maskAccessToken(accessToken)) : '',
+      accessTokenFingerprint: normalizeString(item.accessTokenFingerprint),
       accessTokenUpdatedAt,
       redeemStatus: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemStatus),
       redeemReason: shouldClearInternalRedeemFailure ? '' : normalizeString(item.redeemReason),
@@ -450,6 +451,14 @@
       upiRedeemPendingVerifyReason: normalizeString(item.upiRedeemPendingVerifyReason),
       membershipOverrideStatus: normalizeString(item.membershipOverrideStatus),
       membershipOverrideCheckedAt: normalizeString(item.membershipOverrideCheckedAt),
+      redeemRecoveryStatus: normalizeString(item.redeemRecoveryStatus),
+      redeemRecoveryEmail: normalizeEmail(item.redeemRecoveryEmail),
+      redeemRecoveryCdkey: normalizeString(item.redeemRecoveryCdkey),
+      redeemRecoveryChannel: normalizeString(item.redeemRecoveryChannel)
+        ? normalizeRedeemChannel(item.redeemRecoveryChannel)
+        : '',
+      redeemRecoveredFromEmail: normalizeEmail(item.redeemRecoveredFromEmail),
+      redeemRecoveryCheckedAt: normalizeString(item.redeemRecoveryCheckedAt),
     };
     if (Object.prototype.hasOwnProperty.call(item, 'upiRedeemSubscriptionActive')) {
       normalized.upiRedeemSubscriptionActive = item.upiRedeemSubscriptionActive === true;

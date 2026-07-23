@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   buildLoginFailureReason,
   hasLoginVerificationChallenge,
+  isAccountDeactivatedSnapshot,
   isEmailVerificationChallenge,
   isTotpVerificationChallenge,
 } = require('../background/membership/login-session-executor.js');
@@ -71,5 +72,19 @@ test('login executor helper snapshot: failure reason formatting', () => {
   assert.equal(
     buildLoginFailureReason({}, '读取 session 失败'),
     '读取 session 失败'
+  );
+});
+
+test('login executor helper snapshot: deleted or deactivated account is unavailable', () => {
+  const snapshot = {
+    state: 'account_deactivated_page',
+    accountDeactivated: true,
+    errorCode: 'account_deactivated',
+  };
+
+  assert.equal(isAccountDeactivatedSnapshot(snapshot), true);
+  assert.equal(
+    buildLoginFailureReason(snapshot),
+    'ACCOUNT_DEACTIVATED::账号已删除或停用，账户不可用'
   );
 });

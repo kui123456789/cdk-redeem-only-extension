@@ -183,6 +183,14 @@
           ),
         });
       }
+      if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'pixChannelRedeemCdkeyUsage')) {
+        await chromeApi.storage.local.set({
+          pixChannelRedeemCdkeyUsage: normalizePersistentSettingValue(
+            'pixChannelRedeemCdkeyUsage',
+            sessionUpdates.pixChannelRedeemCdkeyUsage
+          ),
+        });
+      }
       if (Object.prototype.hasOwnProperty.call(sessionUpdates, membershipResultsStorageKey)) {
         await chromeApi.storage.local.set({
           [membershipResultsStorageKey]: sessionUpdates[membershipResultsStorageKey],

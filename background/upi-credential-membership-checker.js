@@ -184,6 +184,41 @@
     }
   }
 
+  function getRedeemAttemptHistoryModule() {
+    const rootScope = typeof self !== 'undefined' ? self : globalThis;
+    if (rootScope.MultiPageRedeemAttemptHistory) {
+      return rootScope.MultiPageRedeemAttemptHistory;
+    }
+    if (typeof require === 'function') {
+      return require('./membership/redeem-attempt-history.js');
+    }
+    return {};
+  }
+
+  function getAccessTokenOwnership(token = '', targetEmail = '') {
+    const helper = getRedeemAttemptHistoryModule().getAccessTokenOwnership;
+    if (typeof helper === 'function') {
+      return helper(token, targetEmail);
+    }
+    const payload = decodeJwtPayload(token) || {};
+    const profile = payload?.['https://api.openai.com/profile'];
+    const tokenEmail = normalizeEmail(
+      profile?.email
+      || payload?.email
+      || payload?.user?.email
+      || payload?.account?.email
+      || ''
+    );
+    const normalizedTargetEmail = normalizeEmail(targetEmail);
+    const verifiable = Boolean(tokenEmail && normalizedTargetEmail);
+    return {
+      targetEmail: normalizedTargetEmail,
+      tokenEmail,
+      verifiable,
+      matches: verifiable && tokenEmail === normalizedTargetEmail,
+    };
+  }
+
   function getAccessTokenIssuedAtSeconds(token = '') {
     const payload = decodeJwtPayload(token);
     const issuedAt = Number(payload?.iat);
@@ -453,6 +488,10 @@
     return getMembershipServiceModule('MultiPageMembershipPlusVerificationService', './membership/plus-verification-service.js');
   }
 
+  function getMembershipAccessTokenRefreshServiceModule() {
+    return getMembershipServiceModule('MultiPageMembershipAccessTokenRefreshService', './membership/access-token-refresh-service.js');
+  }
+
   function getMembershipFailedRedeemRetryServiceModule() {
     return getMembershipServiceModule('MultiPageMembershipFailedRedeemRetryService', './membership/failed-redeem-retry-service.js');
   }
@@ -483,6 +522,10 @@
 
   function isAccessTokenInvalidMembershipError(error) {
     return getMembershipAccessTokenRefreshHelper('isAccessTokenInvalidMembershipError')(error);
+  }
+
+  function isAccountDeactivatedError(error) {
+    return getMembershipAccessTokenRefreshHelper('isAccountDeactivatedError')(error);
   }
 
   function buildMissingAccessTokenRefreshMaterialReason(credential = {}) {
@@ -1434,6 +1477,90 @@
       return classifySubscriptionResult(subscription?.items?.[0] || {});
     }
 
+    async function persistRecoveredRedeemAttempt({ state = {}, currentEmail = '', recovery = {}, checkedAt = '' } = {}) {
+      const cdkey = normalizeString(recovery.cdkey);
+      const channel = normalizeRedeemChannel(recovery.channel);
+      if (!cdkey) return;
+      const historyModule = getRedeemAttemptHistoryModule();
+      const markRecovered = historyModule.markRedeemAttemptRecovered;
+      if (typeof markRecovered !== 'function') return;
+      const usage = normalizeUpiRedeemCdkeyUsage(getRedeemChannelUsage(state, channel));
+      const currentEntry = usage[cdkey];
+      if (!currentEntry) return;
+      const checkedAtMs = Math.max(1, Date.parse(normalizeString(checkedAt)) || Date.now());
+      const planType = normalizePlanType(recovery.planType || recovery.subscription?.planType || 'plus');
+      const nextEntry = {
+        ...currentEntry,
+        email: normalizeEmail(recovery.email),
+        accessToken: '',
+        accessTokenMasked: '',
+        accessTokenUpdatedAt: 0,
+        hasAccessToken: false,
+        subscriptionActive: true,
+        subscriptionPlanType: planType,
+        subscriptionCheckedAt: checkedAtMs,
+        subscriptionReason: 'CDK 历史 AT 已确认会员真实归属',
+        recoveredFromEmail: normalizeEmail(currentEmail),
+        recoveredAccessTokenFingerprint: normalizeString(recovery.accessTokenFingerprint),
+        recoveredAt: checkedAtMs,
+        redeemAttemptHistory: markRecovered(currentEntry.redeemAttemptHistory, {
+          accessToken: recovery.accessToken,
+          accessTokenFingerprint: recovery.accessTokenFingerprint,
+          recoveredEmail: recovery.email,
+          planType,
+          recoveredAt: checkedAtMs,
+        }, { nowMs: checkedAtMs }),
+      };
+      await setState(buildRedeemChannelUsageUpdates(channel, {
+        ...usage,
+        [cdkey]: nextEntry,
+      }));
+    }
+
+    async function recoverPaidMembershipFromRedeemAttempts({ state = {}, currentItem = {}, throwIfStopRequested = null } = {}) {
+      if (normalizeString(currentItem.status).toLowerCase() !== 'free') return null;
+      const historyModule = getRedeemAttemptHistoryModule();
+      const recoverPaidAttempt = historyModule.recoverPaidRedeemAttempt;
+      const buildRecoveryResult = historyModule.buildRedeemOwnershipRecoveryResult;
+      if (typeof recoverPaidAttempt !== 'function' || typeof buildRecoveryResult !== 'function') return null;
+      const currentEmail = normalizeEmail(currentItem.email);
+      const recovery = await recoverPaidAttempt({
+        state,
+        currentEmail,
+        throwIfStopRequested,
+        checkSubscription: ({ email, accessToken }) => checkCredentialPaidSubscription({
+          state,
+          credential: { email },
+          accessToken,
+          throwIfStopRequested,
+        }),
+      });
+      if (!recovery) return null;
+      const checkedAt = new Date().toISOString();
+      const recoveredBaseItem = (Array.isArray(state?.items) ? state.items : [])
+        .find((item) => normalizeEmail(item?.email) === normalizeEmail(recovery.email)) || {};
+      const result = buildRecoveryResult({
+        currentItem,
+        recoveredBaseItem,
+        recovery,
+        checkedAt,
+      });
+      await persistRecoveredRedeemAttempt({
+        state,
+        currentEmail,
+        recovery,
+        checkedAt,
+      });
+      await addLog(
+        `UPI 会员归属修复：${currentEmail} 当前非 Plus，CDK ${recovery.cdkey} 的历史 AT 已确认 Plus 属于 ${recovery.email}，结果已移动到真实邮箱。`,
+        'ok'
+      );
+      return {
+        ...result,
+        recovery,
+      };
+    }
+
     async function removeOpenAiCookie(cookie) {
       const host = normalizeString(cookie?.domain).replace(/^\.+/, '');
       if (!host) return false;
@@ -1888,26 +2015,36 @@
       };
       try {
         const savedAccessToken = normalizeString(credential.accessToken || credential.token || credential.access_token || credential.upiRedeemAccessToken);
+        let savedAccessTokenMismatchReason = '';
         if (savedAccessToken) {
-          try {
-            await reportStage('token');
-            await addLog(`UPI 备份账号会员核验：${credential.email} -> 使用已保存 AT 直接查询会员，跳过网页登录。`, 'info');
-            return await checkWithAccessToken(savedAccessToken, credential.accessTokenUpdatedAt || credential.checkedAt);
-          } catch (error) {
-            if (isMembershipStopError(error)) throw error;
-            if (!isAccessTokenInvalidMembershipError(error)) {
-              throw error;
+          const ownership = getAccessTokenOwnership(savedAccessToken, credential.email);
+          if (ownership.verifiable && !ownership.matches) {
+            savedAccessTokenMismatchReason = `已保存 AT 属于 ${ownership.tokenEmail}，不是当前目标 ${ownership.targetEmail || credential.email}`;
+            await addLog(
+              `UPI 备份账号会员核验：${credential.email} -> ${savedAccessTokenMismatchReason}，禁止复用旧 AT，开始登录当前账号刷新。`,
+              'warn'
+            );
+          } else {
+            try {
+              await reportStage('token');
+              await addLog(`UPI 备份账号会员核验：${credential.email} -> 使用已保存 AT 直接查询会员，跳过网页登录。`, 'info');
+              return await checkWithAccessToken(savedAccessToken, credential.accessTokenUpdatedAt || credential.checkedAt);
+            } catch (error) {
+              if (isMembershipStopError(error)) throw error;
+              if (!isAccessTokenInvalidMembershipError(error)) {
+                throw error;
+              }
+              const missingRefreshMaterial = buildMissingAccessTokenRefreshMaterialReason(credential);
+              if (missingRefreshMaterial) {
+                return normalizeResultItem({
+                  ...credential,
+                  status: 'failed',
+                  checkedAt,
+                  reason: `已保存 AT 无效或过期，且${missingRefreshMaterial}，无法网页登录刷新 AT：${getErrorMessage(error)}`,
+                });
+              }
+              await addLog(`UPI 备份账号会员核验：${credential.email} -> 已保存 AT 无效或过期，开始网页登录刷新 AT。`, 'warn');
             }
-            const missingRefreshMaterial = buildMissingAccessTokenRefreshMaterialReason(credential);
-            if (missingRefreshMaterial) {
-              return normalizeResultItem({
-                ...credential,
-                status: 'failed',
-                checkedAt,
-                reason: `已保存 AT 无效或过期，且${missingRefreshMaterial}，无法网页登录刷新 AT：${getErrorMessage(error)}`,
-              });
-            }
-            await addLog(`UPI 备份账号会员核验：${credential.email} -> 已保存 AT 无效或过期，开始网页登录刷新 AT。`, 'warn');
           }
         }
         const missingRefreshMaterial = buildMissingAccessTokenRefreshMaterialReason(credential);
@@ -1916,7 +2053,9 @@
             ...credential,
             status: 'failed',
             checkedAt,
-            reason: `缺少 AT，且${missingRefreshMaterial}，无法网页登录刷新 AT`,
+            reason: savedAccessTokenMismatchReason
+              ? `${savedAccessTokenMismatchReason}，且${missingRefreshMaterial}，无法网页登录刷新 AT`
+              : `缺少 AT，且${missingRefreshMaterial}，无法网页登录刷新 AT`,
           });
         }
         const session = await loginAndReadAccessToken(credential, state, {
@@ -2014,13 +2153,29 @@
         });
         await addLog(`UPI 单账号会员检测：开始检测 ${targetEmail} 是否已开通 Plus/Pro/Team。`, 'info');
         await updateSingleStage('token', '正在获取/确认 AT');
-        const resultItem = await checkOneCredential(credential, {
+        let resultItem = await checkOneCredential(credential, {
           ...runtimeState,
           ...currentResults,
         }, {
           onStage: async (stage) => updateSingleStage(stage, getUpiCredentialMembershipFlowStageReason(stage)),
           throwIfStopRequested: () => throwIfMembershipStopRequested('check'),
         });
+        let recoveredItem = null;
+        if (normalizeString(resultItem.status).toLowerCase() === 'free') {
+          const ownershipRecovery = await recoverPaidMembershipFromRedeemAttempts({
+            state: {
+              ...runtimeState,
+              ...currentResults,
+              items,
+            },
+            currentItem: resultItem,
+            throwIfStopRequested: () => throwIfMembershipStopRequested('check'),
+          });
+          if (ownershipRecovery) {
+            resultItem = normalizeResultItem(ownershipRecovery.currentItem);
+            recoveredItem = normalizeResultItem(ownershipRecovery.recoveredItem);
+          }
+        }
         const resultStatus = normalizeString(resultItem.status).toLowerCase();
         const existingRedeemStatus = normalizeString(existingItem.redeemStatus).toLowerCase();
         const shouldClearRedeemSuccess = resultStatus === 'free' && ['success', 'skipped'].includes(existingRedeemStatus);
@@ -2037,6 +2192,9 @@
             membershipOverrideCheckedAt: resultStatus === 'paid' ? '' : existingItem.membershipOverrideCheckedAt,
           }),
         });
+        if (recoveredItem) {
+          items = upsertResultItem(items, recoveredItem);
+        }
         const finishedAt = new Date().toISOString();
         currentResults = await saveResults({
           ...currentResults,
@@ -2049,11 +2207,12 @@
           completed: Math.max(currentResults.completed || 0, items.length),
         });
         await addLog(
-          `UPI 单账号会员检测：${targetEmail} -> ${resultItem.status === 'paid' ? `有会员 ${resultItem.planType || ''}` : resultItem.status === 'free' ? '无会员' : `失败：${resultItem.reason || ''}`}`,
-          resultItem.status === 'paid' ? 'ok' : resultItem.status === 'free' ? 'warn' : 'error'
+          `UPI 单账号会员检测：${targetEmail} -> ${recoveredItem ? `当前无会员，历史 AT 找回 ${recoveredItem.email} 的 ${recoveredItem.planType || 'plus'}` : resultItem.status === 'paid' ? `有会员 ${resultItem.planType || ''}` : resultItem.status === 'free' ? '无会员' : `失败：${resultItem.reason || ''}`}`,
+          resultItem.status === 'paid' || recoveredItem ? 'ok' : resultItem.status === 'free' ? 'warn' : 'error'
         );
         return {
           item: resultItem,
+          recoveredItem,
           results: currentResults,
         };
       } catch (error) {
@@ -2227,6 +2386,49 @@
       }
     }
 
+    const membershipRuntimeFlags = {
+      get batchRunning() { return batchRunning; },
+      set batchRunning(value) { batchRunning = value === true; },
+      get batchStopRequested() { return batchStopRequested; },
+      set batchStopRequested(value) { batchStopRequested = value === true; },
+      get redeemRunning() { return redeemRunning; },
+      get cdkeyRetryRunning() { return cdkeyRetryRunning; },
+    };
+    const accessTokenRefreshServiceFactory = getMembershipAccessTokenRefreshServiceModule().createMembershipAccessTokenRefreshService;
+    if (typeof accessTokenRefreshServiceFactory !== 'function') {
+      throw new Error('Membership access-token refresh service module is not loaded.');
+    }
+    const accessTokenRefreshService = accessTokenRefreshServiceFactory({
+      addLog,
+      buildMissingAccessTokenRefreshMaterialReason,
+      checkCredentialPaidSubscription,
+      getAccessTokenOwnership,
+      getChatGptSessionAccessToken,
+      getErrorMessage,
+      getState,
+      getStoredResults,
+      hasPasskeyCredential,
+      isAccountDeactivatedError,
+      isAccessTokenInvalidMembershipError,
+      isMembershipStopError,
+      loginAndReadAccessToken,
+      maskAccessToken,
+      mergeCredentialsIntoResultItems,
+      normalizeEmail,
+      normalizeResultItem,
+      normalizeString,
+      normalizeSubscriptionRuntimeState,
+      resolveInputCredentials,
+      runtimeFlags: membershipRuntimeFlags,
+      saveResults,
+      throwIfMembershipStopRequested,
+      upsertResultItem,
+    });
+    const refreshMembershipAccessTokens = accessTokenRefreshService?.refreshUpiCredentialMembershipAccessTokens;
+    if (typeof refreshMembershipAccessTokens !== 'function') {
+      throw new Error('Membership access-token refresh service is missing refreshUpiCredentialMembershipAccessTokens.');
+    }
+
     const plusVerificationServiceFactory = getMembershipPlusVerificationServiceModule().createPlusVerificationService;
     if (typeof plusVerificationServiceFactory !== 'function') {
       throw new Error('Membership Plus verification service module is not loaded.');
@@ -2248,14 +2450,7 @@
       normalizeString,
       normalizeSubscriptionRuntimeState,
       resolveInputCredentials,
-      runtimeFlags: {
-        get batchRunning() { return batchRunning; },
-        set batchRunning(value) { batchRunning = value === true; },
-        get batchStopRequested() { return batchStopRequested; },
-        set batchStopRequested(value) { batchStopRequested = value === true; },
-        get redeemRunning() { return redeemRunning; },
-        get cdkeyRetryRunning() { return cdkeyRetryRunning; },
-      },
+      runtimeFlags: membershipRuntimeFlags,
       saveResults,
       throwIfMembershipStopRequested,
       upsertResultItem,
@@ -2555,6 +2750,7 @@
       moveUpiCredentialMembershipAccountGroup,
       pruneIneligibleFreeUpiCredentialMembership,
       redeemUpiCredentialMembershipFree,
+      refreshUpiCredentialMembershipAccessTokens: refreshMembershipAccessTokens,
       retryFailedUpiRedeemCdkey,
       stopUpiCredentialMembershipCheck,
       stopUpiCredentialMembershipRedeem,
@@ -2572,6 +2768,7 @@
     classifySubscriptionResult,
     createUpiCredentialMembershipChecker,
     generateTotpCode,
+    getAccessTokenOwnership,
     normalizeResultsPayload,
     normalizeTotpApiBaseUrl,
     parseCredentialBackupText,

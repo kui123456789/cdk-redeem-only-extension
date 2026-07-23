@@ -59,6 +59,20 @@
           return normalizeRedeemChannel(channel).toUpperCase();
         }
 
+        function normalizeRedeemAttemptHistory(value = [], options = {}) {
+          const helper = getRedeemCdkeyUsageHelpers().normalizeRedeemAttemptHistory;
+          return typeof helper === 'function'
+            ? helper(value, options)
+            : (Array.isArray(value) ? value : []);
+        }
+
+        function appendRedeemAttempt(history = [], attempt = {}, options = {}) {
+          const helper = getRedeemCdkeyUsageHelpers().appendRedeemAttempt;
+          return typeof helper === 'function'
+            ? helper(history, attempt, options)
+            : (Array.isArray(history) ? history : []);
+        }
+
         const REDEEM_CHANNEL_FAILURE_LIMIT = 3;
         const REDEEM_CHANNEL_DAILY_LIMIT_BLOCK_MS = 24 * 60 * 60 * 1000;
         const UPI_REDEEM_GLOBAL_AUTH_PATTERN = /(?:external\s*)?api[\s_-]*key|apikey|x[\s_-]*external[\s_-]*api[\s_-]*key|csrf|x[\s_-]*client[\s_-]*id|client[\s_-]*id|authorization|bearer|(?:外部|远端|接口|后端)[\s\S]*(?:密钥|API\s*Key|ApiKey|鉴权|认证|权限|CSRF)|(?:密钥|API\s*Key|ApiKey|鉴权|认证|权限|CSRF)[\s\S]*(?:外部|远端|接口|后端)/i;
@@ -410,6 +424,9 @@
               lastRetryAt: Math.max(0, Math.floor(Number(entry.lastRetryAt) || 0)),
               retrying: entry.retrying === true,
               retryError: normalizeString(entry.retryError),
+              redeemAttemptHistory: normalizeRedeemAttemptHistory(entry.redeemAttemptHistory, {
+                nowMs: Math.max(1, Math.floor(Number(now()) || Date.now())),
+              }),
             };
             if (entry.subscriptionActive === true || entry.subscriptionActive === false) {
               normalizedEntry.subscriptionActive = Boolean(entry.subscriptionActive);
@@ -563,6 +580,9 @@
             lastRetryAt: Math.max(0, Math.floor(Number(nextEntry.lastRetryAt) || 0)),
             retrying: nextEntry.retrying === true,
             retryError: normalizeString(nextEntry.retryError),
+            redeemAttemptHistory: normalizeRedeemAttemptHistory(nextEntry.redeemAttemptHistory, {
+              nowMs: Math.max(1, Math.floor(Number(now()) || Date.now())),
+            }),
           };
           if (storedAccessToken) {
             storedEntry.accessToken = storedAccessToken;
@@ -604,6 +624,7 @@
         async function reserveCdkeyForRedeemSubmission({
           cdkey = '',
           email = '',
+          tokenEmail = '',
           accessToken = '',
           attemptAt = 0,
           message = '',
@@ -632,6 +653,12 @@
             hasAccessToken: Boolean(normalizeString(accessToken || entry.accessToken || entry.access_token || entry.upiRedeemAccessToken)),
             retrying: false,
             retryError: '',
+            redeemAttemptHistory: appendRedeemAttempt(entry.redeemAttemptHistory, {
+              submittedEmail: email,
+              tokenEmail,
+              accessToken,
+              submittedAt: timestamp,
+            }, { nowMs: timestamp }),
           }), channel);
         }
 
@@ -745,7 +772,9 @@
           const code = normalizeString(payload.code || payload.error_code || payload.errorCode);
           const message = normalizeString(payload.message || payload.error || payload.reason);
           return (Number(statusCode) === 401 && code === '10002')
-            || /未登录|会话已过期|重新登录|session\s*expired|not\s*logged\s*in|login\s*required|unauthenticated/i.test(message);
+            || /未登录|会话已过期|重新登录|session\s*expired|not\s*logged\s*in|login\s*required|unauthenticated/i.test(message)
+            || /(?:access[\s_-]?token|token|session)[\s:_-]*(?:401|unauthorized|invalid|expired|失效|过期|无效)/i.test(message)
+            || /(?:401|unauthorized|invalid|expired|失效|过期|无效)[\s\S]*(?:access[\s_-]?token|token|session)/i.test(message);
         }
 
 
@@ -1196,8 +1225,12 @@
               ...(controller ? { signal: controller.signal } : {}),
             });
             const payload = await readResponseBody(response);
+            const payloadError = getPayloadErrorDetails(payload);
+            const statusCode = Number(response?.status) || 0;
+            if (isUpiAccessTokenExpiredPayload(payload, statusCode)) {
+              throw new Error(`${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}订阅接口报告 ChatGPT accessToken 失效：${payloadError || `HTTP ${statusCode}`}`);
+            }
             if (!response?.ok) {
-              const payloadError = getPayloadError(payload);
               throw new Error(`UPI 会员状态接口请求失败（HTTP ${response?.status || 0}）：${apiUrl}${payloadError ? `。后端：${payloadError}` : ''}`);
             }
             if (isHtmlResponsePayload(response, payload)) {
@@ -1579,6 +1612,7 @@
           await reserveCdkeyForRedeemSubmission({
             cdkey,
             email,
+            tokenEmail: resolveSessionAccountEmail(chatGptSession),
             accessToken,
             attemptAt,
             message: `正在提交兑换：${email || 'unknown'}`,

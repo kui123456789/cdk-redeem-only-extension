@@ -218,6 +218,10 @@
     if (typeof accountRecordsMembershipActions.createAccountRecordsMembershipActions !== 'function') {
       throw new Error('Account records membership actions module is not loaded.');
     }
+    const accountRecordsMembershipAccessTokenActions = globalScope.SidepanelAccountRecordsMembershipAccessTokenActions || {};
+    if (typeof accountRecordsMembershipAccessTokenActions.createAccountRecordsMembershipAccessTokenActions !== 'function') {
+      throw new Error('Account records membership access-token actions module is not loaded.');
+    }
     const accountRecordsRedeemActions = globalScope.SidepanelAccountRecordsRedeemActions || {};
     if (typeof accountRecordsRedeemActions.createAccountRecordsRedeemActions !== 'function') {
       throw new Error('Account records redeem actions module is not loaded.');
@@ -1058,6 +1062,21 @@
       setExportButtonsBusy,
       render: () => render(),
     });
+    const membershipAccessTokenActions = accountRecordsMembershipAccessTokenActions.createAccountRecordsMembershipAccessTokenActions({
+      state,
+      helpers,
+      runtime,
+      getMembershipCheckSettingsPayload: () => getMembershipCheckSettingsPayload(),
+      getEnabledFreeUpiCredentialMembershipRowsWithAt: () => getEnabledFreeUpiCredentialMembershipRowsWithAt(),
+      mergeManualFreeMembershipOverridesIntoResults: (results) => mergeManualFreeMembershipOverridesIntoResults(results),
+      normalizeUpiCredentialMembershipText,
+      refreshUpiCredentialMembershipCheckResults: (...args) => membershipActions.refreshUpiCredentialMembershipCheckResults(...args),
+      setUpiCredentialMembershipCheckBusy: (value) => {
+        upiCredentialMembershipCheckBusy = value === true;
+      },
+      setExportButtonsBusy,
+      render: () => render(),
+    });
     const {
       refreshUpiCredentialMembershipCheckResults,
       fillFreeUpiCredentialMembershipAccessTokens,
@@ -1066,6 +1085,7 @@
       loginUpiCredentialMembershipAccount,
       moveUpiCredentialMembershipAccountGroup,
     } = membershipActions;
+    const { refreshUpiCredentialMembershipAccessTokens } = membershipAccessTokenActions;
 
     const membershipPoolOps = accountRecordsMembershipPoolOps.createAccountRecordsMembershipPoolOps({
       state,
@@ -1273,6 +1293,7 @@
       stopUpiCredentialMembershipRedeem: (...args) => stopUpiCredentialMembershipRedeem(...args),
       checkOneUpiCredentialMembership: (...args) => checkOneUpiCredentialMembership(...args),
       fillFreeUpiCredentialMembershipAccessTokens: (...args) => fillFreeUpiCredentialMembershipAccessTokens(...args),
+      refreshUpiCredentialMembershipAccessTokens: (...args) => refreshUpiCredentialMembershipAccessTokens(...args),
       identifyFreeUpiCredentialMembershipPlus: (...args) => identifyFreeUpiCredentialMembershipPlus(...args),
       verifyPlusUpiCredentialMembershipRows: (...args) => verifyPlusUpiCredentialMembershipRows(...args),
       loginUpiCredentialMembershipAccount: (...args) => loginUpiCredentialMembershipAccount(...args),

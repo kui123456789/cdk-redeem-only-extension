@@ -38,6 +38,7 @@
       stopUpiCredentialMembershipRedeem = async () => {},
       checkOneUpiCredentialMembership = async () => {},
       fillFreeUpiCredentialMembershipAccessTokens = async () => {},
+      refreshUpiCredentialMembershipAccessTokens = async () => {},
       identifyFreeUpiCredentialMembershipPlus = async () => {},
       verifyPlusUpiCredentialMembershipRows = async () => {},
       loginUpiCredentialMembershipAccount = async () => {},
@@ -232,6 +233,12 @@
       const fillFreeAtNode = findClosest(event?.target, '[data-upi-membership-fill-free-at]');
       if (fillFreeAtNode) {
         fillFreeUpiCredentialMembershipAccessTokens();
+        return;
+      }
+
+      const refreshInvalidAtNode = findClosest(event?.target, '[data-upi-membership-refresh-invalid-at]');
+      if (refreshInvalidAtNode) {
+        refreshUpiCredentialMembershipAccessTokens();
         return;
       }
 

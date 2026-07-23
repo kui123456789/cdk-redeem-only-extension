@@ -65,6 +65,26 @@ test('legacy pixRedeem pool aliases remain UPI aliases', () => {
   assert.equal(usage.getRedeemChannelPoolText({ pixRedeemCdkeyPoolText: 'OLD_UPI' }, 'pix'), '');
 });
 
+test('normalizes and appends bounded redeem attempt history without dropping it from CDK usage', () => {
+  const nowMs = Date.parse('2026-07-23T00:00:00.000Z');
+  const appended = usage.appendRedeemAttempt([], {
+    submittedEmail: 'new@example.com',
+    tokenEmail: 'old@example.com',
+    accessToken: 'header.payload.signature',
+    submittedAt: nowMs,
+  }, { nowMs });
+  const normalized = usage.normalizeCdkeyUsage({
+    ' CDK-A ': {
+      remoteStatus: 'submitted',
+      redeemAttemptHistory: appended,
+    },
+  }, { nowMs });
+
+  assert.equal(normalized['CDK-A'].redeemAttemptHistory.length, 1);
+  assert.equal(normalized['CDK-A'].redeemAttemptHistory[0].submittedEmail, 'new@example.com');
+  assert.equal(normalized['CDK-A'].redeemAttemptHistory[0].tokenEmail, 'old@example.com');
+});
+
 test('matches runtime selectability for active, consumed, invalid, duplicate, and subscription states', () => {
   assert.deepEqual(usage.getAvailableCdkeys([
     'USED_AT_NUMBER',
